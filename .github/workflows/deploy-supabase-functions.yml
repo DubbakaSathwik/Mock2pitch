@@ -1,0 +1,20 @@
+# Manual deploy of all Edge Functions to the hosted Supabase project.
+# One-time setup: GitHub repo -> Settings -> Secrets and variables -> Actions -> add
+#   SUPABASE_ACCESS_TOKEN  (Supabase dashboard -> Account -> Access Tokens -> Generate new token)
+#   SUPABASE_PROJECT_REF   (mkglxcdtfimgmvxtddst)
+# Function secrets (R2, NVIDIA, ...) are NOT handled here: set them in Supabase -> Edge Functions -> Secrets.
+name: Deploy Supabase Edge Functions
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy all functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" --use-api
