@@ -25,7 +25,9 @@ beforeAll(async () => {
   await db.admin.query("insert into public.session_slide_results(session_id,slide_index,transcript) values ($1,0,'private words')", [sessA]);
   await db.admin.query("insert into public.files(owner_id,deck_id,kind,slide_index,bucket,object_key,mime_type,expected_size_bytes,status) values ($1,$2,'slide_image',0,'b','users/a/img.jpg','image/jpeg',10,'uploaded')", [A, deckA]);
   await db.admin.query("insert into public.files(owner_id,session_id,kind,slide_index,bucket,object_key,mime_type,expected_size_bytes,status) values ($1,$2,'audio_clip',0,'b','users/a/clip.wav','audio/wav',10,'uploaded')", [A, sessA]);
+  await db.admin.query("insert into public.files(owner_id,deck_id,kind,slide_index,bucket,object_key,mime_type,expected_size_bytes,status) values ($1,$2,'slide_image',0,'b','users/b/img.jpg','image/jpeg',10,'uploaded')", [B, deckB]);
   await db.admin.query("insert into public.usage_events(user_id,kind,local_date) values ($1,'upload',public.ist_date(now()))", [A]);
+  await db.admin.query("insert into public.usage_events(user_id,kind,local_date) values ($1,'upload',public.ist_date(now()))", [B]);
   await db.admin.query("update public.profiles set is_blocked=true, blocked_at=now() where id=$1", [C]);
   await db.admin.query("insert into public.report_ratings(report_id,user_id,stars,comment) values ($1,$2,5,'great')", [reportB, B]);
 });
@@ -56,7 +58,9 @@ describe("student A (own data only)", () => {
     expect(await count(A, "practice_sessions")).toBe(1);
     expect(await count(A, "reports")).toBe(1);
     expect(await count(A, "session_slide_results")).toBe(1);
-    expect(await count(A, "usage_events")).toBe(1);
+    expect(await count(A, "usage_events")).toBe(1); // B has one too
+    expect(await count(A, "files")).toBe(1); // A's slide image only (A's audio clip and B's image are hidden)
+    expect(await count(B, "files")).toBe(1);
     expect(await count(A, "report_ratings")).toBe(0);
   });
   it("cannot see B's rows even by id", async () => {
@@ -65,6 +69,8 @@ describe("student A (own data only)", () => {
     expect(await db.q(A, "select id from public.reports where id=$1", [reportB])).toEqual([]);
     expect(await db.q(A, "select id from public.report_ratings where report_id=$1", [reportB])).toEqual([]);
     expect(await db.q(A, "select id from public.profiles where id=$1", [B])).toEqual([]);
+    expect(await db.q(A, "select id from public.files where deck_id=$1", [deckB])).toEqual([]);
+    expect(await db.q(A, "select id from public.usage_events where user_id=$1", [B])).toEqual([]);
   });
   it("cannot write content tables directly", async () => {
     for (const sql of [

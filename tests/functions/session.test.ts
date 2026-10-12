@@ -96,6 +96,22 @@ describe("session-submit-init", () => {
   });
 });
 
+describe("logging hygiene", () => {
+  it("a full upload -> analyse flow logs no keys, presigned URLs, tokens or transcript text", async () => {
+    const lines: string[] = [];
+    const spies = (["log", "error", "warn", "info"] as const).map((m) => { const orig = console[m]; console[m] = (...a: unknown[]) => { lines.push(a.map(String).join(" ")); }; return () => { console[m] = orig; }; });
+    try {
+      const { u, sessionId } = await started("log1@example.test");
+      await submit(u, sessionId, [{ slide_index: 0, wav: wav(20) }]);
+      await env.call(sessionAnalyse, { session_id: sessionId }, { token: u.token }); await env.settle();
+      await env.call(sessionAnalyse, { session_id: "garbage" }, { token: "bad-token" });
+      const joined = lines.join("\n");
+      expect(lines.length).toBeGreaterThan(0); // something was logged (counts/ids)
+      for (const forbidden of ["X-Amz-Signature", "X-Amz-Credential", u.token, "slide-k0", "asr-k0", "rep-k0", "sekrit", "we built the system", "internal-secret"]) expect(joined).not.toContain(forbidden);
+    } finally { spies.forEach((restore) => restore()); }
+  });
+});
+
 describe("session-analyse: happy path", () => {
   it("transcribes, scores with the v1 formulas, writes report + per-slide results, deletes all audio", async () => {
     env.ai.asrCalls.length = 0; env.ai.chatCalls.length = 0;
