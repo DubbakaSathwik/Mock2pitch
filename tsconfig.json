@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "lib": ["dom", "dom.iterable", "ES2023"], "module": "esnext",
+    "moduleResolution": "bundler", "strict": true, "noUncheckedIndexedAccess": true,
+    "allowImportingTsExtensions": true, "noEmit": true, "jsx": "preserve", "esModuleInterop": true,
+    "skipLibCheck": true, "resolveJsonModule": true, "isolatedModules": true, "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "paths": { "@/*": ["./*"], "@shared/*": ["./supabase/functions/_shared/*"] }
+  },
+  "include": ["next-env.d.ts", "app/**/*.ts", "app/**/*.tsx", "lib/**/*.ts", "types/**/*.ts", "tests/**/*.ts", "supabase/functions/_shared/**/*.ts", "vitest.config.ts", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "supabase/functions/*/index.ts"]
+}
