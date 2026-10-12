@@ -1,12 +1,12 @@
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, ParseSpeeds } from "pdf-lib";
 import { api, AppError, Errors, fromDbError, ok, readBody, requireUser } from "./common.ts";
 import { deckIdIn } from "../schemas.ts";
-import { MAX_PDF_BYTES, MAX_SLIDES, PUT_EXPIRES_S, SLIDE_IMAGE_JPEG_QUALITY, SLIDE_IMAGE_MAX_BYTES, SLIDE_IMAGE_MAX_WIDTH } from "../constants.ts";
+import { MAX_PDF_BYTES, MAX_SLIDES, PUT_EXPIRES_S, SLIDE_IMAGE_JPEG_QUALITY, SLIDE_IMAGE_MAX_BYTES, SLIDE_IMAGE_MAX_WIDTH, SLIDE_IMAGE_MIN_JPEG_QUALITY, SLIDE_IMAGE_MIN_WIDTH } from "../constants.ts";
 import { isPdfSignature } from "../files.ts";
 import { keys } from "../r2.ts";
 import type { Ctx } from "../deps.ts";
 
-const RULES = { max_width: SLIDE_IMAGE_MAX_WIDTH, jpeg_quality: SLIDE_IMAGE_JPEG_QUALITY, max_bytes: SLIDE_IMAGE_MAX_BYTES, content_type: "image/jpeg" };
+const RULES = { max_width: SLIDE_IMAGE_MAX_WIDTH, min_width: SLIDE_IMAGE_MIN_WIDTH, jpeg_quality: SLIDE_IMAGE_JPEG_QUALITY, min_jpeg_quality: SLIDE_IMAGE_MIN_JPEG_QUALITY, max_bytes: SLIDE_IMAGE_MAX_BYTES, content_type: "image/jpeg" };
 
 async function failDeck(ctx: Ctx, userId: string, deckId: string, code: string) {
   await ctx.deps.r2.delete(keys.deckPdf(userId, deckId)).catch(() => {});
@@ -49,7 +49,7 @@ export const deckUploadComplete = api(async (ctx) => {
   let pages: number;
   try {
     const bytes = await deps.r2.get(key);
-    const pdf = await PDFDocument.load(bytes, { ignoreEncryption: false, updateMetadata: false, throwOnInvalidObject: false });
+    const pdf = await PDFDocument.load(bytes, { ignoreEncryption: false, updateMetadata: false, throwOnInvalidObject: false, parseSpeed: ParseSpeeds.Fastest });
     pages = pdf.getPageCount();
   } catch (e) {
     const encrypted = /encrypt/i.test((e as Error)?.name + " " + (e as Error)?.message);

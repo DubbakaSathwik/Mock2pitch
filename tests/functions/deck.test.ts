@@ -107,7 +107,7 @@ describe("deck-upload-complete", () => {
     expect(complete.status).toBe(200);
     expect(complete.json.data.page_count).toBe(10);
     expect(complete.json.data.images).toHaveLength(10);
-    expect(complete.json.data.rules).toMatchObject({ max_width: 1280, content_type: "image/jpeg" });
+    expect(complete.json.data.rules).toMatchObject({ max_width: 1280, min_width: 800, jpeg_quality: 0.8, min_jpeg_quality: 0.5, max_bytes: 180000, content_type: "image/jpeg" });
     expect(new URL(complete.json.data.images[0].upload.url).searchParams.get("X-Amz-SignedHeaders")).toContain("content-type");
     expect(await used(u.id)).toBe(1);
     expect((await deckRow(deckId)).status).toBe("awaiting_images");
@@ -217,7 +217,7 @@ describe("deck-process", () => {
     const nj = await env.call(deckProcess, { deck_id: deckId }, { token: u.token });
     expect([nj.json.error.code, nj.json.error.slide_index]).toEqual(["not_jpeg", 1]);
     expect(await env.r2.head(keys.slideImage(u.id, deckId, 1))).toBeNull();
-    await put(ims[1].upload.url, ims[1].upload.headers, jpeg(1_600_000));
+    await put(ims[1].upload.url, ims[1].upload.headers, jpeg(180_001));
     const big = await env.call(deckProcess, { deck_id: deckId }, { token: u.token });
     expect(big.json.error.code).toBe("image_too_large");
     expect((await deckRow(deckId)).status).toBe("awaiting_images");

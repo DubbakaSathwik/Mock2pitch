@@ -335,6 +335,18 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
+# Google is the ONLY sign-in provider in hosted environments (D2). Locally it stays off so tests/dev use email+password
+# (see [auth.email]); to try Google locally set enabled = true and export the two env vars from .env.example.
+# Redirect URLs to register in Google Cloud: <supabase-url>/auth/v1/callback, http://localhost:3000/auth/callback, the Netlify URL.
+[auth.external.google]
+enabled = false
+client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
+redirect_uri = ""
+url = ""
+skip_nonce_check = true   # local only: required for Google sign-in on localhost; keep false in hosted settings
+email_optional = false
+
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
 [auth.web3.solana]
