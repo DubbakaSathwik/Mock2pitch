@@ -22,6 +22,8 @@
     "gen:types": "supabase gen types typescript --local > types/database.ts"
   },
   "dependencies": {
+    "@grpc/grpc-js": "^1.14.6",
+    "@grpc/proto-loader": "^0.7.15",
     "@supabase/supabase-js": "^2.117.3",
     "aws4fetch": "^1.0.20",
     "next": "^15.5.27",
@@ -37,6 +39,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "deno": "^2.9.6",
     "eslint": "^9.39.5",
     "pg": "^8.23.1",
     "supabase": "^2.120.0",
