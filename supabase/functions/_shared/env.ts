@@ -27,7 +27,7 @@ const schema = z.object({
 export type Env = z.infer<typeof schema>;
 
 let cached: Env | null = null;
-export function getEnv(raw: Record<string, string | undefined> = Deno.env.toObject()): Env {
+export function getEnv(raw: Record<string, string | undefined> = (globalThis as any).Deno.env.toObject()): Env {
   if (cached) return cached;
   const r = schema.safeParse(raw);
   if (!r.success) {

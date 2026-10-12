@@ -11,7 +11,7 @@ export function isJpegSignature(b: Uint8Array): boolean {
 export type WavInfo = { ok: true; durationMs: number; dataOffset: number; dataBytes: number } | { ok: false; reason: string };
 
 /** Validate RIFF/WAVE, PCM, 16 kHz, mono, 16-bit; duration derives from the data chunk (server-trusted). */
-export function parseWav(b: Uint8Array): WavInfo {
+export function parseWav(b: Uint8Array, totalLength: number = b.length): WavInfo {
   if (b.length < 44) return { ok: false, reason: "too_short" };
   const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
   const tag = (o: number) => String.fromCharCode(b[o]!, b[o + 1]!, b[o + 2]!, b[o + 3]!);
@@ -32,7 +32,7 @@ export function parseWav(b: Uint8Array): WavInfo {
       if (fmt.ch !== AUDIO_CHANNELS) return { ok: false, reason: "not_mono" };
       if (fmt.bits !== AUDIO_BITS) return { ok: false, reason: "bad_bit_depth" };
       // Streaming encoders may write 0/0xFFFFFFFF sizes; clamp to what is actually present.
-      const avail = b.length - body;
+      const avail = totalLength - body; // totalLength lets callers pass only the header bytes of a large object
       const dataBytes = size === 0 || size > avail ? avail : size;
       const bytesPerSec = fmt.rate * fmt.ch * (fmt.bits / 8);
       return { ok: true, durationMs: Math.round((dataBytes / bytesPerSec) * 1000), dataOffset: body, dataBytes };

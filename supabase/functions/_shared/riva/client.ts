@@ -1,4 +1,5 @@
 // Riva ASR (NVIDIA Cloud Functions, gRPC) client. Runs under Node (Next.js route) and Deno (Edge Function) via grpc-js.
+import { Buffer } from "node:buffer";
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
 import { AUDIO_SAMPLE_RATE } from "../constants.ts";

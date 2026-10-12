@@ -428,6 +428,7 @@ verify_jwt = true
 verify_jwt = true
 [functions.session-analyse]
 verify_jwt = false   # users (JWT checked in code) + internal re-invocation
+static_files = ["./functions/_shared/riva/riva/proto/*.proto"]   # Riva protos for in-process gRPC (Option A)
 [functions.account-delete]
 verify_jwt = true
 [functions.admin-ai-keys]

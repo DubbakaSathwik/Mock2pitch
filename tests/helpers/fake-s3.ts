@@ -30,7 +30,7 @@ export async function startFakeS3(o: { accessKeyId: string; secretAccessKey: str
       if (!auth) return "no_auth";
       const m = /^AWS4-HMAC-SHA256 Credential=([^,]+), SignedHeaders=([^,]+), Signature=([0-9a-f]+)$/.exec(String(auth));
       if (!m) return "bad_auth";
-      [, credential, signedHeaders, signature] = m as unknown as string[];
+      credential = m[1]!; signedHeaders = m[2]!; signature = m[3]!;
       amzDate = String(req.headers["x-amz-date"]); payloadHash = String(req.headers["x-amz-content-sha256"] ?? "UNSIGNED-PAYLOAD");
     }
     const [akid, date, region, service, term] = credential.split("/") as [string, string, string, string, string];
@@ -52,7 +52,7 @@ export async function startFakeS3(o: { accessKeyId: string; secretAccessKey: str
     if (expected !== signature) return "signature_mismatch";
     if (presigned && req.method === "PUT") {
       // The point of signing these: a different type/length makes the signature check fail above; assert they were signed.
-      if (!names.includes("content-type") || !names.includes("content-length")) return "put_not_bound_to_type_and_length";
+      if (!names.includes("content-type")) return "put_not_bound_to_type";
     }
     return null;
   }

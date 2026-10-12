@@ -56,6 +56,16 @@ describe("presigned PUT", () => {
   });
 });
 
+describe("presigned PUT without a fixed length (slide images)", () => {
+  it("is bound to Content-Type only; any length is accepted, other types are not", async () => {
+    const p = await r2.presignPut(keys.slideImage(U, D, 5), { contentType: "image/jpeg", expiresS: 300 });
+    expect(p.headers).toEqual({ "Content-Type": "image/jpeg" });
+    expect((await fetch(p.url, { method: "PUT", body: new Uint8Array(1234), headers: { "Content-Type": "text/html" } })).status).toBe(403);
+    expect((await fetch(p.url, { method: "PUT", body: new Uint8Array(1234), headers: { "Content-Type": "image/jpeg" } })).status).toBe(200);
+    expect((await r2.head(keys.slideImage(U, D, 5)))?.size).toBe(1234);
+  });
+});
+
 describe("presigned GET + server operations", () => {
   it("serves a presigned GET until expiry, and unsigned access is denied", async () => {
     await r2.put(keys.audioClip(U, S, 0), new Uint8Array([7, 7, 7]), "audio/wav");

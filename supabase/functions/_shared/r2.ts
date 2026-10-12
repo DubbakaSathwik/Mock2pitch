@@ -17,11 +17,14 @@ export class R2 {
   }
   private objectUrl(key: string) { return `${this.base}/${this.bucket}/${encKey(key)}`; }
 
-  /** Presigned PUT bound to Content-Type and Content-Length (both are signed headers). */
-  async presignPut(key: string, o: { contentType: string; contentLength: number; expiresS: number }): Promise<PresignedPut> {
+  /** Presigned PUT bound to Content-Type and (when given) Content-Length; both are signed headers. */
+  async presignPut(key: string, o: { contentType: string; contentLength?: number; expiresS: number }): Promise<PresignedPut> {
     const url = new URL(this.objectUrl(key));
     url.searchParams.set("X-Amz-Expires", String(o.expiresS));
-    const headers = { "Content-Type": o.contentType, "Content-Length": String(o.contentLength) };
+    // Content-Length is signed only when the size is known up front (PDF, audio). Slide JPEGs are rendered after the
+    // URL is issued, so their size is enforced afterwards by a HEAD check in deck-process.
+    const headers: Record<string, string> = { "Content-Type": o.contentType };
+    if (o.contentLength !== undefined) headers["Content-Length"] = String(o.contentLength);
     const signed = await this.aws.sign(url.toString(), { method: "PUT", headers, aws: { signQuery: true, allHeaders: true } });
     return { url: signed.url, method: "PUT", headers, expires_at: new Date(Date.now() + o.expiresS * 1000).toISOString() };
   }
@@ -54,7 +57,7 @@ export class R2 {
   }
 
   async put(key: string, body: Uint8Array, contentType: string): Promise<void> {
-    const res = await this.aws.fetch(this.objectUrl(key), { method: "PUT", body, headers: { "Content-Type": contentType } });
+    const res = await this.aws.fetch(this.objectUrl(key), { method: "PUT", body: body as unknown as BodyInit, headers: { "Content-Type": contentType } });
     if (!res.ok) throw new R2Error("put", res.status);
   }
 
