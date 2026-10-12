@@ -68,7 +68,8 @@ export class FakeAi {
     const forced = this.asrStatus[key];
     if (forced === -1) throw new TransportError("timeout");
     if (forced) return { status: forced, headers: forced === 429 ? { "retry-after": "30" } : {}, body: null };
-    return { status: 200, headers: {}, body: this.transcript(pcm.length), usage: { audioMs: Math.round(pcm.length / 32) } };
+    const silent = pcm.every((b) => b === 0); // a real ASR returns an empty transcript for silence
+    return { status: 200, headers: {}, body: silent ? { text: "", words: [] } : this.transcript(pcm.length), usage: { audioMs: Math.round(pcm.length / 32) } };
   };
 }
 
@@ -157,9 +158,9 @@ export async function put(url: string, headers: Record<string, string>, body: Ui
 }
 
 /** Drive the full happy-path deck upload for a user; returns ids. */
-export async function uploadDeck(env: Env_, u: { token: string }, handlers: { init: any; complete: any; process: any }, pdf: Uint8Array, filename = "ParkSense.pdf") {
+export async function uploadDeck(env: Env_, u: { token: string }, handlers: { init: any; complete: any; process: any }, pdf: Uint8Array, filename = "ParkSense.pdf"): Promise<{ init: any; putRes: Response; complete: any; deckId: string }> {
   const init = await env.call(handlers.init, { filename, size_bytes: pdf.length, content_type: "application/pdf" }, { token: u.token });
-  if (init.status !== 200) return { init };
+  if (init.status !== 200) throw new Error(`deck-upload-init failed: ${init.status} ${init.text}`);
   const up = init.json.data.upload;
   const putRes = await put(up.url, up.headers, pdf);
   const complete = await env.call(handlers.complete, { deck_id: init.json.data.deck_id }, { token: u.token });

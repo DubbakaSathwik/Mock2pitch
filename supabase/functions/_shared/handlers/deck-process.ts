@@ -2,10 +2,9 @@ import { api, AppError, Errors, isInternal, logEvent, ok, readBody, requireUser 
 import { deckIdIn, BLANK_SLIDE, type SlideReadingOut } from "../schemas.ts";
 import { SLIDE_CONCURRENCY, SLIDE_IMAGE_MAX_BYTES } from "../constants.ts";
 import { isJpegSignature } from "../files.ts";
-import { keys } from "../r2.ts";
 import { supabaseRouterStore } from "../ai/store.ts";
 import { readSlide } from "../ai/slide.ts";
-import type { Ctx, Deps } from "../deps.ts";
+import type { Deps } from "../deps.ts";
 
 const FRESH_MS = 2 * 60 * 1000; // a user re-call within this window of the last heartbeat is a no-op
 

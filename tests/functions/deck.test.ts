@@ -273,7 +273,7 @@ describe("deck-process", () => {
     expect((await env.db.admin.query("select role from public.profiles where id=$1", [u.id])).rows[0].role).toBe("student");
   });
   it("another user gets 404; the internal secret may resume any deck; a stale 'processing' deck resumes", async () => {
-    const { u, deckId } = await readyForProcessing("p8@example.test", 2);
+    const { deckId } = await readyForProcessing("p8@example.test", 2);
     const other = await env.user("p8b@example.test");
     expect((await env.call(deckProcess, { deck_id: deckId }, { token: other.token })).status).toBe(404);
     expect((await env.call(deckProcess, { deck_id: deckId }, { internal: true })).status).toBe(202);

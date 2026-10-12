@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createDb, expectCode, makeReadyDeck, readyStudent, type Db } from "./harness";
+import { createDb, makeReadyDeck, readyStudent, type Db } from "./harness";
 
 let db: Db;
 beforeAll(async () => { db = await createDb(); });

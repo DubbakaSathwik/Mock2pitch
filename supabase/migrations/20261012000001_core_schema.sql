@@ -42,6 +42,7 @@ create table public.policy_versions (
   published_by uuid references public.profiles(id) on delete set null
 );
 create index policy_versions_published_idx on public.policy_versions (published_at desc);
+create index policy_versions_published_by_idx on public.policy_versions (published_by);
 
 create table public.policy_acceptances (
   user_id uuid not null references public.profiles(id) on delete cascade,
@@ -95,6 +96,7 @@ create table public.practice_sessions (
 create index sessions_owner_created_idx on public.practice_sessions (owner_id, created_at desc);
 create index sessions_deck_attempt_idx on public.practice_sessions (deck_id, attempt_number);
 create index sessions_status_updated_idx on public.practice_sessions (status, updated_at);
+create index sessions_policy_version_idx on public.practice_sessions (policy_version_id);
 -- Attempt numbers are unique among non-abandoned sessions: a restarted (abandoned) attempt re-uses its number.
 create unique index sessions_deck_attempt_uniq on public.practice_sessions (deck_id, attempt_number) where status <> 'abandoned';
 -- at most one analysing session per owner (race-safe)
@@ -263,6 +265,7 @@ create table public.admin_actions (
   detail jsonb,
   created_at timestamptz not null default now()
 );
+create index admin_actions_admin_idx on public.admin_actions (admin_id);
 
 create table private.pending_deletions (
   user_id uuid primary key,

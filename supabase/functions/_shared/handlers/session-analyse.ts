@@ -1,7 +1,6 @@
 import { api, AppError, checkCanPractise, Errors, isInternal, logEvent, ok, readBody, requireUser } from "./common.ts";
 import { sessionIdIn, sanitiseSlideReport } from "../schemas.ts";
 import { ASR_CONCURRENCY, MAX_ANALYSIS_ATTEMPTS, SCORING_VERSION } from "../constants.ts";
-import { keys } from "../r2.ts";
 import { parseWav } from "../files.ts";
 import { pcmOf } from "../audio.ts";
 import { computeScores, countFillers, countWords, wpm } from "../scoring.ts";
@@ -9,7 +8,7 @@ import { supabaseRouterStore } from "../ai/store.ts";
 import { transcribePcm } from "../ai/asr.ts";
 import { generateReport, type ReportInputSlide } from "../ai/report.ts";
 import { modelFor } from "../env.ts";
-import type { Ctx, Deps } from "../deps.ts";
+import type { Deps } from "../deps.ts";
 
 const FRESH_MS = 2 * 60 * 1000;
 const HEADER_BYTES = 4095;
@@ -29,7 +28,6 @@ export const sessionAnalyse = api(async (ctx) => {
   if (userId) q = q.eq("owner_id", userId);
   const { data: s } = await q.maybeSingle();
   if (!s) throw Errors.notFound();
-  const owner = s.owner_id as string;
 
   if (s.status === "completed") {
     const { data: r } = await deps.admin.from("reports").select("id").eq("session_id", session_id).maybeSingle();
@@ -194,4 +192,3 @@ export async function runAnalysis(deps: Deps, sessionId: string): Promise<void> 
   }
   logEvent("session_completed", { session_id: sessionId, slides: n });
 }
-export type { Ctx };
