@@ -26,3 +26,4 @@ test-results/
 
 # deploy
 .netlify/
+*.tsbuildinfo

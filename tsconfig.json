@@ -46,6 +46,8 @@
   ],
   "exclude": [
     "node_modules",
-    "supabase/functions/*/index.ts"
+    "supabase/functions/*/index.ts",
+    "supabase/functions/_shared/deno-deps.ts",
+    "tests/helpers/deno-riva.ts"
   ]
 }

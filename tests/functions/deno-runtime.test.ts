@@ -17,10 +17,10 @@ const freePort = () => new Promise<number>((res) => { const s = net.createServer
 async function serve(fn: string, env: Record<string, string>) {
   const port = await freePort();
   const p = spawn(deno, ["run", "-A", "--config", "supabase/functions/deno.json", `supabase/functions/${fn}/index.ts`], {
-    cwd: root, env: { PATH: process.env.PATH!, HOME: process.env.HOME!, DENO_SERVE_ADDRESS: `tcp:127.0.0.1:${port}`, ...env }, stdio: ["ignore", "pipe", "pipe"],
-  });
+    cwd: root, env: { PATH: process.env.PATH!, HOME: process.env.HOME!, DENO_SERVE_ADDRESS: `tcp:127.0.0.1:${port}`, ...env } as unknown as NodeJS.ProcessEnv, stdio: ["ignore", "pipe", "pipe"],
+  }) as ChildProcess;
   procs.push(p);
-  let log = ""; p.stderr!.on("data", (d) => (log += d)); p.stdout!.on("data", (d) => (log += d));
+  let log = ""; p.stderr!.on("data", (d: Buffer) => (log += d)); p.stdout!.on("data", (d: Buffer) => (log += d));
   for (let i = 0; i < 100; i++) {
     try { await fetch(`http://127.0.0.1:${port}/`, { method: "OPTIONS" }); break; } catch { await new Promise((r) => setTimeout(r, 200)); }
   }
