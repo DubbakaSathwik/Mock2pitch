@@ -79,7 +79,7 @@ Speech-to-text path: leave `INTERNAL_TRANSCRIBE_URL` **unset** to try the in-pro
 
 ## Part 4 — Deploy the Edge Functions
 Pick one:
-- **A. GitHub Actions (no local tools)** — [YOU] create a Supabase access token (dashboard → *Account → Access Tokens → Generate new token*), add two repo secrets in GitHub (*Settings → Secrets and variables → Actions*): `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` = `mkglxcdtfimgmvxtddst`; then *Actions → Deploy Supabase Edge Functions → Run workflow*. (Workflow: `.github/workflows/deploy-supabase-functions.yml`, if it was pushed — see below.)
+- **A. GitHub Actions (no local tools)** — [YOU] create a Supabase access token (dashboard → *Account → Access Tokens → Generate new token*), add two repo secrets in GitHub (*Settings → Secrets and variables → Actions*): `SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF` = `mkglxcdtfimgmvxtddst`; then *Actions → Deploy Supabase Edge Functions → Run workflow*. (Workflow file: `.github/workflows/deploy-supabase-functions.yml`, already pushed.)
 - **B. Your own computer** — install the Supabase CLI, then: `supabase login` · `supabase link --project-ref mkglxcdtfimgmvxtddst` · `supabase functions deploy`.
 After deploy, check the dashboard → *Edge Functions* lists 9 functions.
 
