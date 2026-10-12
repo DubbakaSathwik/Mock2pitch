@@ -7,8 +7,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
@@ -19,14 +19,17 @@
     "test:r2": "vitest run tests/r2",
     "test:live-ai": "RUN_LIVE_AI_TESTS=1 vitest run tests/live",
     "gen:fixtures": "node scripts/gen-fixtures.mjs",
-    "gen:types": "supabase gen types typescript --local > types/database.ts"
+    "gen:types": "node scripts/gen-types.mjs",
+    "gen:types:cli": "supabase gen types typescript --local > types/database.ts",
+    "spike:nvidia": "tsx scripts/spike-nvidia.mjs",
+    "scan:bundle": "node scripts/scan-client-bundle.mjs"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.6",
     "@grpc/proto-loader": "^0.7.15",
     "@supabase/supabase-js": "^2.117.3",
     "aws4fetch": "^1.0.20",
-    "next": "^15.5.27",
+    "next": "^16.4.0",
     "pdf-lib": "^1.17.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
@@ -48,6 +51,6 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.71.2",
-    "vitest": "^3.2.7"
+    "vitest": "^5.0.4"
   }
 }
