@@ -47,7 +47,9 @@ export class FakeAi {
     const forced = this.chatStatus[key];
     if (forced) return new Response(JSON.stringify({ error: "forced" }), { status: forced, headers: forced === 429 ? { "Retry-After": "30" } : {} });
     let content: unknown;
-    if (body.model === "slide-model") {
+    const structuring = String(body.messages[0]?.content ?? "").includes("PRESENT a slide out loud") && !Array.isArray(body.messages[1]?.content);
+    if (structuring) content = this.slideOut(++this.slideCounter, 1500);
+    else if (body.model === "slide-model") {
       const imgPart = (body.messages.find((m: any) => Array.isArray(m.content))?.content ?? []).find((c: any) => c.type === "image_url");
       const b64 = String(imgPart?.image_url?.url ?? "").split(",")[1] ?? "";
       content = this.slideOut(++this.slideCounter, Buffer.from(b64, "base64").length);
@@ -66,6 +68,8 @@ export class FakeAi {
     const text = typeof content === "string" ? content : JSON.stringify(content);
     return new Response(JSON.stringify({ choices: [{ message: { content: text } }], usage: { prompt_tokens: 11, completion_tokens: 7 } }), { status: 200, headers: { "Content-Type": "application/json" } });
   };
+
+  asrProbe = async (_key: string, _t: number): Promise<string[]> => ["parakeet-fake"];
 
   asr = async ({ pcm, key }: { pcm: Uint8Array; key: string; timeoutMs: number }): Promise<TransportResult> => {
     this.asrCalls.push({ key, bytes: pcm.length });
@@ -92,7 +96,7 @@ export async function createEnv() {
     env: testEnv,
     userClient: (jwt) => makePgSupabase(db.admin, { role: "authenticated", uid: tokens.get(jwt) }, { users: tokens }),
     admin: makePgSupabase(db.admin, { role: "service_role" }, { onDeleteUser: async (id) => { await db.admin.query("delete from auth.users where id=$1", [id]); } }),
-    r2, fetchFn: ai.fetchFn, asr: ai.asr, now: () => state.now(),
+    r2, fetchFn: ai.fetchFn, asr: ai.asr, asrProbe: ai.asrProbe, now: () => state.now(),
     background: (p) => { pending.push(p.catch(() => {})); },
     invoke: async (fn, body) => { invokes.push({ fn, body }); },
   };

@@ -60,6 +60,23 @@ export function recognizePcm(pcm: Uint8Array, o: RivaOptions): Promise<Transcrip
   });
 }
 
+/** Cheap connectivity probe: lists the ASR models the function serves. Fails fast if the channel/auth is broken. */
+export function getRivaConfig(o: Pick<RivaOptions, "functionId" | "apiKey" | "target" | "insecure" | "timeoutMs">): Promise<string[]> {
+  const Ctor = clientCtor();
+  const creds = o.insecure ? grpc.credentials.createInsecure() : grpc.credentials.createSsl();
+  const client = new Ctor(o.target ?? RIVA_TARGET, creds);
+  const md = new grpc.Metadata();
+  if (o.functionId) md.set("function-id", o.functionId);
+  if (o.apiKey) md.set("authorization", `Bearer ${o.apiKey}`);
+  return new Promise((resolve, reject) => {
+    client.GetRivaSpeechRecognitionConfig({}, md, { deadline: new Date(Date.now() + (o.timeoutMs ?? 15_000)) }, (err: grpc.ServiceError | null, res: any) => {
+      client.close();
+      if (err) return reject(new RivaError(err.code, err.details || err.message));
+      resolve((res?.model_config ?? []).map((m: { model_name: string }) => String(m.model_name)));
+    });
+  });
+}
+
 export class RivaError extends Error {
   constructor(public grpcCode: number, message: string) { super(message); }
   /** Map gRPC status to our router's HTTP-ish semantics. */

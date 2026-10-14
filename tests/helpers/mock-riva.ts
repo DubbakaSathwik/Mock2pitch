@@ -13,6 +13,12 @@ export async function startMockRiva(handler: (call: MockRivaCall) => { transcrip
   const server = new grpc.Server();
   const calls: MockRivaCall[] = [];
   server.addService(pkg.nvidia.riva.asr.RivaSpeechRecognition.service, {
+    GetRivaSpeechRecognitionConfig: (call: any, cb: any) => {
+      const md: Record<string, string> = {};
+      for (const [k, v] of Object.entries(call.metadata.getMap())) md[k] = String(v);
+      calls.push({ config: { probe: true }, audioBytes: 0, metadata: md });
+      cb(null, { model_config: [{ model_name: "parakeet-tdt-0.6b-v2-en-US-asr-offline", parameters: {} }] });
+    },
     Recognize: (call: any, cb: any) => {
       const md: Record<string, string> = {};
       for (const [k, v] of Object.entries(call.metadata.getMap())) md[k] = String(v);

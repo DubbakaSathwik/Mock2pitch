@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { recognizePcm, RivaError } from "@shared/riva/client.ts";
+import { getRivaConfig, recognizePcm, RivaError } from "@shared/riva/client.ts";
 import { mergeTranscripts, pcmOf, splitPcm } from "@shared/audio.ts";
 import { buildWav } from "@shared/files.ts";
 import { startMockRiva } from "../helpers/mock-riva";
@@ -25,6 +25,12 @@ describe("Riva gRPC client (against a local mock using the vendored NVIDIA proto
     expect(call.metadata["authorization"]).toBe("Bearer nvapi-test");
     expect(call.audioBytes).toBe(32000);
     expect(call.config).toMatchObject({ encoding: "LINEAR_PCM", sample_rate_hertz: 16000, language_code: "en-US", enable_word_time_offsets: true, enable_automatic_punctuation: true, audio_channel_count: 1 });
+  });
+  it("config probe lists served models using the same auth metadata", async () => {
+    const srv = await startMockRiva(() => []); servers.push(srv);
+    const models = await getRivaConfig({ target: srv.target, insecure: true, functionId: "fn-9", apiKey: "k" });
+    expect(models).toEqual(["parakeet-tdt-0.6b-v2-en-US-asr-offline"]);
+    expect(srv.calls.at(-1)!.metadata).toMatchObject({ "function-id": "fn-9", authorization: "Bearer k" });
   });
   it("silence -> empty transcript, not an error", async () => {
     const srv = await startMockRiva(() => []); servers.push(srv);

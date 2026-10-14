@@ -21,6 +21,8 @@ export interface Deps {
   fetchFn: typeof fetch;
   /** One Riva recognition call over a <= 60 s PCM chunk (gRPC in-process, or via the Next.js internal route). */
   asr: AsrCall;
+  /** Cheap gRPC connectivity probe (lists served ASR models). Optional; used only by the operator self-test. */
+  asrProbe?(key: string, timeoutMs: number): Promise<string[]>;
   /** Fire an internal function-to-function call (sweeper resumes, stage chaining). */
   invoke(fn: string, body: Record<string, unknown>): Promise<void>;
   now(): Date;

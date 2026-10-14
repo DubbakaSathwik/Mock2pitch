@@ -29,6 +29,10 @@ export function buildDeps(): Deps {
       const guarded = p.catch((e) => console.error(JSON.stringify({ level: "error", msg: "background_failed", name: (e as Error)?.name })));
       try { EdgeRuntime.waitUntil(guarded); } catch { /* not running on the Edge Runtime (local deno) */ }
     },
+    asrProbe: async (key, timeoutMs) => {
+      const { getRivaConfig } = await import("./riva/client.ts"); // loaded only when the self-test asks
+      return getRivaConfig({ functionId: env.NVIDIA_ASR_FUNCTION_ID, apiKey: key, timeoutMs });
+    },
     invoke: async (fn, body) => {
       await fetch(`${env.SUPABASE_URL}/functions/v1/${fn}`, {
         method: "POST",
