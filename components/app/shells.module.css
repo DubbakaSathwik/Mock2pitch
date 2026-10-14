@@ -19,8 +19,8 @@
 .mTop{position:sticky;top:0;z-index:20;height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#fff;border-bottom:1px solid var(--border-subtle)}
 .aTop{background:var(--prussian-blue);border-bottom:0}
 .mMain{flex:1;padding:16px 16px 88px;min-width:0}
-.mTabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid var(--border-subtle);padding-bottom:max(6px,env(safe-area-inset-bottom))}
-.aTabs{grid-template-columns:repeat(5,1fr);background:var(--prussian-blue);border-top:0}
+.mTabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:#fff;border-top:1px solid var(--border-subtle);padding-bottom:max(6px,env(safe-area-inset-bottom))}
+.aTabs{grid-template-columns:repeat(5,minmax(0,1fr));background:var(--prussian-blue);border-top:0}
 .mTab{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--text-muted);font-family:var(--font-body);font-size:12px;text-decoration:none}
 .mTab:hover{text-decoration:none;color:var(--ink-800)}
 .mTabOn{color:var(--imperial-blue);font-weight:700}
@@ -43,12 +43,14 @@
 .exit:hover{background:var(--ink-100);color:var(--ink-800);text-decoration:none}
 
 .center{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:40px;background:var(--bg-page);box-sizing:border-box}
-.head{display:flex;flex-direction:row;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px}
+.head{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px}
 .headTitle{}
 @container app (max-width:759.98px){
-  .flowBar{height:56px;padding:0 16px}
+  .flowBar{height:56px;padding:0 8px 0 12px;gap:8px}
+  .dot{width:22px;height:22px}
+  .exit{width:36px;height:36px}
   .flowMain{padding:16px}
-  .stepper{gap:6px}
+  .stepper{gap:4px}
   .center{padding:20px}
   .head{flex-direction:column;align-items:stretch}
   .headTitle{font-size:26px}

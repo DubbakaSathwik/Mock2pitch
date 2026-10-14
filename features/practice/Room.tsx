@@ -176,7 +176,7 @@ export function Room() {
     </div>
   );
   const strip = (
-    <div className={styles.strip} role="group" aria-label="Slides">
+    <div className={styles.strip} role="group" aria-label="Slides" tabIndex={0}>
       {slides.map((_, k) => { const s = statusOf(k); return (
         <button key={k} type="button" disabled={recording} aria-current={k === i ? "true" : undefined} aria-label={`Slide ${k + 1}, ${STAT[s].label}`} className={`${styles.chip} ${k === i ? styles.chipOn : ""}`} style={{ width: compact ? 76 : 112 }} onClick={() => { playback.stop(); setCur(k); }}>
           <SlideView src={images.urls.get(k)} alt="" flat radius={4} onRefetch={images.refetch} />

@@ -83,7 +83,7 @@ export function FlowShell({ step, wide, children }: { step: FlowStep; wide?: boo
   return (
     <div className={styles.flow}>
       <header className={styles.flowBar}>
-        <Logo size={compact ? 18 : 22} />
+        <Logo size={compact ? 16 : 22} />
         <ol className={styles.stepper} aria-label="Progress">
           {STEPS.map(([k, l], i) => (
             <li key={k} aria-current={i === idx ? "step" : undefined} className={`${styles.step} ${i <= idx ? styles.stepOn : ""} ${i === idx ? styles.stepCur : ""}`}>

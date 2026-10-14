@@ -1,13 +1,17 @@
 # Mock2Pitch
 
-Rehearse presentations privately: upload a PDF deck, record each slide in a virtual jury room, get an AI feedback report. This repository currently contains **Phase 1 — the complete backend** (Supabase + Cloudflare R2 + NVIDIA AI pipeline). The product UI is Phase 2; wiring is Phase 3. Start with `docs/phase-1/PHASE-1-HANDOFF.md`.
+Rehearse presentations privately: upload a PDF deck, record each slide in a virtual jury room, get an AI feedback report. This repository contains **Phase 1 — the complete backend** (Supabase + Cloudflare R2 + NVIDIA AI pipeline) and **Phase 2 — the complete frontend**, which runs on a typed in-browser **mock data layer** (no hosted Supabase/R2 is contacted). Wiring the UI to the backend is Phase 3. Start with `docs/phase-1/PHASE-1-HANDOFF.md` and `docs/phase-2/PHASE-2-HANDOFF.md`.
 
 ```
 supabase/            migrations, seed.sql (local only), Edge Functions (+ _shared: pure TS used by Deno and Vitest)
-app/, lib/           minimal Next.js 16 shell: env validation, Supabase clients, internal transcribe route
+app/, features/      Next.js 16 App Router pages + feature modules (Phase 2 UI)
+components/, styles/ design system (ds/), app components, tokens/fonts
+lib/                 env validation, Supabase clients, DataPort (lib/data: types, mock adapter), upload/recording helpers
+e2e/                 Playwright journeys (desktop, mobile, a11y, WebKit smoke)
 tests/               unit · db (RLS/limits/policy) · functions (handlers) · r2 · live (opt-in)
 infra/r2-cors.json   bucket CORS
 scripts/             fixtures, type generation, NVIDIA spike, bundle scan, local Postgres helper
+docs/phase-2/        existing-state, frontend, fidelity, port map, handoff, reference + captured screens
 docs/phase-1/        architecture, supabase, r2, ai, api-contracts, security-review, owner-setup, spikes, handoff
 ```
 
@@ -29,12 +33,20 @@ npm run dev                                               # Next.js shell on :30
 ```
 Local test accounts (email/password, local only) are in the handoff §I.
 
+### Frontend (Phase 2, mock mode)
+```bash
+npm run dev:mock          # next dev --webpack with NEXT_PUBLIC_DATA_MODE=mock on :3100
+```
+Open the app and use the **Mock controls** panel (bottom corner, dev only) to switch persona (signed-out, new student, student with reports, at daily limit, blocked, owner admin…), speed up the AI stages and inject failures. A persona can also be seeded from the URL with `?persona=<id>` (see `docs/phase-2/frontend.md`). State lives in `sessionStorage`; closing the tab resets it. Production builds refuse to start in mock mode unless `NEXT_PUBLIC_ALLOW_MOCK_IN_PROD=1` (used by `npm run build:review` for a review deploy); the dev panel and `window.__m2pMock` are compiled out of production bundles (`npm run check:prod-bundle`).
+
 ## Tests
 ```bash
 scripts/pg-test-server.sh            # once, if no Postgres is running
 npm test                             # everything except live AI
 npm run test:unit | test:db | test:functions | test:r2
 RUN_LIVE_AI_TESTS=1 npm run test:live-ai    # spends NVIDIA credits; needs the NVIDIA_* env
+npm run test:frontend                # Phase 2 unit / component tests (jsdom)
+npm run test:e2e                     # Playwright desktop-chrome (1280x800); :mobile = 390x844; test:a11y = axe sweep; test:webkit = smoke
 npm run typecheck && npm run lint
 npm run build && npm run scan:bundle        # Next build + client-bundle secret scan
 npm run gen:types                           # regenerate types/database.ts from the migrations

@@ -82,7 +82,7 @@ export function TermsEditor() {
     <AdminShell active="/admin/terms">
       <Head title="Terms and Privacy Policy" sub="Edit the text, then publish a new version." right={<Button iconLeft="upload" disabled={!draft || !dirty} onClick={openDialog}>Publish new version</Button>} />
       {ui?.kind === "inline" ? <ErrorNotice title={ui.title} body={ui.body} onRetry={() => versions.refetch()} /> : (
-        <div className={styles.grid} style={{ gridTemplateColumns: compact ? "1fr" : "1.6fr 1fr" }}>
+        <div className={styles.grid} style={{ gridTemplateColumns: compact ? "minmax(0,1fr)" : "minmax(0,1.6fr) minmax(0,1fr)" }}>
           <Card>
             <div style={{ marginBottom: 14 }}><Tabs variant="pill" items={TABS} value={tab} onChange={setTab} label="Document" /></div>
             {!draft ? <Skeleton h={compact ? 320 : 460} r={12} /> : (

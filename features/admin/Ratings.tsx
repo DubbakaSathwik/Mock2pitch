@@ -34,7 +34,7 @@ export function Ratings() {
         <Card padding={0}>
           <ul className={styles.list}>
             {rows.map((r, i) => (
-              <li key={i} className={styles.row} style={{ gridTemplateColumns: compact ? "1fr" : "1.2fr 1.2fr 130px 2fr 110px", gap: compact ? 4 : 16, padding: compact ? "14px 16px" : "16px 24px" }}>
+              <li key={i} className={styles.row} style={{ gridTemplateColumns: compact ? "minmax(0,1fr)" : "minmax(0,1.2fr) minmax(0,1.2fr) 130px minmax(0,2fr) 110px", gap: compact ? 4 : 16, padding: compact ? "14px 16px" : "16px 24px" }}>
                 <b className={styles.name}>{r.student_name}</b><span>{r.deck_title}</span><Stars n={r.stars} size={15} />
                 <span>{r.comment || <i className={styles.nc}>No comment</i>}</span><span className={styles.date}>{formatDate(r.date)}</span>
               </li>

@@ -1,6 +1,6 @@
 .page{min-height:100dvh;background:#fff}
 .header{height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 64px}
-.hero{padding:56px 64px 80px;display:grid;grid-template-columns:1.05fr .95fr;gap:64px;align-items:center;max-width:1280px;margin:0 auto;box-sizing:border-box}
+.hero{padding:56px 64px 80px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:64px;align-items:center;max-width:1280px;margin:0 auto;box-sizing:border-box}
 .h1{font-family:var(--font-display);font-weight:400;font-size:56px;line-height:1.08;color:var(--prussian-blue);margin:16px 0 20px;text-wrap:balance}
 .cta{display:flex;flex-direction:column;align-items:flex-start;gap:12px;margin-top:28px}
 .heroArt{position:relative}
@@ -9,34 +9,34 @@
 .reportTop{display:flex;flex-wrap:wrap;gap:20px;align-items:center}
 .reportHead{flex:1;min-width:160px}
 .reportTitle{font-family:var(--font-display);font-size:18px;color:var(--text-strong);margin-top:8px;line-height:1.25}
-.reportBars{display:grid;gap:10px;margin-top:20px}
-.reportRow{display:grid;grid-template-columns:110px 1fr 28px;align-items:center;gap:10px;font-family:var(--font-body);font-size:14px;color:var(--text-body)}
+.reportBars{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin-top:20px}
+.reportRow{display:grid;grid-template-columns:110px minmax(0,1fr) 28px;align-items:center;gap:10px;font-family:var(--font-body);font-size:14px;color:var(--text-body)}
 .pace{grid-column:2/4;font-size:13px;color:var(--text-muted)}
-.room{background:var(--prussian-blue);border-radius:16px;padding:14px;display:grid;grid-template-columns:1fr 28%;gap:10px;box-shadow:var(--shadow-lg)}
+.room{background:var(--prussian-blue);border-radius:16px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) 28%;gap:10px;box-shadow:var(--shadow-lg)}
 .roomMain{display:flex;flex-direction:column;gap:10px;justify-content:center}
 .roomDock{align-self:center;display:flex;gap:8px;padding:8px;border-radius:99px;background:rgba(166,225,250,.12)}
 .dockBtn{width:30px;height:30px;border-radius:50%;background:rgba(166,225,250,.18);color:#fff;display:flex;align-items:center;justify-content:center}
 .dockRec{background:var(--danger-500)}
-.roomRail{display:grid;gap:6px;align-content:center}
+.roomRail{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;align-content:center}
 .how{background:var(--bg-page);padding:88px 64px}
 .inner{max-width:1152px;margin:0 auto}
 .sectionTitle{margin:10px 0 28px}
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
 .stepTop{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .stepNo{font-family:var(--font-display);color:var(--text-muted);font-size:15px}
 .two{padding:88px 64px}
-.twoGrid{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.twoGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:32px}
 .sub{margin:8px 0 14px}
 .privacy{padding:0 64px 88px}
-.band{max-width:1152px;margin:0 auto;background:var(--prussian-blue);border-radius:24px;padding:56px;display:grid;grid-template-columns:1.2fr 1fr;gap:32px;align-items:center}
+.band{max-width:1152px;margin:0 auto;background:var(--prussian-blue);border-radius:24px;padding:56px;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:32px;align-items:center}
 .bandTitle{font-family:var(--font-display);font-weight:400;font-size:36px;color:#fff;margin:12px 0 14px;line-height:1.15}
-.bandList{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.bandList{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 .bandList li{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(166,225,250,.1);color:#fff;font-family:var(--font-body)}
 .footer{border-top:1px solid var(--border-subtle);padding:28px 64px;display:flex;flex-direction:row;gap:16px;justify-content:space-between;align-items:center}
 .footLinks{display:flex;gap:24px;font-family:var(--font-body);font-size:14px}
 
 @container app (max-width:1099.98px){
-  .hero{grid-template-columns:1fr;gap:32px}
+  .hero{grid-template-columns:minmax(0,1fr);gap:32px}
   .heroCard{position:relative;right:auto;bottom:auto;width:100%;max-width:520px;margin-top:16px}
 }
 @container app (max-width:759.98px){
@@ -45,11 +45,11 @@
   .h1{font-size:38px}
   .cta{align-items:stretch}
   .how{padding:48px 20px}
-  .steps{grid-template-columns:1fr}
+  .steps{grid-template-columns:minmax(0,1fr)}
   .two{padding:48px 20px}
-  .twoGrid{grid-template-columns:1fr}
+  .twoGrid{grid-template-columns:minmax(0,1fr)}
   .privacy{padding:0 20px 48px}
-  .band{padding:28px;grid-template-columns:1fr}
+  .band{padding:28px;grid-template-columns:minmax(0,1fr)}
   .bandTitle{font-size:26px}
   .footer{padding:24px 20px;flex-direction:column;align-items:flex-start}
 }

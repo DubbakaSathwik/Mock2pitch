@@ -22,11 +22,11 @@ export function BarChart({ data, labels, h = 160, every = 1, values, caption }: 
           ))}
         </div>
       </div>
-      <table className="sr-only">
+      <div className="sr-only"><table>
         <caption>{caption}</caption>
         <thead><tr><th scope="col">Day</th><th scope="col">Value</th></tr></thead>
         <tbody>{labels.map((l, i) => <tr key={i}><th scope="row">{l}</th><td>{data[i]}</td></tr>)}</tbody>
-      </table>
+      </table></div>
     </figure>
   );
 }

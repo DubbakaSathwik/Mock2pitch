@@ -49,7 +49,7 @@ export function StudentDetail() {
               <Button variant={d.profile.is_blocked ? "primary" : "secondary"} iconLeft={d.profile.is_blocked ? "check" : "ban"} disabled={block.isPending} onClick={toggle}>{d.profile.is_blocked ? "Unblock" : "Block student"}</Button>
             </div>
           </Card>
-          <div className={styles.grid} style={{ gridTemplateColumns: compact ? "1fr" : "1.2fr 1fr" }}>
+          <div className={styles.grid} style={{ gridTemplateColumns: compact ? "minmax(0,1fr)" : "minmax(0,1.2fr) minmax(0,1fr)" }}>
             <Card padding={0} aria-label="Practice attempts">
               <div style={{ padding: "18px 24px" }}><H l={3}>Practice attempts</H></div>
               {d.attempts.length === 0 ? <div className={styles.empty}>No attempts yet.</div> : d.attempts.map((a) => (

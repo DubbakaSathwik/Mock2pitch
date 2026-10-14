@@ -10,10 +10,10 @@
 .over{background:var(--danger-500)}
 .dim{opacity:.75;font-size:14px}
 .micErr{padding:0 24px 8px}
-.body{flex:1;min-height:0;display:grid;grid-template-columns:1fr 320px;gap:20px;padding:0 24px}
+.body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;padding:0 24px}
 .left{min-width:0;display:flex;flex-direction:column;gap:14px;overflow:auto;justify-content:center}
 .rail{display:flex;flex-direction:column;gap:12px;overflow:auto}
-.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tiles{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .stage{position:relative;display:flex;flex-direction:column;justify-content:center;gap:10px}
 .status{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .statusL{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -43,9 +43,9 @@
 .big{width:56px;height:56px}
 .rec{background:var(--danger-500)}
 .leave{background:var(--danger-500);width:68px}
-.mBody{flex:1;overflow:auto;padding:0 12px 12px;display:grid;gap:12px;align-content:start}
-.mTiles{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
-.sheet{flex-shrink:0;background:var(--deep-navy);border-radius:20px 20px 0 0;padding:12px 8px max(14px,env(safe-area-inset-bottom));display:grid;gap:10px}
+.mBody{flex:1;overflow:auto;padding:0 12px 12px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-content:start}
+.mTiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
+.sheet{flex-shrink:0;background:var(--deep-navy);border-radius:20px 20px 0 0;padding:12px 8px max(14px,env(safe-area-inset-bottom));display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
 .sheetTimers{display:flex;justify-content:center}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 @container app (max-width:759.98px){

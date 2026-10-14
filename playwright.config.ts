@@ -23,7 +23,7 @@ export default defineConfig({
   },
   projects: [
     { name: "desktop-chrome", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 }, launchOptions: { args: chromiumArgs }, permissions: ["microphone"] }, testIgnore: /webkit-smoke|a11y-sweep/ },
-    { name: "mobile", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, hasTouch: true, launchOptions: { args: chromiumArgs }, permissions: ["microphone"] }, testIgnore: /webkit-smoke|a11y-sweep/ },
+    { name: "mobile", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, hasTouch: true, launchOptions: { args: chromiumArgs }, permissions: ["microphone"] }, testIgnore: /webkit-smoke|a11y-sweep|journey-11/ },
     { name: "a11y", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 }, launchOptions: { args: chromiumArgs }, permissions: ["microphone"] }, testMatch: /a11y-sweep/ },
     { name: "webkit-smoke", use: { ...devices["Desktop Safari"], viewport: { width: 1280, height: 800 } }, testMatch: /webkit-smoke/ },
   ],

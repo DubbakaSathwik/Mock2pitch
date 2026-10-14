@@ -46,7 +46,7 @@ export function AiUsage() {
     <AdminShell active="/admin/ai-usage">
       <Head title="AI usage and credits" sub="Keys are shown masked. Usage over the last 7 days." />
       {ui?.kind === "inline" ? <ErrorNotice title={ui.title} body={ui.body} onRetry={() => { void usage.refetch(); void keys.refetch(); }} /> : (
-        <div className={styles.grid} style={{ gridTemplateColumns: compact ? "1fr" : "repeat(auto-fit,minmax(340px,1fr))" }}>
+        <div className={styles.grid} style={{ gridTemplateColumns: compact ? "minmax(0,1fr)" : "repeat(auto-fit,minmax(340px,1fr))" }}>
           {usage.isPending || keys.isPending ? [0, 1, 2].map((k) => <Skeleton key={k} h={420} r={16} />) : (usage.data?.purposes ?? []).map((p) => {
             const meta = PURPOSE_UI[p.purpose];
             const model = keys.data?.purposes.find((x) => x.purpose === p.purpose);

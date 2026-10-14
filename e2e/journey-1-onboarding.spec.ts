@@ -10,7 +10,7 @@ test("1. new student: landing → sign in → terms → profile → empty dashbo
   await page.getByRole("button", { name: "Continue with Google" }).click();
 
   // first-time terms: Continue disabled until the box is ticked
-  await expect(page).toHaveURL(/\/onboarding\/terms/);
+  await expect(page).toHaveURL(/\/onboarding\/terms/, { timeout: 45_000 }); // generous: the first navigation of a cold dev server compiles routes
   await expect(page.getByRole("heading", { name: "Before you start" })).toBeVisible();
   const cont = page.getByRole("button", { name: "Continue" });
   await expect(cont).toBeDisabled();

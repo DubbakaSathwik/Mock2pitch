@@ -10,7 +10,7 @@
 .accent{--bg:var(--action-accent);--hover:var(--action-accent-hover);--press:var(--marine-700);--fg:var(--white);--bd:transparent}
 .secondary{--bg:var(--white);--hover:var(--marine-50);--press:var(--marine-100);--fg:var(--imperial-blue);--bd:var(--border-strong)}
 .ghost{--bg:transparent;--hover:var(--ink-100);--press:var(--ink-200);--fg:var(--imperial-blue);--bd:transparent}
-.record{--bg:var(--danger-500);--hover:#C03A3A;--press:#A93232;--fg:var(--white);--bd:transparent}
+.record{--bg:#C93A3A;--hover:#B83232;--press:#A32C2C;--fg:var(--white);--bd:transparent}
 .inverse{--bg:var(--icy-blue);--hover:#C4ECFC;--press:#8FD5F3;--fg:var(--prussian-blue);--bd:transparent}
 /* Touch targets >= 44 px on mobile (handoff §6). */
 @container app (max-width:759.98px){.sm{min-height:44px}}

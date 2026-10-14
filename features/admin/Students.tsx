@@ -47,7 +47,7 @@ export function Students() {
   );
   return (
     <AdminShell active="/admin/students">
-      <Head title="Students" sub={list.isPending ? " " : `${rows.length} of ${total || rows.length} shown`} right={<div style={{ width: compact ? "100%" : 300 }}><Input icon="search" type="search" aria-label="Search students" placeholder="Search name, email or college" value={q} onChange={(e) => { setQ(e.target.value); setLimit(PAGE); }} /></div>} />
+      <Head title="Students" sub={list.isPending ? " " : `${rows.length} of ${total || rows.length} shown`} right={<div style={{ width: compact ? "100%" : 300, maxWidth: "100%" }}><Input icon="search" type="search" aria-label="Search students" placeholder="Search name, email or college" value={q} onChange={(e) => { setQ(e.target.value); setLimit(PAGE); }} /></div>} />
       {ui?.kind === "inline" ? <ErrorNotice title={ui.title} body={ui.body} onRetry={() => list.refetch()} /> : list.isPending ? <Card padding={24}><Skeleton h={40} /></Card> : compact ? (
         <ul className={styles.cards}>
           {rows.map((s) => (
@@ -65,6 +65,7 @@ export function Students() {
         </ul>
       ) : (
         <Card padding={0}>
+          <div className={styles.scroll} tabIndex={0} role="region" aria-label="Students table">
           <table className={styles.table}>
             <thead><tr>{["Name", "Email", "College", "Year", "Branch", "Sessions", "Last active", "Avg"].map((h) => <th key={h} scope="col">{h}</th>)}<th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
@@ -77,6 +78,7 @@ export function Students() {
               ))}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
       {!list.isPending && rows.length === 0 && !ui && <Card padding={32} className={styles.none}><Muted>No students match &ldquo;{search}&rdquo;</Muted></Card>}

@@ -1,7 +1,9 @@
 import { expect, test } from "./fixtures";
 import { control, seed } from "./helpers";
 
-test("9. admin: owner sign in → overview, students (block/unblock), detail, ratings, AI usage, terms publish; redirects", async ({ page }) => {
+test("9. admin: owner sign in → overview, students (block/unblock), detail, ratings, AI usage, terms publish; redirects", async ({ page, isMobile }) => {
+  // desktop shows a table (rows); the compact layout shows one card per student (list items)
+  const student = (n: RegExp) => page.getByRole(isMobile ? "listitem" : "row").filter({ hasText: n });
   await seed(page, "signed_out");
   await page.goto("/admin/sign-in");
   await expect(page.getByRole("heading", { level: 1, name: "Owner sign in" })).toBeVisible();
@@ -20,11 +22,11 @@ test("9. admin: owner sign in → overview, students (block/unblock), detail, ra
   await page.getByRole("navigation", { name: "Admin" }).getByRole("link", { name: "Students" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Students" })).toBeVisible();
   await page.getByLabel("Search students").fill("arjun");
-  await expect(page.getByRole("row", { name: /Arjun Reddy/ })).toBeVisible();
-  await expect(page.getByRole("row", { name: /Ananya Rao/ })).toHaveCount(0);
+  await expect(student(/Arjun Reddy/)).toBeVisible();
+  await expect(student(/Ananya Rao/)).toHaveCount(0);
   await page.getByRole("button", { name: "Block Arjun Reddy" }).click();
   await expect(page.getByText("Student blocked")).toBeVisible();
-  await expect(page.getByRole("row", { name: /Arjun Reddy/ }).getByText("Blocked")).toBeVisible();
+  await expect(student(/Arjun Reddy/).getByText("Blocked")).toBeVisible();
   await page.getByRole("button", { name: "Unblock Arjun Reddy" }).click();
   await expect(page.getByText("Student unblocked")).toBeVisible();
   await page.getByLabel("Search students").fill("zzz-nobody");

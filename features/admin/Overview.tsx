@@ -32,7 +32,7 @@ export function Overview() {
       <Head title="Overview" sub="Last 14 days" />
       {ui?.kind === "inline" ? <ErrorNotice title={ui.title} body={ui.body} onRetry={() => { void ov.refetch(); void days.refetch(); }} /> : (
         <>
-          <div className={styles.stats} style={{ gridTemplateColumns: compact ? "1fr 1fr" : "repeat(4,1fr)" }}>
+          <div className={styles.stats} style={{ gridTemplateColumns: compact ? "minmax(0,1fr) minmax(0,1fr)" : "repeat(auto-fit,minmax(170px,1fr))" }}>
             {ov.isPending || !o ? [0, 1, 2, 3].map((k) => <Skeleton key={k} h={132} r={16} />) : (
               <>
                 <Stat icon="users" label="Total students" value={o.total_students.toLocaleString("en-IN")} sub="Signed in with Google" />
@@ -42,7 +42,7 @@ export function Overview() {
               </>
             )}
           </div>
-          <div className={styles.two} style={{ gridTemplateColumns: compact ? "1fr" : "1.5fr 1fr" }}>
+          <div className={styles.two} style={{ gridTemplateColumns: compact ? "minmax(0,1fr)" : "minmax(0,1.5fr) minmax(0,1fr)" }}>
             <Card>
               <H l={3} style={{ marginBottom: 4 }}>Sessions per day</H>
               <Muted style={{ marginBottom: 16 }}>{d.length ? `${formatDayMonth(d[0]!.day)} to ${formatDate(d.at(-1)!.day)}` : "Last 14 days"}</Muted>
