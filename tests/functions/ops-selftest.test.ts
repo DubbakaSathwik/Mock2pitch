@@ -50,6 +50,21 @@ describe("ops-selftest (operator diagnostics)", () => {
     for (const secret of ["slide-k0", "asr-k0", "rep-k0", "Bearer"]) expect(r.text).not.toContain(secret);
   });
 
+  it("nvidia sub-checks run independently so a slow model cannot exhaust the time budget", async () => {
+    env.ai.chatCalls.length = 0; env.ai.asrCalls.length = 0;
+    const models = await run("nvidia_models");
+    expect(models.json.data.steps.every((s: any) => s.name.includes("/v1/models"))).toBe(true);
+    expect(env.ai.chatCalls.length).toBe(0);
+    const slide = await run("nvidia_slide");
+    expect(slide.json.data.steps.map((s: any) => s.name.split(":")[0])).toEqual(["slide model", "slide model"]);
+    expect(env.ai.asrCalls.length).toBe(0);
+    const asr = await run("nvidia_asr");
+    expect(asr.json.data.steps.length).toBe(1);
+    const report = await run("nvidia_report");
+    expect(report.json.data.steps.length).toBe(2);
+    expect(report.json.data.ok && slide.json.data.ok && asr.json.data.ok && models.json.data.ok).toBe(true);
+  });
+
   it("pipeline: a synthetic user runs upload-completion -> deck processing -> analysis -> report, then everything is cleaned up", async () => {
     const before = (await env.db.admin.query("select count(*)::int n from public.profiles")).rows[0].n;
     const r = await run("pipeline");
