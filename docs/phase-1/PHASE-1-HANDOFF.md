@@ -1,37 +1,45 @@
 # Phase 1 handoff — Mock2Pitch backend
 
 ## A. Phase
-**Phase 1 is deployed and code-complete. Three live verifications remain, each needing one action from the owner** (listed in §F "Remaining to close Phase 1"). Everything below marks what was executed, where, and what was not.
+**Phase 1 is complete and verified on the real stack (Supabase + Cloudflare R2 + NVIDIA), with the exceptions listed in §F "Not verifiable without the Phase 2 UI".** Everything below says what was executed, where, and what was not.
 
-**Hosted environment (verified 2026-10-14 through the Supabase tools):** project `mkglxcdtfimgmvxtddst` (Postgres 17.11) has all 8 migrations; 9 Edge Functions are `ACTIVE` (deployed by the GitHub workflow after the import-map fix); cron job `maintenance-sweep` has run 180+ times; Vault contains `functions_base_url` and `internal_function_secret`; R2 bucket `mock2pitch-dev` exists; security advisors reviewed (details in `HOSTED-STATE.md`). The functions **boot with the configured secrets** (the 16:15 cron call reached the handler and got a deliberate `403 forbidden`, which can only happen after environment validation passed).
+**Hosted environment (verified 2026-10-14):** project `mkglxcdtfimgmvxtddst` (Postgres 17.11) has all 8 migrations; 10 Edge Functions are `ACTIVE` (the 9 product functions + the operator-only `ops-selftest`), deployed by the GitHub workflow on every merge to `main`; cron job `maintenance-sweep` runs every 15 min and returns `200` from the handler; Vault holds `functions_base_url` and a real `internal_function_secret`; R2 bucket `mock2pitch-dev` exists; security advisors reviewed (`HOSTED-STATE.md`).
 
-**Found while verifying:** the Vault secret `internal_function_secret` holds the literal text `<the same INTERNAL_FUNCTION_SECRET>` (the placeholder from the setup doc) instead of the real value, so the cleanup job is rejected with 403 on every run. This is a one-line fix by the owner (§F item R1). Until then the sweeper does nothing, and the new `ops-selftest` function cannot be invoked from the database.
+**Live self-test results (run inside the Supabase Edge Runtime through `ops-selftest`, details and numbers in `spikes.md`):**
+| Area | Result |
+|---|---|
+| R2 | 7/7: signed `Content-Type` and `Content-Length` are enforced by real R2, GET, CORS for localhost allowed / foreign origin refused, prefix delete |
+| Report model `nvidia/nemotron-3-ultra-550b-a55b` | exact id confirmed; p50 1.2 s on a small prompt; `json_object` accepted |
+| Slide model | the planned `meta/llama-4-maverick-17b-128e-instruct` is **retired (HTTP 410)**; replaced by `meta/llama-3.2-11b-vision-instruct`: 3/3 valid JSON with the new prompt, p50 ≈ 8 s per slide; images up to 1.6 MB accepted |
+| Speech-to-text (Parakeet, gRPC) | works in-process in the Edge Runtime after replacing the gRPC library channel (which never connects there) with a direct `node:http2` call: p50 1.7 s for a 6 s clip; 3 of 4 spoken fillers kept in the transcript |
+| Full pipeline with a synthetic user | all 7 steps pass: user → daily-session consumed → 2 slides read → clip transcribed → report (overall 22 for a deliberately short clip, formula verified) → audio deleted → usage log → complete cleanup (0 rows, 0 R2 objects left) |
 
 ## B. Completed
 - Repo scaffold: Next.js 16 shell (env validation, Supabase clients, secret-protected internal transcribe route), `supabase/` config, shared pure-TS modules importable from both Deno and Vitest, `.gitignore`, `.env.example`.
 - **Database** (8 migrations): 14 public tables + `private` helpers, constraints, race-free "one in-flight deck / one analysing session" indexes, RLS everywhere, column-level grants, owner allow-list + sign-up trigger, 10 student RPCs/views, 10 admin RPCs, 7 service-role functions, Realtime publication, 15-minute cron job (guarded).
 - **Edge Functions** (9): `deck-upload-init`, `deck-upload-complete`, `deck-process`, `asset-urls`, `session-submit-init`, `session-analyse`, `account-delete`, `admin-ai-keys`, `maintenance-sweep`.
 - **R2**: SigV4 presigned PUT/GET, server-side HEAD/GET/DELETE/list/prefix-delete, server-built keys, CORS file.
-- **AI**: key router (3 purposes × 3 keys), chat transport, Riva gRPC client (vendored official protos), chunking/merging, prompts, Zod output validation, scoring `v1`.
+- **AI**: key router (3 purposes × 3 keys), chat transport, Riva gRPC client (direct HTTP/2, embedded descriptor from the vendored official protos), chunking/merging, prompts, Zod output validation, scoring `v1`.
+- **Operator self-test** (`ops-selftest`, internal secret only): live R2 / NVIDIA / pipeline checks, invoked from SQL. Safe to keep; delete the function when Phase 2 begins if you prefer.
 - Dev seed, committed fixtures, generated DB types, NVIDIA spike script, opt-in live tests, bundle scanner, docs (§12).
 
 ## C. Verified (by area) — all executed
 - **Scoring/validators/router/schemas/env** (unit): boundaries, filler regex word-boundaries, WAV/PDF/JPEG checks, every router branch (429/401/400/5xx/timeout/cooldown/RPM/credits/empty slots/invalid output), Zod clamping and injection guards.
 - **Database on real PostgreSQL 16.15**: migrations apply from scratch; owner promotion (case-insensitive, verified-email only, later confirmation, `sync_owner_role`); clients cannot change `role/is_blocked/email/...`; IST boundary; limit 5/6th rejected; **8 concurrent connections at count 4 → exactly 1 success**; attempt 1 free / retake charged / restart not double-charged; policy gating incl. in-progress exception; RLS matrix for anon, A, B, blocked, admin (no admin access to content tables; admin cannot practise); admin RPCs return summary fields only; structural privilege/`search_path`/FK-index audit; seed integrity.
 - **Edge Function handlers** against real Postgres + a fake S3 that re-computes SigV4 + a scriptable fake NVIDIA: all upload/processing/analysis paths in §10.4 including 10 vs 11 pages, encrypted/corrupt/renamed files, size mismatch, AI-busy → retry without duplicates, key fallback, resume at each stage, invalid report JSON → one repair, chunked ASR with offset-corrected timestamps, audio deleted after success and kept after failure, concurrent analysis rejection, account deletion with partial R2 failure finished by the sweeper, sweeper rules, masked keys, CORS, log hygiene.
-- **Real Deno 2.9.6**: all 9 entrypoints `deno check`; real processes serve CORS/401/403/misconfigured responses; `@grpc/grpc-js` + Riva protos work under Deno.
+- **Real Deno 2.9.6**: all entrypoints `deno check`; real processes serve CORS/401/403/misconfigured responses; the Riva client works under Deno against a local mock Riva server.
+- **Live (hosted) — see §A and `spikes.md`:** R2, NVIDIA slide/report/speech models, and the full pipeline with a synthetic user.
 - **Build/quality**: `tsc --noEmit` strict clean; ESLint clean; `next build` OK; client bundle scan clean; `npm audit` 0 vulnerabilities; secret scan of tracked files and full git history clean.
 
-## D. Test results (latest full run: 231 tests, 227 passed, 0 failed, 4 skipped by design)
+## D. Test results (latest full run: 246 tests, 242 passed, 0 failed, 4 skipped by design)
 | Suite | Command | Result | Covers |
 |---|---|---|---|
-| unit | `npm run test:unit` | 66 pass | scoring, files, router, schemas, riva client + chunking, transcribe route, fixtures, env |
+| unit | `npm run test:unit` | 70 pass | scoring, files, router, schemas (incl. tolerant slide output), riva client over HTTP/2 + chunking, transcribe route, fixtures, env |
 | db | `npm run test:db` | 90 pass | migrations, auth/roles, limits/IST/race, policy, constraints/cascades, RLS matrix, security audit, seed |
-| functions | `npm run test:functions` | 57 pass | deck, session, admin keys, account deletion, sweeper, Deno runtime, logging |
+| functions | `npm run test:functions` | 68 pass | deck, session, admin keys, account deletion, sweeper, `ops-selftest`, Deno runtime, logging |
 | r2 | `npm run test:r2` | 13 pass | SigV4 presign vs independent verifier, expiry, tamper, prefix delete, CORS file |
-| live | `RUN_LIVE_AI_TESTS=1 npm run test:live-ai` | 1 pass, **4 skipped** | **never run** (no network/keys) |
-Prerequisite: a local PostgreSQL ≥ 15 (`scripts/pg-test-server.sh`). The DB/function tests use a Supabase stand-in, not the real stack.
-
+| live | `RUN_LIVE_AI_TESTS=1 npm run test:live-ai` | **4 skipped** | the sandbox cannot reach NVIDIA; the equivalent live checks ran inside the hosted Edge Runtime via `ops-selftest` (§A) |
+Prerequisite: a local PostgreSQL ≥ 15 (`scripts/pg-test-server.sh`). The DB/function tests use a Supabase stand-in, not the real stack. `tsc --noEmit` and ESLint are clean.
 ## E. Security review
 `docs/phase-1/security-review.md`. Highlights: one real bug found and fixed (citext equality under empty `search_path`); anon can execute only a pure date helper; `svc_*` are service-role only; no admin SELECT on content; open residual risks listed there. Hosted advisors were **not** run.
 
@@ -39,28 +47,27 @@ Prerequisite: a local PostgreSQL ≥ 15 (`scripts/pg-test-server.sh`). The DB/fu
 1. **Design handoff missing** from the repo. Legal text, ParkSense sample and field names could not be taken from it (see `existing-state.md`).
 2. **Legal text edits to review.** `policy_versions v1.0` is a *draft authored from §1*: PDF-only, ≤10 slides/5 MB, 5 sessions/day IST, AI feedback disclaimer, audio sent to an AI speech service and deleted once the report is generated, "only you can see your reports; the owner sees aggregate usage, your profile details and the star ratings you give". It is not the handoff's `TERMS0`/`PRIV0`. Publish the approved text as `v1.1` (owner-setup §7).
 3. **Scoring constants are my defaults, not owner-specified:** timing full band ±5 % → 0 at ±50 %; filler penalty 15 pts per filler/min (0.5-min floor); filler regex list. Tunable in `constants.ts` (`scoring_version` is stored per report).
-4. **Slide-image size rule is provisional** (180 KB / 1280 px / quality 0.8→0.5 / min width 800). NVIDIA's real inline limit is unverified; the asset-upload path is not built.
+4. **Slide-image rule (measured):** max 1,000,000 bytes / 1280 px / quality 0.8→0.5 / min width 800. NVIDIA accepted inline images up to 1.6 MB, so the 180 KB assumption was wrong and the asset-upload path is not needed. Phase 2 reads these numbers from `deck-upload-complete → rules`.
 5. **Admin sees deck titles** in attempts and ratings lists (the design shows them). Titles are user text (default = file name). Say if you would rather show "Deck 1".
 6. **"Sessions per day" chart** counts submitted attempts per IST day; "practice sessions" in the overview counts submitted attempts, not daily-limit consumptions.
 7. **R2 lifecycle safety-net is not configurable** with the prescribed key layout (literal prefixes only). Proposed: audio under its own top-level prefix. Sweeper covers 24 h meanwhile.
 8. **Presigned image PUT cannot cap size up front** (size unknown at signing); enforced after upload.
 9. **`verify_jwt`**: kept `true` per spec for user-only functions; if the hosted project uses asymmetric JWT keys and the gateway rejects tokens, flip to `false` (code already verifies).
-10. **ASR option**: default in code is in-process gRPC (Option A) when `INTERNAL_TRANSCRIBE_URL` is unset; I recommend starting with Option B (set that URL + secret) until a real clip is transcribed inside the Edge Runtime.
+10. **ASR option (decided):** Option A, in-process from the Edge Function, is verified live; leave `INTERNAL_TRANSCRIBE_URL` unset. The Next.js route (Option B) stays in the repo as a fallback only. A **human-recorded** clip has not been transcribed (the test clip is text-to-speech): record one in Phase 2 and check how many fillers survive; the model dropped 1 of 4 in the synthetic clip.
 11. `NVIDIA_KEY_DEFAULT_CREDIT_LIMIT` is validated but slots are seeded with 1000 by migration (change with `admin_set_credit_limit`).
 12. A restarted unsubmitted attempt reuses its attempt number and is not charged twice (my reading of "retake" fairness); an unsubmitted attempt is abandoned after 24 h.
 13. `types/database.ts` comes from `scripts/gen-types.mjs` (no Docker). It approximates `supabase gen types`; table-function columns are typed nullable. Re-generate with `npm run gen:types:cli` when Docker is available.
-14. **Update:** the owner confirmed the hosted project "Mock2Pitch" (`mkglxcdtfimgmvxtddst`). Migrations are applied, advisors were run and the R2 bucket `mock2pitch-dev` exists — see `HOSTED-STATE.md`. Functions, secrets, Google OAuth and the live NVIDIA checks remain: `SETUP-STEPS.md`.
+14. The hosted project is "Mock2Pitch" (`mkglxcdtfimgmvxtddst`); see `HOSTED-STATE.md`.
+15. **Slide model changed.** Maverick was retired by NVIDIA (HTTP 410). The Supabase secret `NVIDIA_SLIDE_MODEL` should be `meta/llama-3.2-11b-vision-instruct` (the code default and `.env.example` already are). Report time: the full report call is the slow step (≈ 30 s for a one-slide session), so analysis takes roughly 30–60 s; the UI must show progress via Realtime.
+16. **Only one NVIDIA key per purpose is configured** (primary). Fallback slots 1–2 exist and are tested with fakes, but have no real key; add keys in Supabase secrets when available.
+17. **Add the Netlify origin to the R2 CORS policy** (`infra/r2-cors.json`) when the site exists; only `http://localhost:3000` is verified.
 
-### Remaining to close Phase 1 (R1–R3)
-| # | Action | Who | Why it is needed |
-|---|---|---|---|
-| R1 | Fix the Vault secret: in the Supabase SQL Editor run `select vault.update_secret((select id from vault.secrets where name='internal_function_secret'), '<the exact INTERNAL_FUNCTION_SECRET you saved in Edge Function secrets>');` (replace the whole `<...>` including the brackets). | owner | cron sweeper currently gets 403; also lets the self-test be called from SQL |
-| R2 | Merge the open pull request that adds `ops-selftest` (GitHub → Pull requests → Compare & pull request → Merge). The deploy workflow now runs automatically on merge. | owner | deploys the live-check function |
-| R3 | Tell the assistant "run the self-test". It calls `ops-selftest` from the database (`net.http_post` with the secret read from Vault, so nobody has to paste it), reads the JSON result, writes the numbers into `spikes.md`, and flips the ⛔ items below to ✅/❌. | assistant | closes §L: live NVIDIA, real R2 behaviour, gRPC inside the Edge Runtime, filler retention, image-size limit, pipeline on the real stack |
+### Not verifiable without the Phase 2 UI (nothing the owner needs to do now)
+- Google sign-in end to end and owner promotion to `admin` on first Google login (the allow-list holds `dubbakasathwik@gmail.com`; configure the Google provider first — `owner-setup.md`).
+- Browser uploads through pdf.js / MediaRecorder, and Realtime events arriving in a browser.
+- Filler retention on a human recording.
 
-`ops-selftest` (internal-secret only; no user data) checks: **env**, **r2** (signed Content-Type/Content-Length enforcement, GET, CORS preflight for each allowed origin vs a foreign origin, prefix delete), **nvidia** (each configured key against `/v1/models`, configured model ids listed, latency p50/p95, token-usage fields, `json_object` support, vision schema validity, inline image-size probe, gRPC speech-to-text and which fillers survive) and **pipeline** (synthetic user → daily-limit consumption → `deck-process` → `session-analyse` → report → audio deleted → user and R2 objects removed). Its logic is covered by `tests/functions/ops-selftest.test.ts` (6 tests) against the fakes.
-
-Not coverable without the Phase 2 UI: Google sign-in end to end (owner promotion to `admin` on first Google login), browser uploads through pdf.js/MediaRecorder, Realtime events in a browser.
+Previously open items R1 (Vault secret), R2 (deploy `ops-selftest`) and R3 (run the self-test) are **done**.
 
 ## G. Files / architecture
 `supabase/migrations/*.sql` · `supabase/functions/<name>/index.ts` (Deno wiring only) · `supabase/functions/_shared/{constants,scoring,files,audio,schemas,http,env,r2,deps,deno-deps}.ts` · `_shared/handlers/*` (the logic) · `_shared/ai/*` · `_shared/nvidia/{router,chat}.ts` · `_shared/riva/` (client + vendored protos) · `_shared/prompts/*` · `app/api/internal/transcribe/route.ts` · `lib/env.ts` · `infra/r2-cors.json` · `tests/**` · `docs/phase-1/*`. Architecture and decisions: `architecture.md`.
@@ -96,18 +103,18 @@ Seed validity was tested on the PG 16 stand-in; **it has not been run through re
 ## K. R2 summary
 Private bucket per environment; keys `users/{uid}/decks/{deck}/source.pdf`, `…/slides/{i}.jpg`, `users/{uid}/sessions/{sess}/audio/{i}.wav`; presigned PUT 5/10 min (type signed; length signed for PDF/audio), GET 10 min; server verifies size/signature/page count; audio deleted after report, swept at 24 h; account deletion removes the whole `users/{uid}/` prefix with pagination. Limitations and the lifecycle-rule problem: `r2.md`.
 
-## L. §15 checklist (✅ verified · ◐ verified only against a stand-in · ⛔ blocked/not done)
-**Repository & environment** — ✅ existing state documented, nothing overwritten · ✅ `.gitignore`/`.env.example`, Zod env (Edge: tested incl. Deno; Next: unit-tested) · ✅ no secrets in files/history.
-**Spikes** — ⛔ NVIDIA models live (keys are set in Supabase but the sandbox cannot reach NVIDIA; **`ops-selftest nvidia` closes this — R3**) · ⛔→provisional vision image rule (180 KB, implemented, unconfirmed) · ◐ gRPC: both options built; client verified vs local server and under Deno; ⛔ real clip transcribed · ⛔ filler retention (both via `ops-selftest nvidia`, R3).
-**Database** — ✅ migrations applied to the hosted PG 17 project and verified there (14 tables, RLS on all, definer functions pinned, anon/authenticated privileges, Realtime tables, cron job) · ◐ test suites run on PG 16 (⛔ `supabase db reset` not run: no Docker images) · ◐ all tables/constraints/FKs/cascades/indexes · ◐ owner allow-list/trigger/sync, no client escalation · ◐ daily limit (IST, race-safe with real concurrency, upload+retake, no charge on failures) · ◐ policy versioning + in-progress exception · ◐ student + admin RPCs.
-**RLS** — ◐ RLS on all tables and matrix; ◐ allowed/denied for anon/A/B/blocked/admin, admin cannot read content or practise · ✅ Supabase advisors run on the hosted project: 0 errors; 3 INFO (RLS without policy on the three intentionally locked tables), 17 WARN (intentional `SECURITY DEFINER` RPCs, each checks `auth.uid()`/admin), 26 INFO unused indexes (no traffic yet).
-**R2** — ✅ private bucket `mock2pitch-dev` created · ⛔ CORS/token set by the owner but **unverified until `ops-selftest r2`** · ⛔ lifecycle not expressible with the key layout · ◐ upload/download/delete/prefix-delete flows (fake S3) · ◐ type/size/expiry enforcement (independent SigV4 verifier; real R2 enforcement is checked by `ops-selftest r2`) · ◐ PDF/JPEG/WAV server validation · ◐ metadata/object consistency and sweeper.
-**AI pipeline** — ◐ routing (unit + handler tests with fake NVIDIA; ⛔ live run) · ◐ deck processing idempotent/resumable (⛔ Realtime not observed) · ◐ session analysis/scoring/report/audio deletion/resume (⛔ Realtime not observed) · ◐ Zod + injection safeguards · ◐ usage log, `admin_ai_usage`, masked keys.
-**Account & admin** — ◐ account deletion (fake R2) · ◐ block/unblock, ratings, overview, sessions/day, AI usage, policy publish.
+## L. §15 checklist (✅ verified on the real stack · ◐ verified only against a stand-in · ⛔ not done / not verifiable yet)
+**Repository & environment** — ✅ existing state documented, nothing overwritten · ✅ `.gitignore`/`.env.example`, Zod env · ✅ no secrets in files/history.
+**Spikes** — ✅ NVIDIA models live (report model confirmed; slide model replaced after Maverick returned 410; 90B too slow; gemma/phi listed but 404) · ✅ vision inline limit measured (≥ 1.6 MB OK; rule set to 1 MB) · ✅ gRPC works in the Edge Runtime (needed the HTTP/2 client replacement) · ✅ real transcription · ◐ filler retention measured on a synthetic clip only (3/4); a human recording is still open.
+**Database** — ✅ migrations applied to the hosted PG 17 project and verified (14 tables, RLS on all, definer functions pinned, privileges, Realtime tables, cron job running) · ✅ real Auth admin API + `handle_new_user` trigger + daily-session consumption on PG 17 (pipeline check) · ◐ test suites (race, IST, policy, constraints, RPCs) run on PG 16 (⛔ `supabase db reset` not run: no Docker images).
+**RLS** — ◐ RLS matrix for anon/A/B/blocked/admin against the stand-in · ✅ Supabase advisors run on the hosted project: 0 errors; 3 INFO (RLS without policy on the three intentionally locked tables), 17 WARN (intentional `SECURITY DEFINER` RPCs, each checks `auth.uid()`/admin), 26 INFO unused indexes.
+**R2** — ✅ private bucket · ✅ signed Content-Type and Content-Length enforced by real R2 · ✅ CORS allow/deny · ✅ presigned PUT/GET, delete, prefix delete · ⛔ lifecycle rule not expressible with the key layout (sweeper covers it) · ◐ PDF/JPEG/WAV server validation, metadata consistency, sweeper (fake S3).
+**AI pipeline** — ✅ deck processing and session analysis on the real stack (synthetic user, one key per purpose) · ✅ usage log without prompts/keys · ✅ audio deleted after the report · ◐ key fallback/cooldown/credit paths (fake NVIDIA; only primary keys exist live) · ⛔ Realtime events not observed in a browser.
+**Account & admin** — ◐ account deletion (fake R2; the self-test cleanup exercised real cascade + R2 prefix delete) · ◐ block/unblock, ratings, overview, sessions/day, AI usage, policy publish · ⛔ owner promotion via real Google login.
 **Security & quality** — ✅ bundle clean (shell only; re-scan in Phase 2/3) · ✅ safe errors, logs tested · ✅ TS strict, lint, all suites run and re-run after fixes · ✅ docs · ◐ DB types generated by script.
 
 ## M. Next phase
-Phase 2 builds the UI from the (missing) design handoff against `api-contracts.md`; Phase 3 wires it. Before that, close the ⛔ items: apply to the hosted project, run advisors, create R2 bucket + CORS, supply keys, run `npm run spike:nvidia` and `RUN_LIVE_AI_TESTS=1 npm run test:live-ai` (and record the results in `spikes.md`), transcribe one real clip, confirm R2 enforces signed Content-Length, confirm Realtime events.
+Phase 2 builds the UI from the design handoff (still missing from the repo) against `api-contracts.md`. Before or during it: configure the Google provider and sign in as the owner (verifies admin promotion), add the Netlify origin to R2 CORS, set `NVIDIA_SLIDE_MODEL` to the 11B model in Supabase secrets if not done, record a human clip to check fillers, and watch Realtime in a browser.
 
 ## N. Phase 2 handoff
 - **Contract and types:** `docs/phase-1/api-contracts.md`, `types/database.ts`.

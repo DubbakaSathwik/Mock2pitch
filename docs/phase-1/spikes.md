@@ -23,7 +23,7 @@ Not yet covered: the Netlify origin (not in the CORS policy yet — add it when 
 | | `meta/llama-3.2-90b-vision-instruct` | first call exceeded 40 s (timeout) → too slow for 10 slides |
 | | `google/gemma-3-12b-it`, `microsoft/phi-3-vision-128k-instruct` | listed in `/v1/models` but **HTTP 404** when called: listed ≠ callable for this account |
 | inline image size | 11B vision model | images of 133 KB, 233 KB, 433 KB, 833 KB and **1.6 MB all accepted (HTTP 200)** → no 180 KB limit; `SLIDE_IMAGE_MAX_BYTES` raised to **1,000,000** |
-| speech_to_text | Parakeet via in-process gRPC | **fails inside the Supabase Edge Runtime**: `NotFound: path not found: …/functions/ops-selftest/riva/proto/riva_asr.proto` — the runtime does not expose bundled files to protobuf loaders by path. **Fix:** the protocol is now embedded as a generated JSON descriptor (`_shared/riva/descriptor.ts`, `scripts/gen-riva-descriptor.mjs`), so no file access is needed. Re-test pending deploy. |
+| speech_to_text | Parakeet via in-process gRPC | **fails inside the Supabase Edge Runtime**: `NotFound: path not found: …/functions/ops-selftest/riva/proto/riva_asr.proto` — the runtime does not expose bundled files to protobuf loaders by path. **Fix:** the protocol is now embedded as a generated JSON descriptor (`_shared/riva/descriptor.ts`, `scripts/gen-riva-descriptor.mjs`), so no file access is needed. Re-tested, see FINAL RESULTS below. |
 
 ### Pipeline on the real stack (synthetic user, run 1 — stopped early by the two NVIDIA findings above)
 | Step | Result |
@@ -72,3 +72,41 @@ Deviation from the prompt's Option B text: the Edge Function sends the **raw PCM
 ## Other facts established
 - `supabase db reset`/`supabase start` could not be run (no container images). Migrations were applied to a real PostgreSQL 16.15 server with a Supabase stand-in (`tests/db/supabase-stub.sql`): roles `anon/authenticated/service_role`, `auth.users/identities`, `auth.uid()`, Supabase's default privileges, and the `supabase_realtime` publication. **Re-run `supabase db reset` on a machine with Docker before trusting it as final.**
 - Real bug caught by the harness: with `search_path = ''`, `citext = citext` is not resolvable and silently falls back to case-sensitive text equality (owner emails in different case would not match). Fixed with `lower()` comparisons.
+
+## FINAL LIVE RESULTS (2026-10-14, later runs, same method)
+
+### Speech-to-text (Parakeet TDT 0.6B, `grpc.nvcf.nvidia.com:443`) — **works inside the Supabase Edge Runtime (Option A)**
+| Finding | Detail |
+|---|---|
+| `@grpc/grpc-js` channel in the Edge Runtime | **never connects**: `Deadline exceeded … Waiting for LB pick` (15 s probe and 45/90 s transcribe). Not a firewall: from the same function raw TLS with ALPN `h2`, `fetch` (401 without auth) and `node:http2` all connect to the host in 11–16 ms. |
+| Fix | `_shared/riva/client.ts` now sends the gRPC unary call itself over `node:http2` (POST, `content-type: application/grpc`, 5-byte message prefix, status read from trailers); protobufjs (via proto-loader, embedded descriptor) only (de)serialises messages. `grpc-js` is no longer used by the product code (only by the test mock server). |
+| Auth/config probe | `GetRivaSpeechRecognitionConfig` → 200 in ~1.1 s, model list `["parakeet-tdt-0.6b-en-US-asr-offline"]` |
+| Transcription | 3/3 HTTP 200, **p50 1.70 s, p95 1.71 s** for a 6 s clip |
+| Transcript | "So um we built the system, and it actually works basically 94% accuracy." |
+| Filler retention | script had 4 fillers (um, uh, actually, basically); **3 survived** (um, actually, basically; "uh" was dropped). Filler detection therefore works but under-counts slightly; a human recording is still the real test (the fixture is text-to-speech). |
+| Decision | **Option A (in-process) is the production path.** Option B (Next.js route) stays implemented but is not needed. |
+
+### Slide reading — `meta/llama-3.2-11b-vision-instruct`
+| Attempt | Valid JSON |
+|---|---|
+| original long-schema system prompt | 1/3 (answers in Markdown) |
+| **B: "you are a JSON API" system prompt + JSON shape as an example in the user turn** | **2/2, then 3/3 in the production code path**, p50 ≈ 8 s. **Adopted** (`prompts/slide-reading.ts`). |
+| C: `response_format: json_object` | 0/2 (parameter ignored by this model) |
+| D: `nvext.guided_json` | 0/1 (ignored) |
+| E: vision describes, report model structures | 2/2 but p50 ≈ 22 s per slide; not needed |
+The Zod schema also stays tolerant (null/missing text fields, `{point: "..."}` items, clamped lengths).
+
+### Pipeline on the real stack (synthetic user) — **all 7 steps pass**
+| Step | Result |
+|---|---|
+| create user via Auth admin API; trigger creates profile `student` | pass (0.9 s) |
+| `svc_complete_deck_upload`: 1 daily session consumed, 2 slide JPEGs in R2 | pass (1.5 s) |
+| `deck-process`: vision model reads both slides → deck `ready` | pass (8.9 s), key points 5 per slide |
+| session prepared with one recorded clip (slide 2 unrecorded) | pass |
+| `session-analyse`: transcribe → metrics → report → finalise → audio deleted | pass (**33.6 s** end to end, one attempt); transcript correct; `formula_matches: true`; unrecorded slide still has a row; scores coverage 10 / clarity 65 / timing 0 / fillers 10 → overall 22 (the clip is 6 s against a 30 s target and covers 1 of 5 points, so a low score is correct) |
+| usage log | slide_reading ×2, speech_to_text ×1, report_generation ×1, all `success`, no prompts/keys |
+| cleanup | pass: user cascade-deleted, R2 objects removed; afterwards 0 profiles/decks/sessions and 0 `selftest-` users remain |
+Note: the report call dominates the 34 s (`nvidia/nemotron-3-ultra-550b-a55b` with the full prompt); `session-analyse` runs in the background after a 202, so the student sees progress through Realtime, not a blocked request.
+
+### Image-size rule (final)
+Inline base64 images up to 1.6 MB were accepted by the vision endpoint, so the provisional 180 KB rule is retired: `SLIDE_IMAGE_MAX_BYTES = 1,000,000`, width 1280, quality 0.8 → 0.5, min width 800.

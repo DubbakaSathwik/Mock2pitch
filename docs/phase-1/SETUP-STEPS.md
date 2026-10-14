@@ -58,7 +58,7 @@ Paste this block (fill the blanks; the first group is non-secret and already cor
 ```
 R2_BUCKET=mock2pitch-dev
 APP_ALLOWED_ORIGINS=http://localhost:3000
-NVIDIA_SLIDE_MODEL=meta/llama-4-maverick-17b-128e-instruct
+NVIDIA_SLIDE_MODEL=meta/llama-3.2-11b-vision-instruct
 NVIDIA_REPORT_MODEL=nvidia/nemotron-3-ultra-550b-a55b
 NVIDIA_ASR_MODEL_LABEL=parakeet-tdt-0.6b-v2
 NVIDIA_KEY_RPM_SOFT_LIMIT=35
@@ -75,7 +75,7 @@ INTERNAL_FUNCTION_SECRET=
 (Add the `_FALLBACK_1/_2` keys if you have them. `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` are injected automatically — do **not** add them.)
 `INTERNAL_FUNCTION_SECRET`: any random string of 32+ characters (e.g. run `openssl rand -hex 32`, or use a password manager). Keep a copy: you need the same value in Part 5.
 
-Speech-to-text path: leave `INTERNAL_TRANSCRIBE_URL` **unset** to try the in-process gRPC option first (default). If speech-to-text fails inside Supabase, we switch to the Netlify route (set `INTERNAL_TRANSCRIBE_URL` + `INTERNAL_TRANSCRIBE_SECRET`) — recommended fallback, documented in `spikes.md`.
+Speech-to-text path: leave `INTERNAL_TRANSCRIBE_URL` **unset**. The in-process option was verified live in Supabase (see `spikes.md`); the Netlify route is only a fallback.
 
 ## Part 4 — Deploy the Edge Functions
 Pick one:
