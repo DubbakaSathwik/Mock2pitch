@@ -13,7 +13,8 @@ export function grpcAsr(o: { functionId: string; protoRoot: string; target?: str
         if (e.httpStatus === 504) throw new TransportError("timeout");
         return { status: e.httpStatus, headers: {}, body: null };
       }
-      throw new TransportError("network");
+      // keep a short, content-free reason (error class + message) so operators can diagnose runtime problems
+      throw new TransportError("network", `${(e as Error)?.name ?? "Error"}: ${String((e as Error)?.message ?? "").slice(0, 200)}`);
     }
   };
 }

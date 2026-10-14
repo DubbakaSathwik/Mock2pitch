@@ -25,7 +25,7 @@ export type TransportResult = {
 };
 export type Transport = (req: { key: string; slot: Slot; timeoutMs: number }) => Promise<TransportResult>;
 /** Transports signal timeouts/network failures by throwing this. */
-export class TransportError extends Error { constructor(public kind: "timeout" | "network") { super(kind); } }
+export class TransportError extends Error { constructor(public kind: "timeout" | "network", public detail?: string) { super(kind); } }
 
 export type RouteOptions<T> = {
   purpose: Purpose; model: string; keys: { slot: Slot; key: string }[]; store: RouterStore; transport: Transport;
