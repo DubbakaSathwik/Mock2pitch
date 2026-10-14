@@ -30,6 +30,11 @@ describe("slideReadingOut", () => {
     expect(r.time_weight).toBe(100);
     expect(slideReadingOut.parse({ title: "", slide_text: "", key_points: ["a"], suggested_script: "", time_weight: -4 }).time_weight).toBe(1);
   });
+  it("tolerates small-model quirks: missing/null text fields, string weights, key points as {point} objects", () => {
+    const r = slideReadingOut.parse({ title: null, key_points: [{ point: " Say hi " }, "Second"], time_weight: "25" });
+    expect(r).toEqual({ title: "", slide_text: "", key_points: ["Say hi", "Second"], suggested_script: "", time_weight: 25 });
+    expect(slideReadingOut.parse({ key_points: ["a"], time_weight: null }).time_weight).toBe(10);
+  });
   it("rejects missing key points / wrong types", () => {
     expect(slideReadingOut.safeParse({ title: "", slide_text: "", key_points: [], suggested_script: "", time_weight: 5 }).success).toBe(false);
     expect(slideReadingOut.safeParse({ title: 3 }).success).toBe(false);

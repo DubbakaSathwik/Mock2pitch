@@ -3,10 +3,10 @@ import { TransportError, type TransportResult } from "../nvidia/router.ts";
 import type { AsrCall } from "../deps.ts";
 import { recognizePcm, RivaError } from "../riva/client.ts";
 
-export function grpcAsr(o: { functionId: string; protoRoot: string; target?: string; insecure?: boolean }): AsrCall {
+export function grpcAsr(o: { functionId: string; target?: string; insecure?: boolean }): AsrCall {
   return async ({ pcm, key, timeoutMs }): Promise<TransportResult> => {
     try {
-      const t = await recognizePcm(pcm, { protoRoot: o.protoRoot, functionId: o.functionId, apiKey: key, timeoutMs, target: o.target, insecure: o.insecure });
+      const t = await recognizePcm(pcm, { functionId: o.functionId, apiKey: key, timeoutMs, target: o.target, insecure: o.insecure });
       return { status: 200, headers: {}, body: t, usage: { audioMs: Math.round(pcm.length / 32) } };
     } catch (e) {
       if (e instanceof RivaError) {

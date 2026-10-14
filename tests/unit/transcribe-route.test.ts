@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { POST } from "../../app/api/internal/transcribe/route";
-import { PROTO_ROOT, startMockRiva } from "../helpers/mock-riva";
+import { startMockRiva } from "../helpers/mock-riva";
 import { routeAsr } from "@shared/ai/asr-route.ts";
 
 const SECRET = "internal-secret-0123456789";
@@ -8,7 +8,7 @@ let srv: Awaited<ReturnType<typeof startMockRiva>>;
 beforeAll(async () => {
   srv = await startMockRiva((c) => (c.metadata["authorization"] === "Bearer bad" ? { code: 16, message: "no" } : [{ transcript: "route works um", words: [{ word: "route", start_time: 0, end_time: 10 }] }]));
   process.env.INTERNAL_TRANSCRIBE_SECRET = SECRET;
-  process.env.RIVA_PROTO_ROOT = PROTO_ROOT; process.env.RIVA_TARGET_OVERRIDE = srv.target; process.env.RIVA_INSECURE_TEST = "1";
+  process.env.RIVA_TARGET_OVERRIDE = srv.target; process.env.RIVA_INSECURE_TEST = "1";
 });
 afterAll(async () => { await srv.stop(); });
 

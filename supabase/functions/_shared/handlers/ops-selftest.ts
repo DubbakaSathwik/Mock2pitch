@@ -187,12 +187,19 @@ async function nvidiaCheck(deps: Deps, s: Steps, part: "all" | "models" | "repor
   if (slideKey && want("slide")) {
     await s.run("slide model: reads the fixture slide (3 calls, schema-valid)", async () => {
       const lat: number[] = []; let valid = 0; const statuses: number[] = []; let sample = ""; const loopStart = Date.now();
+      const rejected: { issues: string[]; raw_head: string }[] = [];
       for (let i = 0; i < 3 && Date.now() - loopStart < 80_000; i++) {
         const r = await chat(slideKey, env.NVIDIA_SLIDE_MODEL, [{ role: "system", content: SLIDE_READING_SYSTEM }, { role: "user", content: [{ type: "text", text: SLIDE_READING_USER }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${toBase64(jpeg)}` } }] }], { max_tokens: 1200 });
         lat.push(r.ms); statuses.push(r.status);
-        try { const out = slideReadingOut.parse(parseJsonLoose(chatText(r.json))); valid++; sample = out.title; } catch { /* invalid */ }
+        let rawText = "";
+        try { rawText = chatText(r.json); const out = slideReadingOut.parse(parseJsonLoose(rawText)); valid++; sample = out.title; }
+        catch (e) {
+          // synthetic fixture content only: safe to show a short head of the model's answer and which fields failed
+          const issues = (e as { issues?: { path: (string | number)[]; message: string }[] }).issues?.map((i) => `${i.path.join(".")}: ${i.message}`.slice(0, 80)) ?? [String((e as Error)?.message ?? "parse_failed").slice(0, 80)];
+          rejected.push({ issues: issues.slice(0, 4), raw_head: rawText.slice(0, 240) });
+        }
       }
-      return { ok: valid === statuses.length && statuses.length > 0, detail: { statuses, schema_valid: `${valid}/${statuses.length}`, p50_ms: pct(lat, 50), p95_ms: pct(lat, 95), sample_title: sample } };
+      return { ok: valid === statuses.length && statuses.length > 0, detail: { statuses, schema_valid: `${valid}/${statuses.length}`, p50_ms: pct(lat, 50), p95_ms: pct(lat, 95), sample_title: sample, ...(rejected.length ? { rejected: rejected.slice(0, 2) } : {}) } };
     });
     await s.run("slide model: inline image size probe (decides SLIDE_IMAGE_MAX_BYTES)", async () => {
       const results: Record<string, number> = {}; const loopStart = Date.now();

@@ -20,7 +20,7 @@ export function buildDeps(): Deps {
     ? routeAsr({ url: env.INTERNAL_TRANSCRIBE_URL, secret: env.INTERNAL_TRANSCRIBE_SECRET, functionId: env.NVIDIA_ASR_FUNCTION_ID })
     : async (req) => {
       const { grpcAsr } = await import("./ai/asr-grpc.ts"); // loaded only when speech-to-text actually runs
-      return grpcAsr({ functionId: env.NVIDIA_ASR_FUNCTION_ID, protoRoot: decodeURIComponent(new URL("./riva", import.meta.url).pathname) })(req);
+      return grpcAsr({ functionId: env.NVIDIA_ASR_FUNCTION_ID })(req);
     };
   return {
     env, admin, r2, asr, fetchFn: fetch, now: () => new Date(),

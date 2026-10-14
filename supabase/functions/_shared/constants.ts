@@ -8,14 +8,14 @@ export const DAILY_SESSION_LIMIT = 5;
 export const TIMEZONE = "Asia/Kolkata";
 
 // Slide image rule (D6/§3.2): the browser renders each PDF page to JPEG at this width/quality.
-// PROVISIONAL until the live vision spike (blocked: no NVIDIA access) confirms the inline payload limit. NVIDIA's hosted
-// vision endpoints have historically capped inline base64 images at roughly 180 KB, so the conservative value is used: the
-// client renders at <= max_width and lowers JPEG quality (to min quality) and then width until the file fits max_bytes.
+// Measured live (ops-selftest, 2026-10-14, meta/llama-3.2-11b-vision-instruct): inline base64 images of 133 KB, 233 KB,
+// 433 KB, 833 KB and 1.6 MB were ALL accepted (HTTP 200). 1 MB leaves headroom; the client renders at <= max_width and
+// lowers JPEG quality (to min quality) and then width until the file fits max_bytes.
 export const SLIDE_IMAGE_MAX_WIDTH = 1280;
 export const SLIDE_IMAGE_JPEG_QUALITY = 0.8;
 export const SLIDE_IMAGE_MIN_JPEG_QUALITY = 0.5;
 export const SLIDE_IMAGE_MIN_WIDTH = 800;
-export const SLIDE_IMAGE_MAX_BYTES = 180_000;
+export const SLIDE_IMAGE_MAX_BYTES = 1_000_000;
 
 // Audio rule (D8): 16 kHz mono 16-bit PCM WAV, <= ~10 min.
 export const AUDIO_SAMPLE_RATE = 16000;
