@@ -47,7 +47,7 @@ export class FakeAi {
     const forced = this.chatStatus[key];
     if (forced) return new Response(JSON.stringify({ error: "forced" }), { status: forced, headers: forced === 429 ? { "Retry-After": "30" } : {} });
     let content: unknown;
-    const structuring = String(body.messages[0]?.content ?? "").includes("PRESENT a slide out loud") && !Array.isArray(body.messages[1]?.content);
+    const structuring = String(body.messages[0]?.content ?? "").includes("sends ONE slide image") && !Array.isArray(body.messages[1]?.content);
     if (structuring) content = this.slideOut(++this.slideCounter, 1500);
     else if (body.model === "slide-model") {
       const imgPart = (body.messages.find((m: any) => Array.isArray(m.content))?.content ?? []).find((c: any) => c.type === "image_url");
