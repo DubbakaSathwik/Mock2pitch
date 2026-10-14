@@ -1,0 +1,29 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+# deps / build
+node_modules/
+.next/
+dist/
+build/
+coverage/
+logs/
+*.log
+.DS_Store
+next-env.d.ts
+
+# supabase
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+
+# tests
+playwright-report/
+test-results/
+
+# deploy
+.netlify/
+*.tsbuildinfo

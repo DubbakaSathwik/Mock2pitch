@@ -1,0 +1,56 @@
+{
+  "name": "mock2pitch",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:db": "vitest run tests/db",
+    "test:functions": "vitest run tests/functions",
+    "test:r2": "vitest run tests/r2",
+    "test:live-ai": "RUN_LIVE_AI_TESTS=1 vitest run tests/live",
+    "gen:fixtures": "node scripts/gen-fixtures.mjs",
+    "gen:types": "node scripts/gen-types.mjs",
+    "gen:types:cli": "supabase gen types typescript --local > types/database.ts",
+    "spike:nvidia": "tsx scripts/spike-nvidia.mjs",
+    "scan:bundle": "node scripts/scan-client-bundle.mjs"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.6",
+    "@grpc/proto-loader": "^0.7.15",
+    "@supabase/supabase-js": "^2.117.3",
+    "aws4fetch": "^1.0.20",
+    "next": "^16.4.0",
+    "pdf-lib": "^1.17.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.9",
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "deno": "^2.9.6",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
+    "pg": "^8.23.1",
+    "supabase": "^2.120.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.4"
+  }
+}
