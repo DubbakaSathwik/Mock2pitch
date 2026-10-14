@@ -1,0 +1,5 @@
+.wrap{max-width:520px;margin:60px auto;text-align:center}
+.tile{display:flex;justify-content:center;margin-bottom:18px}
+.bar{margin-bottom:24px}
+.actions{display:flex;gap:12px;justify-content:center}
+@container app (max-width:759.98px){.wrap{margin:24px auto}}

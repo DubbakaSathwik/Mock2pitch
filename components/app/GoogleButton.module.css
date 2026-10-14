@@ -1,0 +1,4 @@
+.g{display:inline-flex;align-items:center;justify-content:center;gap:12px;height:52px;padding:0 28px;border-radius:999px;border:1px solid var(--border-strong);background:#fff;cursor:pointer;font-family:var(--font-display);font-size:16px;color:var(--prussian-blue);box-shadow:var(--shadow-sm);transition:transform .12s,background .12s}
+.g:hover:not(:disabled){background:var(--marine-50)}
+.g:active:not(:disabled){transform:scale(.97)}
+.g:disabled{opacity:.7;cursor:progress}

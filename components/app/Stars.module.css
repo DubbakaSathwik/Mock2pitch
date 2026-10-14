@@ -1,0 +1,4 @@
+.row{display:inline-flex;gap:2px}
+.group{display:flex;gap:6px}
+.btn{border:0;background:none;cursor:pointer;padding:4px;min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px}
+.btn:disabled{cursor:default}

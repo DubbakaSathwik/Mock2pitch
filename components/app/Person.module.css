@@ -1,0 +1,13 @@
+.tile{position:relative;aspect-ratio:4/3;border-radius:12px;overflow:hidden;min-width:0}
+.svg{width:100%;height:100%;display:block}
+.nod{transform-origin:60px 90px;animation:nod var(--d) ease-in-out var(--delay) infinite}
+.blink{transform-origin:60px 41px;animation:blink var(--d) linear var(--delay) infinite}
+.label{position:absolute;left:6px;bottom:6px;padding:2px 8px;border-radius:99px;background:rgba(0,7,45,.62);color:#fff;font-family:var(--font-body);font-size:12px;white-space:nowrap;max-width:90%;overflow:hidden;text-overflow:ellipsis}
+.labelSm{padding:1px 6px;font-size:10px}
+.role{color:var(--icy-blue)}
+.mute{position:absolute;right:6px;top:6px;width:18px;height:18px;border-radius:99px;background:rgba(0,7,45,.55);color:#A6E1FA;display:flex;align-items:center;justify-content:center}
+.self{position:relative;aspect-ratio:4/3;border-radius:12px;background:#0A2472;display:flex;align-items:center;justify-content:center;min-width:0;box-sizing:border-box}
+.self .label{color:#fff}
+.self .mute{color:#fff}
+@keyframes nod{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(2px) rotate(-1.2deg)}60%{transform:translateY(0) rotate(1deg)}80%{transform:translateY(1.5px) rotate(0)}}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}

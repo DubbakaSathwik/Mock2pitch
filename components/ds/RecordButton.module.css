@@ -1,0 +1,4 @@
+.rb{border-radius:50%;border:none;cursor:pointer;background:var(--action-primary);color:var(--white);display:inline-flex;align-items:center;justify-content:center;box-shadow:0 0 0 8px rgba(14,107,168,.14);transition:all var(--dur-base) var(--ease-out)}
+.rb:hover:not(:disabled){background:var(--action-primary-hover)}
+.rb:disabled{opacity:.4;cursor:not-allowed}
+.rec{background:var(--danger-500);box-shadow:0 0 0 8px rgba(214,69,69,.18),0 0 0 18px rgba(214,69,69,.08)}

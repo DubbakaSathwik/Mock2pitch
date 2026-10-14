@@ -34,3 +34,24 @@ export function serverEnv() {
   if (typeof window !== "undefined") throw new Error("serverEnv() must not be called in the browser");
   return parse(serverSchema, { SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY, INTERNAL_TRANSCRIBE_SECRET: process.env.INTERNAL_TRANSCRIBE_SECRET }, "server");
 }
+
+// ---- Phase 2: data mode (which adapter the UI talks to) -------------------------------------------------------------
+const publicFlagsSchema = z.object({
+  NEXT_PUBLIC_DATA_MODE: z.enum(["mock", "supabase"]).default("mock"),
+  NEXT_PUBLIC_ALLOW_MOCK_IN_PROD: z.enum(["1", "0"]).default("0"),
+});
+
+/**
+ * `mock` (default in Phase 2) = in-memory adapter; `supabase` = real adapter (Phase 3).
+ * A production build with `mock` fails fast unless NEXT_PUBLIC_ALLOW_MOCK_IN_PROD=1 (used only for a review deploy).
+ */
+export function dataMode(): "mock" | "supabase" {
+  const f = parse(publicFlagsSchema, {
+    NEXT_PUBLIC_DATA_MODE: process.env.NEXT_PUBLIC_DATA_MODE || undefined,
+    NEXT_PUBLIC_ALLOW_MOCK_IN_PROD: process.env.NEXT_PUBLIC_ALLOW_MOCK_IN_PROD || undefined,
+  }, "public flags");
+  if (f.NEXT_PUBLIC_DATA_MODE === "mock" && process.env.NODE_ENV === "production" && f.NEXT_PUBLIC_ALLOW_MOCK_IN_PROD !== "1") {
+    throw new Error("NEXT_PUBLIC_DATA_MODE=mock is not allowed in a production build (set NEXT_PUBLIC_ALLOW_MOCK_IN_PROD=1 for a review deploy only).");
+  }
+  return f.NEXT_PUBLIC_DATA_MODE;
+}

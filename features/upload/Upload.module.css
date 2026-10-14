@@ -1,0 +1,7 @@
+.drop{cursor:pointer;border:2px dashed var(--border-strong);background:#fff;border-radius:20px;padding:64px 24px;text-align:center;transition:all .2s}
+.dragging{border-color:var(--bright-marine);background:var(--marine-50)}
+.progress{text-align:center}
+.tileRow{display:flex;justify-content:center;margin-bottom:14px}
+.err{margin-top:12px}
+.hint{margin-top:20px;display:flex;gap:12px;align-items:center}
+@container app (max-width:759.98px){.drop{padding:40px 20px}}

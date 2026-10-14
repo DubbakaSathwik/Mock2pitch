@@ -1,0 +1,10 @@
+.page{min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--prussian-blue);padding:24px;text-align:center;box-sizing:border-box}
+.box{max-width:440px;width:100%}
+.spinner{width:88px;height:88px;margin:0 auto 28px;border-radius:50%;border:6px solid rgba(166,225,250,.2);border-top-color:var(--icy-blue);animation:spin 1.1s linear infinite}
+.title{font-family:var(--font-display);font-weight:400;color:#fff;margin:0 0 10px;line-height:1.2}
+.text{font-family:var(--font-body);font-size:16px;line-height:1.6;color:var(--icy-blue);margin:0 0 24px}
+.err{font-family:var(--font-body);color:#ffb4b4;margin:0 0 16px}
+.track{height:6px;border-radius:6px;background:rgba(166,225,250,.18);overflow:hidden}
+.fill{height:100%;border-radius:6px;background:var(--icy-blue);transition:width 1s linear}
+.btns{display:flex;justify-content:center}
+@keyframes spin{to{transform:rotate(360deg)}}

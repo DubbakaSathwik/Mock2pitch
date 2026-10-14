@@ -1,0 +1,10 @@
+.grid{display:grid;gap:20px;align-items:start}
+.head{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+.model{font-family:var(--font-mono);font-size:12px;color:var(--ink-500);overflow-wrap:anywhere}
+.slots{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:14px}
+.slot{padding:12px;border-radius:12px;background:var(--ink-50);display:grid;gap:8px}
+.slotTop{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.slotName{font-family:var(--font-body);font-weight:700;font-size:14px;color:var(--text-strong);min-width:74px}
+.key{font-family:var(--font-mono);font-size:13px;color:var(--ink-500)}
+.badges{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.nums{display:flex;justify-content:space-between;font-family:var(--font-body);font-size:13px}

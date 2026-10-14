@@ -1,0 +1,4 @@
+.logo{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:400;line-height:1.2;white-space:nowrap}
+.mark{border-radius:50%;border:3px solid transparent;border-top-color:#2F5BF0;border-left-color:#2F5BF0;border-right-color:var(--pitch-violet);display:inline-flex;align-items:center;justify-content:center;transform:rotate(-20deg);flex-shrink:0}
+.play{width:0;height:0;border-left-style:solid;border-left-color:var(--pitch-violet);border-top-style:solid;border-top-color:transparent;border-bottom-style:solid;border-bottom-color:transparent;margin-left:2px;transform:rotate(20deg)}
+.two{color:var(--pitch-violet)}

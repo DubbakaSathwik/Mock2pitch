@@ -1,0 +1,6 @@
+.wrap{display:flex;flex-direction:column;gap:6px;font-family:var(--font-body)}
+.row{display:flex;justify-content:space-between;font-size:14px;color:var(--text-body)}
+.row b{color:var(--text-strong)}
+.track{background:var(--ink-100);overflow:hidden}
+.fill{height:100%;transition:width var(--dur-slow) var(--ease-out)}
+.marine{background:var(--bright-marine)}.success{background:var(--success-500)}.warning{background:var(--warning-500)}.danger{background:var(--danger-500)}.navy{background:var(--imperial-blue)}
