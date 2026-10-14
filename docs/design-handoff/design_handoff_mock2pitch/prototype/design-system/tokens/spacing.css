@@ -1,0 +1,13 @@
+:root{
+--space-0:0;--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-10:40px;--space-12:48px;--space-16:64px;--space-20:80px;
+--radius-xs:6px;--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:24px;--radius-pill:999px;
+--border-width:1px;
+--shadow-sm:0 1px 2px rgba(0,7,45,.06),0 1px 3px rgba(0,7,45,.08);
+--shadow-md:0 4px 12px rgba(0,7,45,.08),0 1px 3px rgba(0,7,45,.06);
+--shadow-lg:0 16px 40px rgba(0,7,45,.14),0 4px 12px rgba(0,7,45,.08);
+--shadow-record:0 0 0 6px rgba(214,69,69,.18);
+--ease-out:cubic-bezier(.22,.8,.3,1);/* @kind other */
+--ease-in-out:cubic-bezier(.65,0,.35,1);/* @kind other */
+--dur-fast:120ms;/* @kind other */--dur-base:200ms;/* @kind other */--dur-slow:360ms;/* @kind other */
+--content-max:1200px;--sidebar-w:248px;--topbar-h:64px;
+}
