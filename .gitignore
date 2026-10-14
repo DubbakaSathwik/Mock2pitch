@@ -27,3 +27,4 @@ test-results/
 # deploy
 .netlify/
 *.tsbuildinfo
+deno.lock
