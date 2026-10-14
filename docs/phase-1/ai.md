@@ -4,7 +4,7 @@
 | Purpose | Model env var | Keys (env) | Protocol |
 |---|---|---|---|
 | `slide_reading` | `NVIDIA_SLIDE_MODEL` | `NVIDIA_SLIDE_KEY_PRIMARY / _FALLBACK_1 / _FALLBACK_2` | OpenAI-compatible `chat/completions`, image as base64 data URL |
-| `speech_to_text` | `NVIDIA_ASR_FUNCTION_ID`, label `NVIDIA_ASR_MODEL_LABEL` | `NVIDIA_ASR_KEY_*` | Riva gRPC `Recognize` (offline) |
+| `speech_to_text` | `NVIDIA_ASR_FUNCTION_ID`, label `NVIDIA_ASR_MODEL_LABEL` | `NVIDIA_ASR_KEY_*` | Riva gRPC `Recognize` (offline), sent as a direct HTTP/2 call (grpc-js does not connect in the Edge Runtime) |
 | `report_generation` | `NVIDIA_REPORT_MODEL` | `NVIDIA_REPORT_KEY_*` | OpenAI-compatible `chat/completions` |
 
 One model per purpose, used by all three keys of that purpose (D9). A slot whose env var is empty is skipped. **The models in `.env.example` are defaults to try first; none has been verified live** (see `spikes.md`). Keys never reach the browser, logs, responses or the database; the admin sees only `••••••••<last4>` via `admin-ai-keys`.
@@ -20,7 +20,7 @@ Candidates are tried primary → fallback_1 → fallback_2. A slot is skipped if
 | 401 / 403 | cooldown 10 min, `last_error_code='auth'`; next slot (shown in `admin_ai_usage`) |
 | 400 / 422 | log `bad_request`; **do not rotate**; fail the step |
 | nothing eligible | `AI_BUSY` (HTTP 429, retryable) |
-Timeouts: slide 45 s, ASR 60 s per ≤ 60 s chunk, report 90 s (unmeasured defaults). Concurrency: 3 slides / 3 clips at once. Every attempt writes one `ai_usage_log` row (purpose, slot, model, outcome, status, latency, tokens or audio ms, user/deck/session ids). **Never** prompt text, transcripts or keys.
+Timeouts: slide 45 s, ASR 60 s per ≤ 60 s chunk, report 90 s. Measured live: slide ≈ 8 s, ASR ≈ 1.7 s per 6 s clip, report up to ≈ 30 s for the full prompt. Concurrency: 3 slides / 3 clips at once. Every attempt writes one `ai_usage_log` row (purpose, slot, model, outcome, status, latency, tokens or audio ms, user/deck/session ids). **Never** prompt text, transcripts or keys.
 
 ## Credit accounting
 No NVIDIA balance API exists. "Used" = billable outcomes (`success`, `invalid_output`) since the slot's `credit_period_start`; "limit" = `ai_key_slots.credit_limit` (seeded 1000, editable with `admin_set_credit_limit`, which can also start a new period for a fresh key). `running_low` = > 75 % used. `NVIDIA_KEY_DEFAULT_CREDIT_LIMIT` is validated but the DB default (1000) is what seeds slots.
@@ -42,4 +42,4 @@ See `architecture.md`. Idempotency: slides upsert on `(deck_id, slide_index)`; t
 Weights 35/25/20/20; timing full-score band ±5 %, zero at ±50 %; filler penalty 15 points per filler/min with a 0.5 min floor; filler regex `\b(um|uh|like|basically|you know|actually)\b` (case-insensitive). These are defaults, not owner-specified.
 
 ## Filler-detection accuracy
-**Not measured** (needs live ASR and a human recording). Parakeet-class models often normalise away "um/uh"; if the live spike shows that, the filler score will under-count and the owner may wish to weight it lower — the prompt forbids changing the weights, so it is documented only.
+**Measured on a synthetic (text-to-speech) clip:** 3 of 4 spoken fillers survived ("uh" was dropped), so the filler score can under-count slightly. A human recording is still needed for the real figure. The weights are unchanged; this is documented only.

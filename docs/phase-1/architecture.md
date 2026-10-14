@@ -9,7 +9,7 @@ flowchart LR
   F -- service role, after authorisation --> S
   F -- SigV4: HEAD/GET/DELETE/list + presign --> R
   F -- chat/completions, 3 purposes x 3 keys --> N[NVIDIA hosted models]
-  F -- Riva gRPC (in-process OR via Next internal route) --> N
+  F -- Riva gRPC over HTTP/2 (in-process; Next route is a fallback) --> N
   C[pg_cron + pg_net every 15 min] -- x-internal-secret --> F
   S -- Realtime: decks, practice_sessions --> B
 ```

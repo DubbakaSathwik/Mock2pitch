@@ -47,7 +47,7 @@ Validates the stored file. On success **consumes one daily session** and returns
 ```json
 { "ok": true, "data": { "deck_id": "uuid", "page_count": 8,
   "images": [ { "slide_index": 0, "upload": { "url": "…", "method": "PUT", "headers": { "Content-Type": "image/jpeg" }, "expires_at": "…" } } ],
-  "rules": { "max_width": 1280, "min_width": 800, "jpeg_quality": 0.8, "min_jpeg_quality": 0.5, "max_bytes": 180000, "content_type": "image/jpeg" } } }
+  "rules": { "max_width": 1280, "min_width": 800, "jpeg_quality": 0.8, "min_jpeg_quality": 0.5, "max_bytes": 1000000, "content_type": "image/jpeg" } } }
 ```
 Idempotent while the deck is `awaiting_images` (re-issues URLs). Failures delete the object and set `decks.status='failed'` with the code in `decks.error_code`; nothing is consumed.
 
