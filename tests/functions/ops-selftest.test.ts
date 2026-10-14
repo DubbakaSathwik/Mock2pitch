@@ -46,7 +46,7 @@ describe("ops-selftest (operator diagnostics)", () => {
     expect(step(r, "report model: 5").detail.statuses).toEqual([200, 200, 200, 200, 200]);
     expect(step(r, "slide model: reads").detail.schema_valid).toBe("3/3");
     expect(Object.keys(step(r, "size probe").detail.http_status_by_image_size).length).toBeGreaterThan(0);
-    expect(step(r, "speech-to-text").detail).toMatchObject({ audio_seconds: 6, fillers_in_script: 4 });
+    expect(step(r, "over gRPC").detail).toMatchObject({ audio_seconds: 6, fillers_in_script: 4 });
     for (const secret of ["slide-k0", "asr-k0", "rep-k0", "Bearer"]) expect(r.text).not.toContain(secret);
   });
 
@@ -59,7 +59,7 @@ describe("ops-selftest (operator diagnostics)", () => {
     expect(slide.json.data.steps.map((s: any) => s.name.split(":")[0])).toEqual(["slide model", "slide model"]);
     expect(env.ai.asrCalls.length).toBe(0);
     const asr = await run("nvidia_asr");
-    expect(asr.json.data.steps.length).toBe(1);
+    expect(asr.json.data.steps.length).toBe(2);
     const report = await run("nvidia_report");
     expect(report.json.data.steps.length).toBe(2);
     expect(report.json.data.ok && slide.json.data.ok && asr.json.data.ok && models.json.data.ok).toBe(true);
@@ -106,12 +106,29 @@ describe("ops-selftest (operator diagnostics)", () => {
     expect(env.ai.chatCalls.some((c) => c.model === "override-vision")).toBe(true);
   });
 
+  it("slide strategies check tries each way of getting clean JSON and reports per-strategy validity", async () => {
+    const r = await run("nvidia_slide_strategies");
+    const names = r.json.data.steps.map((s: any) => s.name);
+    expect(names).toEqual([
+      "slide strategy B: JSON-first prompt with an example", "slide strategy C: response_format json_object",
+      "slide strategy D: nvext guided_json schema", "slide strategy E: vision describes, text model structures (json_object)",
+    ]);
+    expect(r.json.data.steps.every((s: any) => s.ok && /^\d\/\d$/.test(s.detail.valid))).toBe(true);
+  });
+
+  it("asr: the gRPC probe runs first and a longer timeout can be requested", async () => {
+    const r = await env.call(opsSelftest, { check: "nvidia_asr", asr_timeout_ms: 90_000 }, { internal: true });
+    expect(r.json.data.steps.map((s: any) => s.name.split(":")[0])).toEqual(["speech-to-text", "speech-to-text over gRPC (3 calls) and filler retention"]);
+    expect(r.json.data.steps[0].detail.models).toEqual(["parakeet-fake"]);
+    expect((await env.call(opsSelftest, { check: "nvidia_asr", asr_timeout_ms: 1000 }, { internal: true })).status).toBe(400);
+  });
+
   it("a speech-to-text runtime failure is reported with its real reason instead of a bare 'network'", async () => {
     const original = env.deps.asr;
     env.deps.asr = async () => { throw new TransportError("network", "Error: ENOENT riva_asr.proto"); };
     const r = await run("nvidia");
     env.deps.asr = original;
-    const asr = step(r, "speech-to-text");
+    const asr = step(r, "over gRPC");
     expect(asr.ok).toBe(false);
     expect(asr.detail).toMatchObject({ transport_error: "network", reason: "Error: ENOENT riva_asr.proto" });
   });
