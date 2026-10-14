@@ -218,6 +218,7 @@ async function nvidiaCheck(deps: Deps, s: Steps, part: "all" | "models" | "repor
 
   const asrKey = keysFor(env, "speech_to_text")[0]?.key;
   if (asrKey && want("asr")) {
+    await netProbes(s);
     if (deps.asrProbe) {
       await s.run("speech-to-text: gRPC channel + auth probe (GetRivaSpeechRecognitionConfig, 15 s)", async () => {
         const t0 = Date.now();
@@ -393,4 +394,34 @@ async function slideStrategies(deps: Deps, s: Steps, slideKey: string, reportKey
       return { status: d.status === 200 ? t.status : d.status, ms: Date.now() - t0, json: t.json, total_ms: Date.now() - t0 };
     });
   }
+}
+
+// ---------------------------------------------------------------- raw network reachability of the Riva gRPC host (Edge Runtime only)
+async function netProbes(s: Steps) {
+  const D = (globalThis as { Deno?: { connectTls?: (o: Record<string, unknown>) => Promise<{ handshake(): Promise<{ alpnProtocol?: string | null }>; close(): void }> } }).Deno;
+  if (!D?.connectTls) return; // not the Edge Runtime (unit tests)
+  const host = "grpc.nvcf.nvidia.com";
+  const within = <T>(p: Promise<T>, ms: number) => Promise.race([p, new Promise<never>((_, rej) => setTimeout(() => rej(new Error(`timeout ${ms}ms`)), ms))]);
+  await s.run(`network: raw TLS connect to ${host}:443 with ALPN h2 (8 s)`, async () => {
+    const t0 = Date.now();
+    try { const c = await within(D.connectTls!({ hostname: host, port: 443, alpnProtocols: ["h2"] }), 8000); const hs = await within(c.handshake(), 8000); c.close(); return { ok: true, detail: { alpn: hs.alpnProtocol ?? null, ms: Date.now() - t0 } }; }
+    catch (e) { return { ok: false, detail: { error: String((e as Error)?.message ?? "").slice(0, 160), ms: Date.now() - t0 } }; }
+  });
+  await s.run(`network: fetch https://${host}/ (8 s)`, async () => {
+    const t0 = Date.now();
+    try { const r = await within(fetch(`https://${host}/`), 8000); return { ok: true, detail: { status: r.status, ms: Date.now() - t0 } }; }
+    catch (e) { return { ok: false, detail: { error: String((e as Error)?.message ?? "").slice(0, 160), ms: Date.now() - t0 } }; }
+  });
+  await s.run(`network: node:http2 session to ${host} (8 s)`, async () => {
+    const t0 = Date.now();
+    try {
+      const http2 = await import("node:http2");
+      const out = await within(new Promise<string>((res, rej) => {
+        const c = http2.connect(`https://${host}`);
+        c.once("connect", () => { c.close(); res("connected"); });
+        c.once("error", (e: Error) => rej(e));
+      }), 8000);
+      return { ok: true, detail: { result: out, ms: Date.now() - t0 } };
+    } catch (e) { return { ok: false, detail: { error: String((e as Error)?.message ?? "").slice(0, 160), ms: Date.now() - t0 } }; }
+  });
 }
