@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createEnv, SECRET, type Env_ } from "./harness";
 import { opsSelftest } from "@shared/handlers/ops-selftest.ts";
+import { TransportError } from "@shared/nvidia/router.ts";
 
 let env: Env_;
 beforeAll(async () => { env = await createEnv(); });
@@ -76,5 +77,27 @@ describe("ops-selftest (operator diagnostics)", () => {
     expect(step(r, "deck-process").ok).toBe(false);
     expect(step(r, "cleanup").ok).toBe(true);
     expect((await env.db.admin.query("select count(*)::int n from public.decks where title='Selftest deck'")).rows[0].n).toBe(0);
+  });
+
+  it("model overrides apply to every check, are validated, and never change the stored configuration", async () => {
+    const r = await env.call(opsSelftest, { check: "env", slide_model: "meta/llama-3.2-90b-vision-instruct", report_model: "nvidia/some-model" }, { internal: true });
+    expect(step(r, "models").detail).toMatchObject({ slide_reading: "meta/llama-3.2-90b-vision-instruct", report_generation: "nvidia/some-model" });
+    expect((await env.call(opsSelftest, { check: "env", slide_model: "bad model; drop table" }, { internal: true })).status).toBe(400);
+    const again = await run("env");
+    expect(step(again, "models").detail.slide_reading).toBe("slide-model");
+    // the override reaches the NVIDIA calls themselves
+    env.ai.chatCalls.length = 0;
+    await env.call(opsSelftest, { check: "nvidia", slide_model: "override-vision" }, { internal: true });
+    expect(env.ai.chatCalls.some((c) => c.model === "override-vision")).toBe(true);
+  });
+
+  it("a speech-to-text runtime failure is reported with its real reason instead of a bare 'network'", async () => {
+    const original = env.deps.asr;
+    env.deps.asr = async () => { throw new TransportError("network", "Error: ENOENT riva_asr.proto"); };
+    const r = await run("nvidia");
+    env.deps.asr = original;
+    const asr = step(r, "speech-to-text");
+    expect(asr.ok).toBe(false);
+    expect(asr.detail).toMatchObject({ transport_error: "network", reason: "Error: ENOENT riva_asr.proto" });
   });
 });

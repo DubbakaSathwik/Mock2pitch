@@ -1,5 +1,39 @@
 # Technical spikes (§3) — status and results
 
+## LIVE RESULTS (2026-10-14, run inside the Supabase Edge Runtime by `ops-selftest`; the sandbox itself still cannot reach NVIDIA/R2)
+
+### Cloudflare R2 — real bucket `mock2pitch-dev`: **7/7 checks pass**
+| Check | Result |
+|---|---|
+| server-side put / head / get / delete | pass |
+| presigned PUT with the exact `Content-Type` + `Content-Length` | accepted (200) |
+| presigned PUT with a **different Content-Type** | **rejected (403), no object created** → signed type is enforced by R2 |
+| presigned PUT with a **longer body than the signed Content-Length** | **rejected (403), no object created** → signed length is enforced by R2 (this was the open question) |
+| presigned GET; same URL without the signature | 200; unsigned → 400 |
+| CORS preflight | `http://localhost:3000` → 204 with `Access-Control-Allow-Origin: http://localhost:3000`; `https://evil.example` → 403, no allow-origin |
+| prefix delete | 4 objects removed, 0 left |
+Not yet covered: the Netlify origin (not in the CORS policy yet — add it when the site exists).
+
+### NVIDIA — keys valid, 80 models listed (`GET /v1/models` is public; keys: 1 primary per purpose configured)
+| Purpose | Model | Result |
+|---|---|---|
+| report_generation | `nvidia/nemotron-3-ultra-550b-a55b` | **exact id confirmed (listed)**. 5/5 calls HTTP 200, **p50 1.2 s, p95 2.0 s** (small prompt), token-usage fields present, `response_format: json_object` **accepted (200)** |
+| slide_reading | `meta/llama-4-maverick-17b-128e-instruct` | **RETIRED**: not in `/v1/models`, every call returns **HTTP 410 Gone**. Must be replaced. |
+| speech_to_text | Parakeet via in-process gRPC | first run failed with a generic "network" error after 80 ms; `ops-selftest` had no bundled `.proto` files, so the cause was not isolated. Re-test after the self-test fix (reports the real reason). |
+
+### Pipeline on the real stack (synthetic user, run 1 — stopped early by the two NVIDIA findings above)
+| Step | Result |
+|---|---|
+| create user through the real Auth admin API; `handle_new_user` trigger creates the profile (`student`) | pass |
+| `svc_complete_deck_upload` on Postgres 17: one daily session consumed atomically, image rows created; slide JPEGs written to R2 | pass |
+| `deck-process` | fails as designed: retired slide model → `decks.status='failed'`, `error_code='ai_unavailable'` (no extra session consumed, key slot flagged `http_410`) |
+| `session-analyse` | fails as designed: speech-to-text error → `practice_sessions.status='failed'`, `error_code='ai_unavailable'`, audio kept |
+| cleanup | pass: 0 users, profiles, decks, sessions, files left; the 3 R2 objects removed; AI usage rows kept with `user_id` null |
+
+Vision-capable models present in the live list: `meta/llama-3.2-90b-vision-instruct`, `meta/llama-3.2-11b-vision-instruct`, `microsoft/phi-3-vision-128k-instruct`, `google/gemma-3-12b-it`, `google/gemma-3-4b-it`, `nvidia/vila`, `nvidia/neva-22b`, `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning` (the previously listed fallback `nvidia/nemotron-nano-12b-v2-vl` is **not** present). Also listed: `nvidia/nemotron-3-super-120b-a12b`, `nvidia/nemotron-3.5-lightning-30b-a3b`, `nvidia/llama-3.1-nemotron-ultra-253b-v1`.
+
+---
+
 > **Honest summary:** every spike that needs the public internet to NVIDIA or Cloudflare is **BLOCKED** in this environment (egress to `integrate.api.nvidia.com` is denied; no NVIDIA keys, no R2 token). What *could* be verified without them was verified and is listed separately. The scripts to finish the live checks are ready: `npm run spike:nvidia` and `RUN_LIVE_AI_TESTS=1 npm run test:live-ai`.
 
 ## 3.2 NVIDIA model verification — BLOCKED (needs keys + network)

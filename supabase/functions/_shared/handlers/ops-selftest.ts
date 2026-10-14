@@ -18,7 +18,8 @@ import { fromB64, SLIDE_JPEG_B64, SPEECH_TEXT, SPEECH_WAV_B64 } from "../selftes
 import { deckProcess } from "./deck-process.ts";
 import { sessionAnalyse } from "./session-analyse.ts";
 
-const bodySchema = z.object({ check: z.enum(["env", "r2", "nvidia", "pipeline"]) }).strict();
+const modelId = z.string().regex(/^[\w./:-]{3,100}$/);
+const bodySchema = z.object({ check: z.enum(["env", "r2", "nvidia", "pipeline"]), slide_model: modelId.optional(), report_model: modelId.optional() }).strict();
 type Step = { name: string; ok: boolean; ms: number; detail?: unknown };
 
 class Steps {
@@ -40,12 +41,15 @@ const pct = (xs: number[], p: number) => { const s = [...xs].sort((a, b) => a - 
 
 export const opsSelftest = api(async (ctx) => {
   if (!isInternal(ctx.req, ctx.deps)) throw new AppError("forbidden", 403, "You can't do that.");
-  const { check } = await readBody(ctx.req, bodySchema);
+  const body = await readBody(ctx.req, bodySchema);
+  const { check } = body;
+  // Optional model overrides let an operator try a candidate model without changing the stored secrets.
+  const deps: Deps = { ...ctx.deps, env: { ...ctx.deps.env, ...(body.slide_model ? { NVIDIA_SLIDE_MODEL: body.slide_model } : {}), ...(body.report_model ? { NVIDIA_REPORT_MODEL: body.report_model } : {}) } };
   const s = new Steps();
-  if (check === "env") await envCheck(ctx, s);
-  else if (check === "r2") await r2Check(ctx.deps, s);
-  else if (check === "nvidia") await nvidiaCheck(ctx.deps, s);
-  else await pipelineCheck(ctx.deps, s);
+  if (check === "env") await envCheck({ ...ctx, deps }, s);
+  else if (check === "r2") await r2Check(deps, s);
+  else if (check === "nvidia") await nvidiaCheck(deps, s);
+  else await pipelineCheck(deps, s);
   return ok({ check, ok: s.allOk, steps: s.steps });
 });
 
@@ -58,7 +62,7 @@ async function envCheck(ctx: Ctx, s: Steps) {
     for (const p of PURPOSES) detail[p] = keysFor(env, p).map((k) => k.slot);
     return { ok: PURPOSES.every((p) => (detail[p] ?? []).includes("primary")), detail };
   });
-  await s.run("models", async () => ({ ok: true, detail: { slide_reading: env.NVIDIA_SLIDE_MODEL, report_generation: env.NVIDIA_REPORT_MODEL, speech_to_text: env.NVIDIA_ASR_MODEL_LABEL } }));
+  await s.run("models (after any override)", async () => ({ ok: true, detail: { slide_reading: env.NVIDIA_SLIDE_MODEL, report_generation: env.NVIDIA_REPORT_MODEL, speech_to_text: env.NVIDIA_ASR_MODEL_LABEL } }));
   await s.run("database reachable and migrated", async () => {
     const { data, error } = await ctx.deps.admin.from("ai_key_slots").select("id");
     if (error) throw new Error("db_query_failed");
@@ -202,7 +206,9 @@ async function nvidiaCheck(deps: Deps, s: Steps) {
       const lat: number[] = []; const statuses: number[] = []; let text = "";
       for (let i = 0; i < 3; i++) {
         const t0 = Date.now();
-        const r = await deps.asr({ pcm, key: asrKey, timeoutMs: 60_000 });
+        let r;
+        try { r = await deps.asr({ pcm, key: asrKey, timeoutMs: 60_000 }); }
+        catch (e) { return { ok: false, detail: { transport_error: (e as { kind?: string }).kind ?? "unknown", reason: (e as { detail?: string }).detail ?? String((e as Error)?.message ?? "").slice(0, 200), calls_ok_before_failure: statuses.filter((x) => x === 200).length } }; }
         lat.push(Date.now() - t0); statuses.push(r.status);
         if (r.status === 200) text = (r.body as { text: string }).text;
       }
