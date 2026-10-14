@@ -38,7 +38,9 @@ export class FakeAi {
   private slideCounter = 0;
   invalidReportOnce = false;
 
-  fetchFn: typeof fetch = async (_url, init) => {
+  fetchFn: typeof fetch = async (url, init) => {
+    if (String(url).endsWith("/v1/models")) return new Response(JSON.stringify({ data: [{ id: "slide-model" }, { id: "report-model" }] }), { status: 200 });
+    if (!init || !(init as RequestInit).body || (init as RequestInit).method === "PUT" || (init as RequestInit).method === "GET" || String(url).includes("r2") || String(url).includes("127.0.0.1")) return fetch(url, init); // storage traffic goes to the fake S3
     const body = JSON.parse(String((init as RequestInit).body));
     const key = String(((init as RequestInit).headers as Record<string, string>).Authorization).replace("Bearer ", "");
     this.chatCalls.push({ model: body.model, key, messages: body.messages });
@@ -46,14 +48,16 @@ export class FakeAi {
     if (forced) return new Response(JSON.stringify({ error: "forced" }), { status: forced, headers: forced === 429 ? { "Retry-After": "30" } : {} });
     let content: unknown;
     if (body.model === "slide-model") {
-      const b64 = String(body.messages[1].content[1].image_url.url).split(",")[1] ?? "";
+      const imgPart = (body.messages.find((m: any) => Array.isArray(m.content))?.content ?? []).find((c: any) => c.type === "image_url");
+      const b64 = String(imgPart?.image_url?.url ?? "").split(",")[1] ?? "";
       content = this.slideOut(++this.slideCounter, Buffer.from(b64, "base64").length);
     }
     else {
       if (this.invalidReportOnce) { this.invalidReportOnce = false; content = "this is not json"; }
       else {
-        const slides = JSON.parse(body.messages[1].content).slides as any[];
-        content = this.reportOut ? this.reportOut(slides) : {
+        let slides: any[] | null = null;
+        try { slides = JSON.parse(body.messages[1].content).slides as any[]; } catch { /* a plain ping */ }
+        content = !slides ? { ok: true } : this.reportOut ? this.reportOut(slides) : {
           slides: slides.map((s) => ({ slide_index: s.slide_index, key_points_covered: s.transcript.length > 20 ? s.key_points.map((_: string, i: number) => i) : [], key_points_missed: [], off_topic_quotes: ["quote that was never said"], feedback: "ok" })),
           clarity_score: 80, headline: "Strong start; tighten the middle", top_fixes: ["Slide 1: trim 10 seconds", "Slide 2: fewer fillers (3)", "Slide 3: add the missed point"], did_well: ["Slide 1: clear opening", "Slide 2: good pace", "Slide 3: strong close"],
         };
@@ -77,7 +81,7 @@ export type Env_ = Awaited<ReturnType<typeof createEnv>>;
 
 export async function createEnv() {
   const db = await createDb();
-  const s3 = await startFakeS3({ accessKeyId: testEnv.R2_ACCESS_KEY_ID, secretAccessKey: testEnv.R2_SECRET_ACCESS_KEY, bucket: testEnv.R2_BUCKET });
+  const s3 = await startFakeS3({ accessKeyId: testEnv.R2_ACCESS_KEY_ID, secretAccessKey: testEnv.R2_SECRET_ACCESS_KEY, bucket: testEnv.R2_BUCKET, corsOrigins: [ORIGIN, "https://m2p.netlify.app"] });
   const ai = new FakeAi();
   const r2 = new R2({ accountId: "acct", accessKeyId: testEnv.R2_ACCESS_KEY_ID, secretAccessKey: testEnv.R2_SECRET_ACCESS_KEY, bucket: testEnv.R2_BUCKET, endpoint: s3.endpoint });
   const tokens = new Map<string, string>(); // jwt -> uid

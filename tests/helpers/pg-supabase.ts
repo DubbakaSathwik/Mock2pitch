@@ -134,6 +134,12 @@ export function makePgSupabase(pool: Pool, principal: Principal, opts: { users?:
         return uid ? { data: { user: { id: uid } }, error: null } : { data: { user: null }, error: { message: "invalid jwt" } };
       },
       admin: {
+        createUser: async (a: { email: string; user_metadata?: Record<string, unknown> }) => {
+          try {
+            const r = await pool.query("insert into auth.users(email, email_confirmed_at, raw_user_meta_data) values ($1, now(), $2) returning id", [a.email, JSON.stringify(a.user_metadata ?? {})]);
+            return { data: { user: { id: r.rows[0].id as string } }, error: null };
+          } catch (e: any) { return { data: { user: null }, error: { message: e.message } }; }
+        },
         deleteUser: async (id: string) => {
           try { await opts.onDeleteUser?.(id); return { data: null, error: null }; } catch (e: any) { return { data: null, error: { message: e.message } }; }
         },

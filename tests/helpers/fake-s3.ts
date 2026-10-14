@@ -8,7 +8,7 @@ const rfc3986 = (s: string) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => 
 
 export type FakeS3 = Awaited<ReturnType<typeof startFakeS3>>;
 
-export async function startFakeS3(o: { accessKeyId: string; secretAccessKey: string; bucket: string; now?: () => number; failDelete?: (key: string) => boolean }) {
+export async function startFakeS3(o: { accessKeyId: string; secretAccessKey: string; bucket: string; now?: () => number; failDelete?: (key: string) => boolean; corsOrigins?: string[] }) {
   const store = new Map<string, { body: Buffer; contentType: string }>();
   const requests: { method: string; path: string; ok: boolean; reason?: string }[] = [];
   const now = o.now ?? (() => Date.now());
@@ -64,6 +64,13 @@ export async function startFakeS3(o: { accessKeyId: string; secretAccessKey: str
     const body = Buffer.concat(chunks);
     const log = (ok: boolean, reason?: string) => requests.push({ method: req.method!, path: url.pathname, ok, reason });
     const deny = (reason: string) => { log(false, reason); res.writeHead(403, { "Content-Type": "application/xml" }); res.end(`<Error><Code>${reason}</Code></Error>`); };
+    if (req.method === "OPTIONS") { // CORS preflight carries no signature
+      const origin = String(req.headers["origin"] ?? "");
+      const allowed = !!origin && (o.corsOrigins ?? []).includes(origin);
+      log(allowed);
+      res.writeHead(allowed ? 200 : 403, allowed ? { "Access-Control-Allow-Origin": origin, "Access-Control-Allow-Methods": "PUT, GET, HEAD" } : {});
+      return void res.end();
+    }
     const bad = verify(req, url);
     if (bad) return deny(bad);
     const prefix = `/${o.bucket}`;
