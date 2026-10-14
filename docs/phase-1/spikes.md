@@ -21,6 +21,15 @@ Not yet covered: the Netlify origin (not in the CORS policy yet — add it when 
 | slide_reading | `meta/llama-4-maverick-17b-128e-instruct` | **RETIRED**: not in `/v1/models`, every call returns **HTTP 410 Gone**. Must be replaced. |
 | speech_to_text | Parakeet via in-process gRPC | first run failed with a generic "network" error after 80 ms; `ops-selftest` had no bundled `.proto` files, so the cause was not isolated. Re-test after the self-test fix (reports the real reason). |
 
+### Pipeline on the real stack (synthetic user, run 1 — stopped early by the two NVIDIA findings above)
+| Step | Result |
+|---|---|
+| create user through the real Auth admin API; `handle_new_user` trigger creates the profile (`student`) | pass |
+| `svc_complete_deck_upload` on Postgres 17: one daily session consumed atomically, image rows created; slide JPEGs written to R2 | pass |
+| `deck-process` | fails as designed: retired slide model → `decks.status='failed'`, `error_code='ai_unavailable'` (no extra session consumed, key slot flagged `http_410`) |
+| `session-analyse` | fails as designed: speech-to-text error → `practice_sessions.status='failed'`, `error_code='ai_unavailable'`, audio kept |
+| cleanup | pass: 0 users, profiles, decks, sessions, files left; the 3 R2 objects removed; AI usage rows kept with `user_id` null |
+
 Vision-capable models present in the live list: `meta/llama-3.2-90b-vision-instruct`, `meta/llama-3.2-11b-vision-instruct`, `microsoft/phi-3-vision-128k-instruct`, `google/gemma-3-12b-it`, `google/gemma-3-4b-it`, `nvidia/vila`, `nvidia/neva-22b`, `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning` (the previously listed fallback `nvidia/nemotron-nano-12b-v2-vl` is **not** present). Also listed: `nvidia/nemotron-3-super-120b-a12b`, `nvidia/nemotron-3.5-lightning-30b-a3b`, `nvidia/llama-3.1-nemotron-ultra-253b-v1`.
 
 ---
