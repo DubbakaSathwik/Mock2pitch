@@ -105,3 +105,16 @@ The cron job already exists; it starts working as soon as these two rows exist.
 1. Reply with what you finished (never paste secrets unless you prefer to).
 2. [ME] `npm run spike:nvidia` and `RUN_LIVE_AI_TESTS=1 npm run test:live-ai` — **only possible if my environment gains network access to NVIDIA** (currently blocked). If it stays blocked, we run the same two commands on your computer or in GitHub Actions and you paste me the output.
 3. [ME/YOU] Call the deployed functions with a test user and run the full flow once (upload a 3-slide PDF → process → record → report).
+
+## Part 8 — Fix found during verification (do this now)
+In Part 5 the second command had a placeholder, `<the same INTERNAL_FUNCTION_SECRET>`. It was saved literally. Replace it with your real secret (the same value you typed into Edge Function secrets):
+```sql
+select vault.update_secret(
+  (select id from vault.secrets where name = 'internal_function_secret'),
+  'PASTE-YOUR-REAL-SECRET-HERE'
+);
+```
+Replace `PASTE-YOUR-REAL-SECRET-HERE` (keep the quotes). Do not paste the secret in chat. If you no longer have the value, set a new one in **both** places (Edge Function secrets → `INTERNAL_FUNCTION_SECRET`, and this command).
+
+## Part 9 — Live self-test
+After the pull request with `ops-selftest` is merged (the deploy runs by itself) and Part 8 is done, tell the assistant "run the self-test". Nothing else is needed from you.

@@ -1,7 +1,11 @@
 # Phase 1 handoff — Mock2Pitch backend
 
 ## A. Phase
-**Phase 1 is code-complete and tested to the limit of this environment, but it is NOT "done" by the §15 definition.** Everything that needs the real Supabase stack (Docker), Cloudflare R2, NVIDIA, or Google OAuth is **blocked / unverified** and listed explicitly in §L. Nothing was reported as passing that was not executed.
+**Phase 1 is deployed and code-complete. Three live verifications remain, each needing one action from the owner** (listed in §F "Remaining to close Phase 1"). Everything below marks what was executed, where, and what was not.
+
+**Hosted environment (verified 2026-10-14 through the Supabase tools):** project `mkglxcdtfimgmvxtddst` (Postgres 17.11) has all 8 migrations; 9 Edge Functions are `ACTIVE` (deployed by the GitHub workflow after the import-map fix); cron job `maintenance-sweep` has run 180+ times; Vault contains `functions_base_url` and `internal_function_secret`; R2 bucket `mock2pitch-dev` exists; security advisors reviewed (details in `HOSTED-STATE.md`). The functions **boot with the configured secrets** (the 16:15 cron call reached the handler and got a deliberate `403 forbidden`, which can only happen after environment validation passed).
+
+**Found while verifying:** the Vault secret `internal_function_secret` holds the literal text `<the same INTERNAL_FUNCTION_SECRET>` (the placeholder from the setup doc) instead of the real value, so the cleanup job is rejected with 403 on every run. This is a one-line fix by the owner (§F item R1). Until then the sweeper does nothing, and the new `ops-selftest` function cannot be invoked from the database.
 
 ## B. Completed
 - Repo scaffold: Next.js 16 shell (env validation, Supabase clients, secret-protected internal transcribe route), `supabase/` config, shared pure-TS modules importable from both Deno and Vitest, `.gitignore`, `.env.example`.
@@ -47,6 +51,17 @@ Prerequisite: a local PostgreSQL ≥ 15 (`scripts/pg-test-server.sh`). The DB/fu
 13. `types/database.ts` comes from `scripts/gen-types.mjs` (no Docker). It approximates `supabase gen types`; table-function columns are typed nullable. Re-generate with `npm run gen:types:cli` when Docker is available.
 14. **Update:** the owner confirmed the hosted project "Mock2Pitch" (`mkglxcdtfimgmvxtddst`). Migrations are applied, advisors were run and the R2 bucket `mock2pitch-dev` exists — see `HOSTED-STATE.md`. Functions, secrets, Google OAuth and the live NVIDIA checks remain: `SETUP-STEPS.md`.
 
+### Remaining to close Phase 1 (R1–R3)
+| # | Action | Who | Why it is needed |
+|---|---|---|---|
+| R1 | Fix the Vault secret: in the Supabase SQL Editor run `select vault.update_secret((select id from vault.secrets where name='internal_function_secret'), '<the exact INTERNAL_FUNCTION_SECRET you saved in Edge Function secrets>');` (replace the whole `<...>` including the brackets). | owner | cron sweeper currently gets 403; also lets the self-test be called from SQL |
+| R2 | Merge the open pull request that adds `ops-selftest` (GitHub → Pull requests → Compare & pull request → Merge). The deploy workflow now runs automatically on merge. | owner | deploys the live-check function |
+| R3 | Tell the assistant "run the self-test". It calls `ops-selftest` from the database (`net.http_post` with the secret read from Vault, so nobody has to paste it), reads the JSON result, writes the numbers into `spikes.md`, and flips the ⛔ items below to ✅/❌. | assistant | closes §L: live NVIDIA, real R2 behaviour, gRPC inside the Edge Runtime, filler retention, image-size limit, pipeline on the real stack |
+
+`ops-selftest` (internal-secret only; no user data) checks: **env**, **r2** (signed Content-Type/Content-Length enforcement, GET, CORS preflight for each allowed origin vs a foreign origin, prefix delete), **nvidia** (each configured key against `/v1/models`, configured model ids listed, latency p50/p95, token-usage fields, `json_object` support, vision schema validity, inline image-size probe, gRPC speech-to-text and which fillers survive) and **pipeline** (synthetic user → daily-limit consumption → `deck-process` → `session-analyse` → report → audio deleted → user and R2 objects removed). Its logic is covered by `tests/functions/ops-selftest.test.ts` (6 tests) against the fakes.
+
+Not coverable without the Phase 2 UI: Google sign-in end to end (owner promotion to `admin` on first Google login), browser uploads through pdf.js/MediaRecorder, Realtime events in a browser.
+
 ## G. Files / architecture
 `supabase/migrations/*.sql` · `supabase/functions/<name>/index.ts` (Deno wiring only) · `supabase/functions/_shared/{constants,scoring,files,audio,schemas,http,env,r2,deps,deno-deps}.ts` · `_shared/handlers/*` (the logic) · `_shared/ai/*` · `_shared/nvidia/{router,chat}.ts` · `_shared/riva/` (client + vendored protos) · `_shared/prompts/*` · `app/api/internal/transcribe/route.ts` · `lib/env.ts` · `infra/r2-cors.json` · `tests/**` · `docs/phase-1/*`. Architecture and decisions: `architecture.md`.
 
@@ -83,10 +98,10 @@ Private bucket per environment; keys `users/{uid}/decks/{deck}/source.pdf`, `…
 
 ## L. §15 checklist (✅ verified · ◐ verified only against a stand-in · ⛔ blocked/not done)
 **Repository & environment** — ✅ existing state documented, nothing overwritten · ✅ `.gitignore`/`.env.example`, Zod env (Edge: tested incl. Deno; Next: unit-tested) · ✅ no secrets in files/history.
-**Spikes** — ⛔ NVIDIA models live (no network/keys; script ready) · ⛔→provisional vision image rule (180 KB, implemented, unconfirmed) · ◐ gRPC: both options built; client verified vs local server and under Deno; ⛔ real clip transcribed · ⛔ filler retention.
-**Database** — ◐ migrations rebuild from scratch on PG 16 (⛔ `supabase db reset` not run: no Docker images) · ◐ all tables/constraints/FKs/cascades/indexes · ◐ owner allow-list/trigger/sync, no client escalation · ◐ daily limit (IST, race-safe with real concurrency, upload+retake, no charge on failures) · ◐ policy versioning + in-progress exception · ◐ student + admin RPCs.
-**RLS** — ◐ RLS on all tables and matrix; ◐ allowed/denied for anon/A/B/blocked/admin, admin cannot read content or practise · ⛔ Supabase advisors not run (structural audit tests instead).
-**R2** — ⛔ real buckets/CORS/lifecycle (none exist; lifecycle not expressible) · ◐ upload/download/delete/prefix-delete flows (fake S3) · ◐ type/size/expiry enforcement (independent SigV4 verifier; real R2 unverified) · ◐ PDF/JPEG/WAV server validation · ◐ metadata/object consistency and sweeper.
+**Spikes** — ⛔ NVIDIA models live (keys are set in Supabase but the sandbox cannot reach NVIDIA; **`ops-selftest nvidia` closes this — R3**) · ⛔→provisional vision image rule (180 KB, implemented, unconfirmed) · ◐ gRPC: both options built; client verified vs local server and under Deno; ⛔ real clip transcribed · ⛔ filler retention (both via `ops-selftest nvidia`, R3).
+**Database** — ✅ migrations applied to the hosted PG 17 project and verified there (14 tables, RLS on all, definer functions pinned, anon/authenticated privileges, Realtime tables, cron job) · ◐ test suites run on PG 16 (⛔ `supabase db reset` not run: no Docker images) · ◐ all tables/constraints/FKs/cascades/indexes · ◐ owner allow-list/trigger/sync, no client escalation · ◐ daily limit (IST, race-safe with real concurrency, upload+retake, no charge on failures) · ◐ policy versioning + in-progress exception · ◐ student + admin RPCs.
+**RLS** — ◐ RLS on all tables and matrix; ◐ allowed/denied for anon/A/B/blocked/admin, admin cannot read content or practise · ✅ Supabase advisors run on the hosted project: 0 errors; 3 INFO (RLS without policy on the three intentionally locked tables), 17 WARN (intentional `SECURITY DEFINER` RPCs, each checks `auth.uid()`/admin), 26 INFO unused indexes (no traffic yet).
+**R2** — ✅ private bucket `mock2pitch-dev` created · ⛔ CORS/token set by the owner but **unverified until `ops-selftest r2`** · ⛔ lifecycle not expressible with the key layout · ◐ upload/download/delete/prefix-delete flows (fake S3) · ◐ type/size/expiry enforcement (independent SigV4 verifier; real R2 enforcement is checked by `ops-selftest r2`) · ◐ PDF/JPEG/WAV server validation · ◐ metadata/object consistency and sweeper.
 **AI pipeline** — ◐ routing (unit + handler tests with fake NVIDIA; ⛔ live run) · ◐ deck processing idempotent/resumable (⛔ Realtime not observed) · ◐ session analysis/scoring/report/audio deletion/resume (⛔ Realtime not observed) · ◐ Zod + injection safeguards · ◐ usage log, `admin_ai_usage`, masked keys.
 **Account & admin** — ◐ account deletion (fake R2) · ◐ block/unblock, ratings, overview, sessions/day, AI usage, policy publish.
 **Security & quality** — ✅ bundle clean (shell only; re-scan in Phase 2/3) · ✅ safe errors, logs tested · ✅ TS strict, lint, all suites run and re-run after fixes · ✅ docs · ◐ DB types generated by script.

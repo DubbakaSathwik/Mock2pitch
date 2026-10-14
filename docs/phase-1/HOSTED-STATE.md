@@ -23,5 +23,12 @@ Verified on the hosted database after applying:
 - Bucket **`mock2pitch-dev`** created (location ENAM, Standard, default jurisdiction). New buckets have **no public access**; do not enable the `r2.dev` URL or a custom domain.
 - Not possible with the available tools (you must do these): create the R2 API token, set the CORS policy, find the Account ID. Steps are in `docs/phase-1/SETUP-STEPS.md`.
 
-## Not done yet
+## Update 2026-10-14 (after the owner finished the setup steps)
+- **9 Edge Functions are ACTIVE** (version 1) with their own `deno.json` import maps; `verify_jwt` true for the user-facing six, false for `deck-process`, `session-analyse`, `maintenance-sweep`.
+- **Boot check:** the function runtime logs `booted`; the cron call at 16:15 UTC returned `403 forbidden` from our handler, proving the environment validated (missing variables would have returned `500 misconfigured`).
+- **Vault finding:** `internal_function_secret` contains the literal placeholder text, not a real secret → every sweep is rejected. Fix = handoff §F R1.
+- **Cron:** 180+ successful job runs (the SQL call succeeds; the HTTP result is what returned 403).
+- `auth.users` is empty: nobody has signed in yet (no UI until Phase 2).
+
+## Not done yet (superseded: see PHASE-1-HANDOFF.md §F "Remaining to close Phase 1")
 Edge Functions are **not deployed** (their code is multi-file and needs the CLI or the GitHub workflow below), no function secrets are set, Google OAuth is not configured, no Netlify site exists.

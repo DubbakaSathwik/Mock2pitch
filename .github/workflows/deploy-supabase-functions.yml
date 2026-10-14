@@ -1,4 +1,4 @@
-# Manual deploy of all Edge Functions to the hosted Supabase project.
+# Deploys all Edge Functions on every push to main that touches supabase/functions (and manually via 'Run workflow') to the hosted Supabase project.
 # One-time setup: GitHub repo -> Settings -> Secrets and variables -> Actions -> add
 #   SUPABASE_ACCESS_TOKEN  (Supabase dashboard -> Account -> Access Tokens -> Generate new token)
 #   SUPABASE_PROJECT_REF   (mkglxcdtfimgmvxtddst)
@@ -6,6 +6,11 @@
 name: Deploy Supabase Edge Functions
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/deploy-supabase-functions.yml'
 jobs:
   deploy:
     runs-on: ubuntu-latest

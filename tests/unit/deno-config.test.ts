@@ -9,7 +9,7 @@ describe("per-function deno.json", () => {
   const shared = fs.readFileSync(path.join(dir, "deno.json"), "utf8");
   const fns = fs.readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory() && d.name !== "_shared").map((d) => d.name);
   it("exists for every function and matches supabase/functions/deno.json", () => {
-    expect(fns.length).toBe(9);
+    expect(fns.length).toBe(10);
     for (const f of fns) expect(fs.readFileSync(path.join(dir, f, "deno.json"), "utf8"), f).toBe(shared);
   });
   it("maps every bare package specifier the shared code imports", () => {

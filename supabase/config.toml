@@ -445,5 +445,7 @@ static_files = ["./functions/_shared/riva/riva/proto/*.proto"]   # Riva protos f
 verify_jwt = true
 [functions.admin-ai-keys]
 verify_jwt = true
+[functions.ops-selftest]
+verify_jwt = false   # protected by INTERNAL_FUNCTION_SECRET (operator diagnostics; no user data)
 [functions.maintenance-sweep]
 verify_jwt = false   # protected by INTERNAL_FUNCTION_SECRET
