@@ -21,7 +21,7 @@
 .mMain{flex:1;padding:16px 16px 88px;min-width:0}
 .mTabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid var(--border-subtle);padding-bottom:max(6px,env(safe-area-inset-bottom))}
 .aTabs{grid-template-columns:repeat(5,1fr);background:var(--prussian-blue);border-top:0}
-.mTab{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--ink-500);font-family:var(--font-body);font-size:12px;text-decoration:none}
+.mTab{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--text-muted);font-family:var(--font-body);font-size:12px;text-decoration:none}
 .mTab:hover{text-decoration:none;color:var(--ink-800)}
 .mTabOn{color:var(--imperial-blue);font-weight:700}
 .aTab{color:var(--ink-400);font-size:11px}
@@ -33,10 +33,10 @@
 .flowBar{position:sticky;top:0;z-index:20;flex-shrink:0;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;background:#fff;border-bottom:1px solid var(--border-subtle);gap:12px}
 .flowMain{flex:1;padding:32px 40px;min-width:0}
 .stepper{list-style:none;margin:0;padding:0;display:flex;align-items:center;gap:14px}
-.step{display:flex;align-items:center;gap:8px;color:var(--ink-400);font-family:var(--font-body);font-size:14px}
+.step{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-family:var(--font-body);font-size:14px}
 .stepOn{color:var(--imperial-blue)}
 .stepCur{font-weight:700}
-.dot{width:24px;height:24px;border-radius:50%;background:var(--ink-100);color:var(--ink-500);display:flex;align-items:center;justify-content:center;font-size:12px}
+.dot{width:24px;height:24px;border-radius:50%;background:var(--ink-100);color:var(--text-muted);display:flex;align-items:center;justify-content:center;font-size:12px}
 .dotDone{background:var(--success-500);color:#fff}
 .dotCur{background:var(--imperial-blue);color:#fff}
 .exit{width:40px;height:40px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-700);flex-shrink:0}

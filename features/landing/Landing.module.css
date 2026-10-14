@@ -23,7 +23,7 @@
 .sectionTitle{margin:10px 0 28px}
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
 .stepTop{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.stepNo{font-family:var(--font-display);color:var(--ink-400);font-size:15px}
+.stepNo{font-family:var(--font-display);color:var(--text-muted);font-size:15px}
 .two{padding:88px 64px}
 .twoGrid{display:grid;grid-template-columns:1fr 1fr;gap:32px}
 .sub{margin:8px 0 14px}

@@ -16,7 +16,7 @@ export function LineChart({ data, h = 170, color = "var(--bright-marine)", ariaL
       {grid.map((g) => (
         <g key={g}>
           <line x1={pad} x2={W - 8} y1={ys(g)} y2={ys(g)} stroke="var(--ink-100)" />
-          <text x={0} y={ys(g) + 4} fontSize="11" fill="var(--ink-500)" fontFamily="var(--font-body)">{g}</text>
+          <text x={0} y={ys(g) + 4} fontSize="11" fill="var(--text-muted)" fontFamily="var(--font-body)">{g}</text>
         </g>
       ))}
       <polyline fill="none" stroke={color} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" points={data.map((d, k) => `${xs(k)},${ys(d.value)}`).join(" ")} />
@@ -24,7 +24,7 @@ export function LineChart({ data, h = 170, color = "var(--bright-marine)", ariaL
         <g key={k}>
           <circle cx={xs(k)} cy={ys(d.value)} r="6" fill="#fff" stroke={color} strokeWidth="3" />
           <text x={xs(k)} y={ys(d.value) - 12} fontSize="13" textAnchor="middle" fill="var(--prussian-blue)" fontFamily="var(--font-display)">{d.value}</text>
-          {(k % step === 0 || k === data.length - 1) && <text x={xs(k)} y={h - 6} fontSize="11" textAnchor="middle" fill="var(--ink-500)" fontFamily="var(--font-body)">{d.label}</text>}
+          {(k % step === 0 || k === data.length - 1) && <text x={xs(k)} y={h - 6} fontSize="11" textAnchor="middle" fill="var(--text-muted)" fontFamily="var(--font-body)">{d.label}</text>}
         </g>
       ))}
     </svg>

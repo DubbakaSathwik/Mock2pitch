@@ -75,7 +75,7 @@ function SlideRows({ d }: { d: ReportDetail }) {
                         <div>
                           <Overline style={{ marginBottom: 8 }}>Key points</Overline>
                           {s.key_points.map((k, x) => { const miss = missed.includes(x); return (
-                            <div key={x} className={styles.kp}><Icon name={miss ? "circle-x" : "circle-check"} size={16} color={miss ? "var(--warning-500)" : "var(--success-500)"} style={{ marginTop: 3 }} /><span>{k} <b style={{ color: miss ? "#9A6106" : "var(--success-500)" }}>{miss ? "· missed" : "· covered"}</b></span></div>
+                            <div key={x} className={styles.kp}><Icon name={miss ? "circle-x" : "circle-check"} size={16} color={miss ? "var(--warning-500)" : "var(--success-500)"} style={{ marginTop: 3 }} /><span>{k} <b style={{ color: miss ? "var(--warning-text)" : "var(--success-text)" }}>{miss ? "· missed" : "· covered"}</b></span></div>
                           ); })}
                         </div>
                         <div>
@@ -110,6 +110,7 @@ function RateCard({ d }: { d: ReportDetail }) {
   const rate = useRateReport(d.report.id);
   const err = rate.error ? toAppError(rate.error) : null;
   useEffect(() => { if (err?.code === "already_rated") setSent(true); }, [err]);
+  if (sent) return <Card className={styles.rate}><div className={styles.thanks}><Tile icon="heart" /><div><H l={3}>Thank you</H><Muted>Your rating helps us improve the reports.</Muted></div></div></Card>;
   if (d.rating) {
     return (
       <Card className={styles.rate}>
@@ -120,7 +121,6 @@ function RateCard({ d }: { d: ReportDetail }) {
       </Card>
     );
   }
-  if (sent) return <Card className={styles.rate}><div className={styles.thanks}><Tile icon="heart" /><div><H l={3}>Thank you</H><Muted>Your rating helps us improve the reports.</Muted></div></div></Card>;
   const ui = err && err.code !== "already_rated" ? errorUi(err.code, err.details) : null;
   return (
     <Card className={styles.rate}>
@@ -187,7 +187,7 @@ export function Report() {
             </div>
             <H l={2} className={styles.sectionHead}>Slide by slide</H>
             <SlideRows d={d} />
-            <RateCard key={d.report.id + (d.rating ? "r" : "n")} d={d} />
+            <RateCard key={d.report.id} d={d} />
             <div className={styles.actions}>
               <div>
                 <Button size="lg" iconLeft="rotate-ccw" fullWidth={compact} disabled={start.blocked} onClick={retake}>Retake this presentation</Button>

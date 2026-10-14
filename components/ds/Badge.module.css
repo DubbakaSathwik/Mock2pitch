@@ -2,8 +2,8 @@
 .dot{width:6px;height:6px;border-radius:3px;background:currentColor}
 .neutral{--bg:var(--ink-100);--fg:var(--ink-700)}
 .info{--bg:var(--marine-50);--fg:var(--marine-600)}
-.success{--bg:var(--success-50);--fg:var(--success-500)}
+.success{--bg:var(--success-50);--fg:var(--success-text)}
 .warning{--bg:var(--warning-50);--fg:#9A6106}
-.danger{--bg:var(--danger-50);--fg:var(--danger-500)}
+.danger{--bg:var(--danger-50);--fg:var(--danger-text)}
 .violet{--bg:var(--pitch-violet-soft);--fg:#5B30D9}
 .solid{--bg:var(--imperial-blue);--fg:var(--white)}

@@ -9,11 +9,12 @@ type Tone = "danger" | "warning" | "info";
 /** Inline message box: danger (errors), warning (e.g. missing slides) or info. Always announced to screen readers. */
 export function Notice({ tone = "danger", title, children, action }: { tone?: Tone; title?: string; children?: ReactNode; action?: ReactNode }) {
   const color = tone === "danger" ? "var(--danger-500)" : tone === "warning" ? "var(--warning-500)" : "var(--bright-marine)";
+  const titleColor = tone === "danger" ? "var(--danger-text)" : tone === "warning" ? "var(--warning-text)" : "var(--marine-600)";
   return (
     <div role={tone === "danger" ? "alert" : "status"} className={`${styles.n} ${styles[tone]}`}>
       <Icon name={tone === "info" ? "info" : "triangle-alert"} size={20} color={color} />
       <div className={styles.body}>
-        {title && <div className={styles.title} style={{ color }}>{title}</div>}
+        {title && <div className={styles.title} style={{ color: titleColor }}>{title}</div>}
         {children && <div className={styles.text}>{children}</div>}
       </div>
       {action}

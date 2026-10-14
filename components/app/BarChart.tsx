@@ -18,7 +18,7 @@ export function BarChart({ data, labels, h = 160, every = 1, values, caption }: 
         </div>
         <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
           {labels.map((l, i) => (
-            <span key={i} style={{ flex: 1, minWidth: 0, textAlign: "center", fontFamily: "var(--font-body)", fontSize: 10, color: "var(--ink-500)", whiteSpace: "nowrap", visibility: i % every === (labels.length - 1) % every ? "visible" : "hidden" }}>{l}</span>
+            <span key={i} style={{ flex: 1, minWidth: 0, textAlign: "center", fontFamily: "var(--font-body)", fontSize: 10, color: "var(--text-muted)", whiteSpace: "nowrap", visibility: i % every === (labels.length - 1) % every ? "visible" : "hidden" }}>{l}</span>
           ))}
         </div>
       </div>

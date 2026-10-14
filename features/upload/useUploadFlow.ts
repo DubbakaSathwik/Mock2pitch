@@ -41,6 +41,7 @@ export function useUploadFlow() {
   const busy = useRef(false);
 
   const fail = useCallback((e: unknown, details: Record<string, unknown> = {}) => {
+    if (!(e instanceof AppError)) console.error("[upload] unexpected error", e);
     const err = toAppError(e);
     const ui = errorUi(err.code, { ...err.details, ...details });
     if (ui.kind === "route") { router.push(ui.to); setPhase({ kind: "idle" }); return; }

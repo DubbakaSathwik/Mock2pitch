@@ -24,9 +24,10 @@ export function decideStudent(i: StudentGateInput): Decision {
   if (i.session === undefined) return { status: "loading" };
   if (i.session === null) return { status: "redirect", to: withNext("/sign-in", i.pathname, i.search) };
   if (i.session.role === "admin") return { status: "redirect", to: "/admin" };
-  if (i.profile === undefined || i.accepted === undefined) return { status: "loading" };
+  const needsPolicy = !under(i.pathname, POLICY_EXEMPT_PREFIXES);
+  if (i.profile === undefined || (needsPolicy && i.accepted === undefined)) return { status: "loading" };
   if (i.profile.is_blocked && !under(i.pathname, BLOCKED_ALLOWED_PREFIXES)) return { status: "redirect", to: "/paused" };
-  if (!i.accepted && !under(i.pathname, POLICY_EXEMPT_PREFIXES)) return { status: "redirect", to: withNext("/onboarding/terms", i.pathname, i.search) };
+  if (needsPolicy && !i.accepted) return { status: "redirect", to: withNext("/onboarding/terms", i.pathname, i.search) };
   if (!i.profile.profile_completed_at && !under(i.pathname, ["/onboarding", "/session/"]) && !under(i.pathname, BLOCKED_ALLOWED_PREFIXES)) return { status: "redirect", to: withNext("/onboarding/profile", i.pathname, i.search) };
   return { status: "allow" };
 }

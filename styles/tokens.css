@@ -71,8 +71,8 @@
 }
 
 :root{
---font-display:var(--nf-display,"Autour One"),"Trebuchet MS",system-ui,sans-serif;
---font-body:var(--nf-body,"LXGW WenKai TC"),"Kaiti TC","STKaiti",Georgia,serif;
+--font-display:"Autour One","Trebuchet MS",system-ui,sans-serif;
+--font-body:"LXGW WenKai TC","Kaiti TC","STKaiti",Georgia,serif;
 --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 
 --weight-light:300;/* @kind other */--weight-regular:400;/* @kind other */--weight-bold:700;/* @kind other */

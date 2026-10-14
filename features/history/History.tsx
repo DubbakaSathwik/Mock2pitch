@@ -63,7 +63,7 @@ export function History() {
                       <Muted>{d.page_count} slides · {plural(d.attempts_count, "attempt")}{d.latest_attempt_at ? ` · last on ${formatDate(d.latest_attempt_at)}` : ""}</Muted>
                     </div>
                     <button type="button" className={`${styles.pin} ${d.pinned ? styles.pinOn : ""}`} aria-pressed={d.pinned} aria-label={d.pinned ? `Unpin ${d.title}` : `Pin ${d.title}`} title={d.pinned ? "Unpin" : "Pin to top"} onClick={() => onPin(d.deck_id, !d.pinned)}><Star on={d.pinned} size={22} /></button>
-                    <div className={styles.score} style={{ color: d.latest_score === null ? "var(--ink-400)" : scoreColor(d.latest_score) }}>{d.latest_score ?? "–"}{d.latest_score !== null && <span className={styles.latest}>latest</span>}</div>
+                    <div className={styles.score} style={{ color: d.latest_score === null ? "var(--text-muted)" : scoreColor(d.latest_score) }}>{d.latest_score ?? "–"}{d.latest_score !== null && <span className={styles.latest}>latest</span>}</div>
                     {!compact && <Icon name="chevron-right" size={20} color="var(--ink-400)" />}
                   </div>
                 </Card>

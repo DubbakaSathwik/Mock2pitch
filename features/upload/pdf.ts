@@ -8,13 +8,11 @@ let cached: Promise<PdfJs> | null = null;
 
 /** pdf.js with its worker. In Node (unit tests) the legacy build runs with the in-process "fake worker". */
 export function loadPdfjs(): Promise<PdfJs> {
+  // The "legacy" build is used everywhere: pdfjs-dist 6 needs very recent JS features (e.g. Map.getOrInsertComputed) that
+  // current Chrome/Safari releases do not all have; the legacy build ships the polyfills.
   cached ??= (async () => {
-    if (typeof window === "undefined") {
-      const lib = (await import("pdfjs-dist/legacy/build/pdf.mjs")) as unknown as PdfJs;
-      return lib;
-    }
-    const lib = await import("pdfjs-dist");
-    lib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+    const lib = (await import("pdfjs-dist/legacy/build/pdf.mjs")) as unknown as PdfJs;
+    if (typeof window !== "undefined") lib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/legacy/build/pdf.worker.min.mjs", import.meta.url).toString();
     return lib;
   })();
   return cached;

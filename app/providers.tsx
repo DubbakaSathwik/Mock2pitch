@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { makeQueryClient } from "@/lib/query";
 import { ToastProvider, useToast } from "@/components/ds/Toast";
@@ -12,9 +13,11 @@ const MockPanel: ComponentType | null = process.env.NODE_ENV !== "production"
   ? dynamic(() => import("@/components/dev/MockPanel").then((m) => m.MockPanel), { ssr: false })
   : null;
 
+/** Shows a one-shot message set before a navigation (e.g. "Your account was deleted" on the Landing page). */
 function FlashToast() {
   const { toast } = useToast();
-  useEffect(() => { const m = consumeFlash(); if (m) toast(m); }, [toast]);
+  const pathname = usePathname();
+  useEffect(() => { const m = consumeFlash(); if (m) toast(m); }, [toast, pathname]);
   return null;
 }
 

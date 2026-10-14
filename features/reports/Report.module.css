@@ -7,7 +7,7 @@
 .sub{height:100%;box-sizing:border-box}
 .subTop{display:flex;justify-content:space-between;align-items:center}
 .subVal{font-family:var(--font-display);font-size:34px;margin:10px 0 2px;line-height:1.1}
-.unit{font-family:var(--font-body);font-size:14px;color:var(--ink-500)}
+.unit{font-family:var(--font-body);font-size:14px;color:var(--text-muted)}
 .subLabel{font-family:var(--font-body);font-weight:700;font-size:14px;color:var(--text-strong)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .cardHead{display:flex;gap:10px;align-items:center;margin-bottom:12px}
@@ -19,7 +19,7 @@
 .sectionHead{margin:32px 0 14px}
 .slides{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .rowBtn{width:100%;border:0;background:none;text-align:left;cursor:pointer;display:grid;grid-template-columns:36px 1fr auto auto auto 24px;gap:12px;align-items:center;padding:16px 24px;font:inherit;border-radius:var(--radius-lg)}
-.idx{font-family:var(--font-display);color:var(--ink-400)}
+.idx{font-family:var(--font-display);color:var(--text-muted)}
 .rowTitle{font-family:var(--font-body);font-weight:700;color:var(--text-strong);min-width:0}
 .panel{padding:16px 24px 24px 72px;display:grid;gap:16px;border-top:1px solid var(--border-subtle)}
 .kp{display:flex;gap:8px;padding:4px 0;font-family:var(--font-body);font-size:14px;color:var(--text-body)}

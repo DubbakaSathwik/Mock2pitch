@@ -5,7 +5,7 @@ import { FILLER_REGEX_SOURCE } from "@shared/constants.ts";
 export function scoreBand(v: number): "success" | "marine" | "warning" {
   return v >= 75 ? "success" : v >= 60 ? "marine" : "warning";
 }
-export const SCORE_COLOR = { success: "var(--success-500)", marine: "var(--bright-marine)", warning: "var(--warning-500)" } as const;
+export const SCORE_COLOR = { success: "var(--success-500)", marine: "var(--bright-marine)", warning: "var(--score-warning)" } as const;
 export const scoreColor = (v: number) => SCORE_COLOR[scoreBand(v)];
 export const SCORE_WORD = { success: "Strong", marine: "Good", warning: "Needs work" } as const;
 

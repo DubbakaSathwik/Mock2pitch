@@ -1,14 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
+import { preload } from "react-dom";
+import "@/styles/fonts.css";
 import "@/styles/tokens.css";
 import "@/styles/globals.css";
 import { Providers } from "./providers";
-
-const display = localFont({ src: [{ path: "./fonts/AutourOne-Regular.woff2", weight: "400", style: "normal" }], variable: "--nf-display", display: "swap", preload: true });
-const body = localFont({
-  src: [{ path: "./fonts/LXGWWenKaiTC-Regular.woff2", weight: "400", style: "normal" }, { path: "./fonts/LXGWWenKaiTC-Bold.woff2", weight: "700", style: "normal" }],
-  variable: "--nf-body", display: "swap", preload: true,
-});
 
 export const metadata: Metadata = {
   title: { default: "Mock2Pitch", template: "%s · Mock2Pitch" },
@@ -18,8 +13,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#00072D" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Preload only the two faces every page uses.
+  preload("/fonts/AutourOne-Regular.woff2", { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  preload("/fonts/LXGWWenKaiTC-Regular.woff2", { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
+    <html lang="en">
       <body>
         <a href="#main" className="skip-link">Skip to main content</a>
         <div id="m2p-root"><Providers>{children}</Providers></div>

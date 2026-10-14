@@ -82,7 +82,7 @@ export function Settings() {
       </Card>
       <Button variant="secondary" iconLeft="log-out" style={{ marginTop: 20 }} disabled={signOut.isPending} onClick={() => signOut.mutate(undefined, { onSuccess: () => router.replace("/") })}>Sign out</Button>
       <Card variant="default" className={styles.danger} aria-label="Danger zone">
-        <H l={3} style={{ color: "var(--danger-500)", marginBottom: 6 }}>Danger zone</H>
+        <H l={3} style={{ color: "var(--danger-text)", marginBottom: 6 }}>Danger zone</H>
         <P style={{ fontSize: 15, marginBottom: 14 }}>Deleting your account removes your profile, decks, slide images, reports and ratings permanently. This can&apos;t be undone.</P>
         <Button variant="record" iconLeft="trash-2" disabled={blocked} onClick={() => setConfirm(true)}>Delete account</Button>
       </Card>
