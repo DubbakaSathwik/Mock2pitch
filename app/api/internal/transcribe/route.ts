@@ -1,6 +1,5 @@
 // Internal speech-to-text bridge (gRPC Option B). Callable ONLY by the session-analyse Edge Function (shared secret).
 // Body: raw 16 kHz mono 16-bit PCM (<= 60 s). Headers: x-internal-secret, x-asr-key, x-asr-function-id, [x-asr-timeout-ms].
-import path from "node:path";
 import { timingSafeEqual } from "node:crypto";
 import { recognizePcm, RivaError } from "@shared/riva/client.ts";
 
@@ -28,7 +27,6 @@ export async function POST(req: Request): Promise<Response> {
   const timeoutMs = Math.min(Math.max(Number(req.headers.get("x-asr-timeout-ms")) || 25_000, 1_000), 55_000);
   try {
     const t = await recognizePcm(pcm, {
-      protoRoot: process.env.RIVA_PROTO_ROOT ?? path.join(process.cwd(), "supabase/functions/_shared/riva"),
       functionId, apiKey: key, timeoutMs,
       target: process.env.RIVA_TARGET_OVERRIDE, insecure: process.env.RIVA_INSECURE_TEST === "1",
     });

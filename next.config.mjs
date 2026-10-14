@@ -10,8 +10,6 @@ const nextConfig = {
   // Phase 1 ships no product UI; this shell exists for env validation, shared types and the internal transcribe route.
   experimental: { externalDir: true },
   outputFileTracingRoot: root,
-  // The Riva .proto files are read at runtime by the transcribe route; make sure the serverless bundle contains them.
-  outputFileTracingIncludes: { "/api/internal/transcribe": ["./supabase/functions/_shared/riva/riva/proto/*.proto"] },
   serverExternalPackages: ["@grpc/grpc-js", "@grpc/proto-loader"],
   webpack: (config) => {
     config.resolve.alias["@shared"] = path.join(root, "supabase/functions/_shared");

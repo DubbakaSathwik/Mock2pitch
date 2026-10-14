@@ -30,12 +30,14 @@ export const accountDeleteIn = z.object({ confirm: z.literal("DELETE") }).strict
 const clampInt = (lo: number, hi: number) =>
   z.coerce.number().transform((n) => Math.min(hi, Math.max(lo, Math.round(n))));
 
+// Smaller vision models often drop or null optional text fields: those default to "" / 10. Key points stay mandatory.
+const lenientText = (max: number, trim = true) => z.string().nullish().transform((s) => { const v = (s ?? ""); return (trim ? v.trim() : v).slice(0, max); });
 export const slideReadingOut = z.object({
-  title: z.string().transform((s) => s.trim().slice(0, 120)),
-  slide_text: z.string().transform((s) => s.slice(0, 4000)),
-  key_points: z.array(z.string().transform((s) => s.trim().slice(0, 200)).pipe(z.string().min(1))).min(1).transform((a) => a.slice(0, 5)),
-  suggested_script: z.string().transform((s) => s.trim().slice(0, 1500)),
-  time_weight: clampInt(1, 100),
+  title: lenientText(120),
+  slide_text: lenientText(4000, false),
+  key_points: z.array(z.union([z.string(), z.object({ point: z.string() }).transform((o) => o.point)]).transform((s) => s.trim().slice(0, 200)).pipe(z.string().min(1))).min(1).transform((a) => a.slice(0, 5)),
+  suggested_script: lenientText(1500),
+  time_weight: z.coerce.number().nullish().transform((n) => Math.min(100, Math.max(1, Math.round(Number.isFinite(n as number) ? (n as number) : 10)))),
 });
 export type SlideReadingOut = z.infer<typeof slideReadingOut>;
 

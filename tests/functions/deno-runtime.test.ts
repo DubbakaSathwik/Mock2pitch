@@ -5,7 +5,7 @@ import { promisify } from "node:util";
 const execFileP = promisify(execFile); // async: a sync exec would block the in-process mock server
 import path from "node:path";
 import net from "node:net";
-import { PROTO_ROOT, startMockRiva } from "../helpers/mock-riva";
+import { startMockRiva } from "../helpers/mock-riva";
 
 const root = path.resolve(__dirname, "../..");
 const deno = path.join(root, "node_modules/.bin/deno");
@@ -60,7 +60,7 @@ describe("production entrypoints under real Deno", () => {
   it("grpc-js + protobuf loading works under Deno against a Riva-compatible server (Option A viability, locally)", async () => {
     const srv = await startMockRiva(() => [{ transcript: "deno grpc ok", words: [{ word: "deno", start_time: 5, end_time: 9 }] }]);
     try {
-      const { stdout: out } = await execFileP(deno, ["run", "-A", "--config", "supabase/functions/deno.json", "tests/helpers/deno-riva.ts", srv.target, PROTO_ROOT], { cwd: root, encoding: "utf8", timeout: 60_000 });
+      const { stdout: out } = await execFileP(deno, ["run", "-A", "--config", "supabase/functions/deno.json", "tests/helpers/deno-riva.ts", srv.target], { cwd: root, encoding: "utf8", timeout: 60_000 });
       expect(JSON.parse(out.trim().split("\n").at(-1)!)).toEqual({ text: "deno grpc ok", words: [{ w: "deno", start_ms: 5, end_ms: 9 }] });
       expect(srv.calls[0]!.metadata).toMatchObject({ "function-id": "fn-deno", authorization: "Bearer key-deno" });
     } finally { await srv.stop(); }

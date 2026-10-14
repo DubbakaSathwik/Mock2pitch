@@ -440,13 +440,11 @@ verify_jwt = true
 verify_jwt = true
 [functions.session-analyse]
 verify_jwt = false   # users (JWT checked in code) + internal re-invocation
-static_files = ["./functions/_shared/riva/riva/proto/*.proto"]   # Riva protos for in-process gRPC (Option A)
 [functions.account-delete]
 verify_jwt = true
 [functions.admin-ai-keys]
 verify_jwt = true
 [functions.ops-selftest]
 verify_jwt = false   # protected by INTERNAL_FUNCTION_SECRET (operator diagnostics; no user data)
-static_files = ["./functions/_shared/riva/riva/proto/*.proto"]   # the self-test exercises in-process gRPC speech-to-text
 [functions.maintenance-sweep]
 verify_jwt = false   # protected by INTERNAL_FUNCTION_SECRET

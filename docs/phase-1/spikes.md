@@ -18,8 +18,12 @@ Not yet covered: the Netlify origin (not in the CORS policy yet — add it when 
 | Purpose | Model | Result |
 |---|---|---|
 | report_generation | `nvidia/nemotron-3-ultra-550b-a55b` | **exact id confirmed (listed)**. 5/5 calls HTTP 200, **p50 1.2 s, p95 2.0 s** (small prompt), token-usage fields present, `response_format: json_object` **accepted (200)** |
-| slide_reading | `meta/llama-4-maverick-17b-128e-instruct` | **RETIRED**: not in `/v1/models`, every call returns **HTTP 410 Gone**. Must be replaced. |
-| speech_to_text | Parakeet via in-process gRPC | first run failed with a generic "network" error after 80 ms; `ops-selftest` had no bundled `.proto` files, so the cause was not isolated. Re-test after the self-test fix (reports the real reason). |
+| slide_reading | `meta/llama-4-maverick-17b-128e-instruct` | **RETIRED**: not in `/v1/models`, every call returns **HTTP 410 Gone**. Replaced (see below). |
+| slide_reading candidates | `meta/llama-3.2-11b-vision-instruct` | **works**: 3/3 HTTP 200, **p50 9.4 s, p95 10.2 s**, read the fixture title correctly; only 1/3 answers matched our strict JSON schema (parser made tolerant, see `ai.md`). **Chosen default.** |
+| | `meta/llama-3.2-90b-vision-instruct` | first call exceeded 40 s (timeout) → too slow for 10 slides |
+| | `google/gemma-3-12b-it`, `microsoft/phi-3-vision-128k-instruct` | listed in `/v1/models` but **HTTP 404** when called: listed ≠ callable for this account |
+| inline image size | 11B vision model | images of 133 KB, 233 KB, 433 KB, 833 KB and **1.6 MB all accepted (HTTP 200)** → no 180 KB limit; `SLIDE_IMAGE_MAX_BYTES` raised to **1,000,000** |
+| speech_to_text | Parakeet via in-process gRPC | **fails inside the Supabase Edge Runtime**: `NotFound: path not found: …/functions/ops-selftest/riva/proto/riva_asr.proto` — the runtime does not expose bundled files to protobuf loaders by path. **Fix:** the protocol is now embedded as a generated JSON descriptor (`_shared/riva/descriptor.ts`, `scripts/gen-riva-descriptor.mjs`), so no file access is needed. Re-test pending deploy. |
 
 ### Pipeline on the real stack (synthetic user, run 1 — stopped early by the two NVIDIA findings above)
 | Step | Result |

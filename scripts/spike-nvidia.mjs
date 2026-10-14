@@ -104,7 +104,7 @@ else {
   let transcript = "";
   for (let i = 0; i < 5; i++) {
     const t0 = Date.now();
-    const t = await recognizePcm(pcm, { protoRoot: path.join(root, "supabase/functions/_shared/riva"), functionId: env.NVIDIA_ASR_FUNCTION_ID, apiKey: ak, timeoutMs: 60000 });
+    const t = await recognizePcm(pcm, { functionId: env.NVIDIA_ASR_FUNCTION_ID, apiKey: ak, timeoutMs: 60000 });
     lat.push(Date.now() - t0); transcript = t.text;
   }
   const fillers = ["um", "uh", "like", "basically", "you know", "actually"].map((f) => `${f}: ${(transcript.toLowerCase().match(new RegExp(`\\b${f}\\b`, "g")) ?? []).length}`);

@@ -2,13 +2,13 @@
 import { Buffer } from "node:buffer";
 import * as grpc from "@grpc/grpc-js";
 import * as protoLoader from "@grpc/proto-loader";
+import { RIVA_DESCRIPTOR } from "./descriptor.ts";
 import { AUDIO_SAMPLE_RATE } from "../constants.ts";
 import type { Transcript } from "../audio.ts";
 
 export const RIVA_TARGET = "grpc.nvcf.nvidia.com:443";
 
 export type RivaOptions = {
-  protoRoot: string;            // directory containing riva/proto/*.proto
   functionId?: string;
   apiKey?: string;
   target?: string;
@@ -18,20 +18,18 @@ export type RivaOptions = {
 };
 
 let cachedClientCtor: any;
-function clientCtor(protoRoot: string) {
-  if (cachedClientCtor?.root === protoRoot) return cachedClientCtor.ctor;
-  const def = protoLoader.loadSync("riva/proto/riva_asr.proto", {
-    includeDirs: [protoRoot], keepCase: true, longs: Number, enums: String, defaults: true, oneofs: true,
-  });
+// The protocol is embedded as a JSON descriptor (generated from the vendored .proto files): no file access at runtime.
+function clientCtor() {
+  if (cachedClientCtor) return cachedClientCtor;
+  const def = protoLoader.fromJSON(RIVA_DESCRIPTOR as any, { keepCase: true, longs: Number, enums: String, defaults: true, oneofs: true });
   const pkg: any = grpc.loadPackageDefinition(def);
-  const ctor = pkg.nvidia.riva.asr.RivaSpeechRecognition;
-  cachedClientCtor = { root: protoRoot, ctor };
-  return ctor;
+  cachedClientCtor = pkg.nvidia.riva.asr.RivaSpeechRecognition;
+  return cachedClientCtor;
 }
 
 /** Offline recognition of one raw 16 kHz mono 16-bit PCM buffer (<= ~60 s recommended). */
 export function recognizePcm(pcm: Uint8Array, o: RivaOptions): Promise<Transcript> {
-  const Ctor = clientCtor(o.protoRoot);
+  const Ctor = clientCtor();
   const creds = o.insecure ? grpc.credentials.createInsecure() : grpc.credentials.createSsl();
   const client = new Ctor(o.target ?? RIVA_TARGET, creds, { "grpc.max_receive_message_length": 16 * 1024 * 1024, "grpc.max_send_message_length": 16 * 1024 * 1024 });
   const md = new grpc.Metadata();

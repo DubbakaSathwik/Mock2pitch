@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { recognizePcm, RivaError } from "@shared/riva/client.ts";
 import { mergeTranscripts, pcmOf, splitPcm } from "@shared/audio.ts";
 import { buildWav } from "@shared/files.ts";
-import { PROTO_ROOT, startMockRiva } from "../helpers/mock-riva";
+import { startMockRiva } from "../helpers/mock-riva";
 
 const servers: { stop: () => Promise<void> }[] = [];
 afterAll(async () => { await Promise.all(servers.map((s) => s.stop())); });
@@ -15,7 +15,7 @@ describe("Riva gRPC client (against a local mock using the vendored NVIDIA proto
     ]);
     servers.push(srv);
     const pcm = new Uint8Array(32000); // 1 s
-    const t = await recognizePcm(pcm, { protoRoot: PROTO_ROOT, target: srv.target, insecure: true, functionId: "fn-123", apiKey: "nvapi-test" });
+    const t = await recognizePcm(pcm, { target: srv.target, insecure: true, functionId: "fn-123", apiKey: "nvapi-test" });
     expect(t.text).toBe("Hello, um world. Second part.");
     expect(t.words).toEqual([
       { w: "Hello,", start_ms: 100, end_ms: 400 }, { w: "um", start_ms: 500, end_ms: 700 }, { w: "world.", start_ms: 800, end_ms: 1200 }, { w: "Second", start_ms: 3000, end_ms: 3300 },
@@ -28,20 +28,20 @@ describe("Riva gRPC client (against a local mock using the vendored NVIDIA proto
   });
   it("silence -> empty transcript, not an error", async () => {
     const srv = await startMockRiva(() => []); servers.push(srv);
-    const t = await recognizePcm(new Uint8Array(3200), { protoRoot: PROTO_ROOT, target: srv.target, insecure: true });
+    const t = await recognizePcm(new Uint8Array(3200), { target: srv.target, insecure: true });
     expect(t).toEqual({ text: "", words: [] });
   });
   it("maps gRPC failures to HTTP-like statuses for the key router", async () => {
     for (const [code, http] of [[8, 429], [16, 401], [7, 403], [3, 400], [14, 503]] as const) {
       const srv = await startMockRiva(() => ({ code, message: "x" })); servers.push(srv);
-      const err = await recognizePcm(new Uint8Array(3200), { protoRoot: PROTO_ROOT, target: srv.target, insecure: true }).catch((e) => e);
+      const err = await recognizePcm(new Uint8Array(3200), { target: srv.target, insecure: true }).catch((e) => e);
       expect(err).toBeInstanceOf(RivaError);
       expect(err.httpStatus).toBe(http);
     }
   });
   it("times out", async () => {
     const srv = await startMockRiva(() => { const t = Date.now(); while (Date.now() - t < 600); return []; }); servers.push(srv);
-    const err = await recognizePcm(new Uint8Array(3200), { protoRoot: PROTO_ROOT, target: srv.target, insecure: true, timeoutMs: 100 }).catch((e) => e);
+    const err = await recognizePcm(new Uint8Array(3200), { target: srv.target, insecure: true, timeoutMs: 100 }).catch((e) => e);
     expect(err.httpStatus).toBe(504);
   });
 });

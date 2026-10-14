@@ -31,7 +31,7 @@ const deps = () => ({
     NVIDIA_ASR_KEY_PRIMARY: e.NVIDIA_ASR_KEY_PRIMARY, NVIDIA_ASR_KEY_FALLBACK_1: e.NVIDIA_ASR_KEY_FALLBACK_1, NVIDIA_ASR_KEY_FALLBACK_2: e.NVIDIA_ASR_KEY_FALLBACK_2,
   },
   fetchFn: fetch,
-  asr: grpcAsr({ functionId: e.NVIDIA_ASR_FUNCTION_ID ?? "", protoRoot: path.resolve(__dirname, "../../supabase/functions/_shared/riva") }),
+  asr: grpcAsr({ functionId: e.NVIDIA_ASR_FUNCTION_ID ?? "" }),
 }) as unknown as Deps;
 
 describe.skipIf(!live)("live NVIDIA", () => {
