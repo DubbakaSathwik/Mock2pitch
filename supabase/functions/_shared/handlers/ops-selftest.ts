@@ -19,12 +19,16 @@ import { deckProcess } from "./deck-process.ts";
 import { sessionAnalyse } from "./session-analyse.ts";
 
 const modelId = z.string().regex(/^[\w./:-]{3,100}$/);
-const bodySchema = z.object({ check: z.enum(["env", "r2", "nvidia", "pipeline"]), slide_model: modelId.optional(), report_model: modelId.optional() }).strict();
+const bodySchema = z.object({ check: z.enum(["env", "r2", "nvidia", "nvidia_models", "nvidia_report", "nvidia_slide", "nvidia_asr", "pipeline"]), slide_model: modelId.optional(), report_model: modelId.optional() }).strict();
 type Step = { name: string; ok: boolean; ms: number; detail?: unknown };
+
+const BUDGET_MS = 110_000; // the Edge Function wall-clock limit is ~150 s; stop starting new steps after this
 
 class Steps {
   steps: Step[] = [];
+  private started = Date.now();
   async run(name: string, fn: () => Promise<{ ok: boolean; detail?: unknown } | void>): Promise<void> {
+    if (Date.now() - this.started > BUDGET_MS) { this.steps.push({ name, ok: false, ms: 0, detail: "skipped: time budget used up (run this check again on its own)" }); return; }
     const t0 = Date.now();
     try {
       const r = (await fn()) ?? { ok: true };
@@ -48,7 +52,7 @@ export const opsSelftest = api(async (ctx) => {
   const s = new Steps();
   if (check === "env") await envCheck({ ...ctx, deps }, s);
   else if (check === "r2") await r2Check(deps, s);
-  else if (check === "nvidia") await nvidiaCheck(deps, s);
+  else if (check === "nvidia" || check.startsWith("nvidia_")) await nvidiaCheck(deps, s, check === "nvidia" ? "all" : check.slice(7) as "models" | "report" | "slide" | "asr");
   else await pipelineCheck(deps, s);
   return ok({ check, ok: s.allOk, steps: s.steps });
 });
@@ -139,12 +143,15 @@ async function r2Check(deps: Deps, s: Steps) {
 // ---------------------------------------------------------------- NVIDIA
 const MODELS_URL = (chatUrl: string) => chatUrl.replace(/\/chat\/completions$/, "/models");
 
-async function nvidiaCheck(deps: Deps, s: Steps) {
-  const { env, fetchFn } = deps;
+async function nvidiaCheck(deps: Deps, s: Steps, part: "all" | "models" | "report" | "slide" | "asr" = "all") {
+  const { env } = deps;
+  const want = (p: string) => part === "all" || part === p;
+  // every upstream call gets its own timeout so a slow model cannot hang the whole check
+  const fetchFn: typeof fetch = (input, init) => deps.fetchFn(input, { ...(init ?? {}), signal: AbortSignal.timeout(40_000) });
   const jpeg = fromB64(SLIDE_JPEG_B64);
 
   const listed = new Map<string, Set<string>>(); // key -> ids
-  for (const purpose of PURPOSES) {
+  for (const purpose of want("models") ? PURPOSES : []) {
     for (const { slot, key } of keysFor(env, purpose)) {
       await s.run(`${purpose}/${slot}: key accepted by /v1/models`, async () => {
         const res = await fetchFn(MODELS_URL(NVIDIA_CHAT_URL), { headers: { Authorization: `Bearer ${key}` } });
@@ -166,7 +173,7 @@ async function nvidiaCheck(deps: Deps, s: Steps) {
     return { status: res.status, ms: Date.now() - t0, json, retryAfter: res.headers.get("retry-after") };
   };
 
-  if (reportKey) {
+  if (reportKey && want("report")) {
     await s.run("report model: 5 small calls (latency, usage fields)", async () => {
       const lat: number[] = []; const statuses: number[] = []; let usage = false;
       for (let i = 0; i < 5; i++) { const r = await chat(reportKey, env.NVIDIA_REPORT_MODEL, [{ role: "user", content: 'Reply with exactly {"ok":true}' }]); lat.push(r.ms); statuses.push(r.status); usage = usage || !!r.json?.usage?.prompt_tokens; }
@@ -177,19 +184,20 @@ async function nvidiaCheck(deps: Deps, s: Steps) {
       return { ok: true, detail: { status: r.status, supported: r.status === 200 } }; // informational: we do not send it today
     });
   }
-  if (slideKey) {
+  if (slideKey && want("slide")) {
     await s.run("slide model: reads the fixture slide (3 calls, schema-valid)", async () => {
-      const lat: number[] = []; let valid = 0; const statuses: number[] = []; let sample = "";
-      for (let i = 0; i < 3; i++) {
+      const lat: number[] = []; let valid = 0; const statuses: number[] = []; let sample = ""; const loopStart = Date.now();
+      for (let i = 0; i < 3 && Date.now() - loopStart < 80_000; i++) {
         const r = await chat(slideKey, env.NVIDIA_SLIDE_MODEL, [{ role: "system", content: SLIDE_READING_SYSTEM }, { role: "user", content: [{ type: "text", text: SLIDE_READING_USER }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${toBase64(jpeg)}` } }] }], { max_tokens: 1200 });
         lat.push(r.ms); statuses.push(r.status);
         try { const out = slideReadingOut.parse(parseJsonLoose(chatText(r.json))); valid++; sample = out.title; } catch { /* invalid */ }
       }
-      return { ok: valid === 3, detail: { statuses, schema_valid: `${valid}/3`, p50_ms: pct(lat, 50), p95_ms: pct(lat, 95), sample_title: sample } };
+      return { ok: valid === statuses.length && statuses.length > 0, detail: { statuses, schema_valid: `${valid}/${statuses.length}`, p50_ms: pct(lat, 50), p95_ms: pct(lat, 95), sample_title: sample } };
     });
     await s.run("slide model: inline image size probe (decides SLIDE_IMAGE_MAX_BYTES)", async () => {
-      const results: Record<string, number> = {};
+      const results: Record<string, number> = {}; const loopStart = Date.now();
       for (const kb of [100, 200, 400, 800, 1600]) {
+        if (Date.now() - loopStart > 80_000) { results["stopped"] = -1; break; }
         const padded = new Uint8Array(jpeg.length + kb * 1024); padded.set(jpeg);
         const r = await chat(slideKey, env.NVIDIA_SLIDE_MODEL, [{ role: "user", content: [{ type: "text", text: "Reply with the word ok." }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${toBase64(padded)}` } }] }], { max_tokens: 5 });
         results[`${Math.round(padded.length / 1024)}KB`] = r.status;
@@ -200,14 +208,15 @@ async function nvidiaCheck(deps: Deps, s: Steps) {
   }
 
   const asrKey = keysFor(env, "speech_to_text")[0]?.key;
-  if (asrKey) {
+  if (asrKey && want("asr")) {
     await s.run("speech-to-text over gRPC (3 calls) and filler retention", async () => {
       const pcm = pcmOf(fromB64(SPEECH_WAV_B64));
       const lat: number[] = []; const statuses: number[] = []; let text = "";
-      for (let i = 0; i < 3; i++) {
+      const loopStart = Date.now();
+      for (let i = 0; i < 3 && Date.now() - loopStart < 80_000; i++) {
         const t0 = Date.now();
         let r;
-        try { r = await deps.asr({ pcm, key: asrKey, timeoutMs: 60_000 }); }
+        try { r = await deps.asr({ pcm, key: asrKey, timeoutMs: 45_000 }); }
         catch (e) { return { ok: false, detail: { transport_error: (e as { kind?: string }).kind ?? "unknown", reason: (e as { detail?: string }).detail ?? String((e as Error)?.message ?? "").slice(0, 200), calls_ok_before_failure: statuses.filter((x) => x === 200).length } }; }
         lat.push(Date.now() - t0); statuses.push(r.status);
         if (r.status === 200) text = (r.body as { text: string }).text;
