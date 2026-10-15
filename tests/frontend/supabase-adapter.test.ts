@@ -261,6 +261,11 @@ describe("adapter: Edge Functions", () => {
     const r = await mkData(fakeSupa({}), f as never).admin.aiKeys();
     expect(r.purposes[0]!.slots[0]!.masked).toBe("••••ab12");
   });
+  it("an unconfigured slot has masked: null on the wire (real backend) and '' in the port", async () => {
+    const f = vi.fn(async () => jsonRes(200, { ok: true, data: { purposes: [{ purpose: "slide_reading", model: "m", slots: [{ slot_id: "b", slot: "fallback_1", configured: false, masked: null }] }] } }));
+    const r = await mkData(fakeSupa({}), f as never).admin.aiKeys();
+    expect(r.purposes[0]!.slots[0]).toMatchObject({ configured: false, masked: "" });
+  });
 });
 
 describe("adapter: realtime", () => {

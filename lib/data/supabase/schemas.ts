@@ -64,7 +64,7 @@ export const assetUrls = z.object({ deck_id: z.string(), expires_at: z.string(),
 export const submitInit = z.object({ session_id: z.string(), clips: z.array(z.object({ slide_index: num, upload: signedUpload })) }).passthrough();
 export const analyseResult = z.object({ session_id: z.string(), status: z.enum(["transcribing", "completed"]), report_id: z.string().optional() }).passthrough();
 export const accountDelete = z.object({ deleted: z.literal(true), storage_cleanup: z.enum(["complete", "pending"]) }).passthrough();
-export const adminAiKeys = z.object({ purposes: z.array(z.object({ purpose: z.string(), model: z.string(), slots: z.array(z.object({ slot_id: z.string(), slot: z.string(), configured: z.boolean(), masked: z.string() })) })) }).passthrough();
+export const adminAiKeys = z.object({ purposes: z.array(z.object({ purpose: z.string(), model: z.string(), slots: z.array(z.object({ slot_id: z.string(), slot: z.string(), configured: z.boolean(), masked: z.string().nullable().transform((m) => m ?? "") })) })) }).passthrough(); // the backend sends null for an empty slot (the contract said string)
 
 // ---- admin RPCs
 export const adminOverview = z.object({ total_students: num, sessions_last_14_days: num, sessions_all_time: num, average_rating: nnum, ratings_count: num, ai_credits_used: num }).passthrough();
