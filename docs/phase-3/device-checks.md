@@ -20,3 +20,6 @@ The sandbox has no WebKit browser with a real microphone, no phone, and no Googl
 7. Optional: Lighthouse on the deployed URL (`node scripts/lighthouse.mjs <url>`; Phase 2 numbers are in `docs/phase-2/lighthouse.json`).
 
 Report anything odd with the browser, OS version and the time; the Edge Function logs are keyed by time.
+
+## WebKit in CI (mock mode)
+`webkit-smoke` (Playwright WebKit 26 on Ubuntu) now gets through sign-in → Terms → profile → dashboard, i.e. the first real WebKit evidence for those screens. A full page reload of `/practice/new` right after onboarding was bounced back to `/dashboard` in WebKit only; the smoke test therefore navigates inside the app (clicks "Upload slides"). This concerns the **mock** backend's sessionStorage persistence; in supabase mode the session is a cookie and a reload does not depend on it. Not re-verified against the real backend in WebKit — part of the Safari checklist above.

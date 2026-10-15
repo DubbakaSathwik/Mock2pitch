@@ -19,9 +19,10 @@ test("@smoke landing → sign in → terms → profile → dashboard → upload 
   await page.getByLabel("College").fill("RV Institute of Technology");
   await page.getByRole("button", { name: "Save and continue" }).click();
   await expect(page).toHaveURL(/\/dashboard/);
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible(); // let the post-onboarding redirect settle
-  // WebKit reports "interrupted by another navigation" when the app's own redirect lands during goto; retry the navigation
-  await expect(async () => { await page.goto("/practice/new"); }).toPass({ timeout: 30_000 });
+  // Navigate inside the app (a full reload is not what a user does here, and the mock backend keeps its state in sessionStorage, which
+  // WebKit in CI did not carry across a reload: the guard bounced /practice/new back to /dashboard).
+  await page.getByRole("button", { name: "Upload slides" }).first().click();
+  await expect(page).toHaveURL(/\/practice\/new/);
   await page.getByTestId("file-input").setInputFiles(fixture("deck-3.pdf"));
   await expect(page).toHaveURL(/\/prepare/, { timeout: 90_000 });
   await expect(page.getByTestId("slide-view").first()).toBeVisible();
