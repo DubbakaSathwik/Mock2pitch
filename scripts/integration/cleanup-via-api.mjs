@@ -16,6 +16,6 @@ for (const key of ["NEW", "A", "B", "DEL", "ADMIN"]) {
   const c = createClient(url, anon, { auth: { persistSession: false } });
   const { data, error } = await c.auth.signInWithPassword({ email, password });
   if (error) { console.log(`${key}: sign-in failed (${error.message}) — already deleted?`); continue; }
-  const res = await fetch(`${url}/functions/v1/account-delete`, { method: "POST", headers: { Authorization: `Bearer ${data.session.access_token}`, apikey: anon, "Content-Type": "application/json" }, body: JSON.stringify({}) });
+  const res = await fetch(`${url}/functions/v1/account-delete`, { method: "POST", headers: { Authorization: `Bearer ${data.session.access_token}`, apikey: anon, "Content-Type": "application/json" }, body: JSON.stringify({ confirm: "DELETE" }) });
   console.log(`${key}: account-delete -> ${res.status} ${(await res.text()).slice(0, 120)}`);
 }
