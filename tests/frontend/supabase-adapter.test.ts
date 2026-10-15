@@ -164,9 +164,11 @@ describe("adapter: auth", () => {
     const d = mkData(s); const cb = vi.fn();
     d.auth.onChange(cb);
     const h = s.authHandlers[0]!;
-    h("SIGNED_IN", { access_token: "t1", user: { id: "u1" } }); await vi.runAllTimersAsync();
+    h("SIGNED_IN", { access_token: "t0", user: { id: "u1" } }); h("INITIAL_SESSION", { access_token: "t0", user: { id: "u1" } }); await vi.runAllTimersAsync(); // init sequence: baseline, no notification
+    expect(cb).not.toHaveBeenCalled();
+    h("SIGNED_IN", { access_token: "t1", user: { id: "u2" } }); await vi.runAllTimersAsync(); // a different user signed in (another tab)
     h("TOKEN_REFRESHED", { access_token: "t2", user: { id: "u1" } }); await vi.runAllTimersAsync();
-    h("SIGNED_IN", { access_token: "t3", user: { id: "u1" } }); await vi.runAllTimersAsync(); // same user again (tab refocus)
+    h("SIGNED_IN", { access_token: "t3", user: { id: "u2" } }); await vi.runAllTimersAsync(); // same user again (tab refocus)
     expect(cb).toHaveBeenCalledTimes(1);
     expect(s.raw.realtime.setAuth).toHaveBeenLastCalledWith("t3");
     h("SIGNED_OUT", null); await vi.runAllTimersAsync();

@@ -76,11 +76,16 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
       getSession: () => readSession(),
       onChange: (cb) => {
         let last: string | null | undefined;
+        let initialised = false;
         const { data } = supa.auth.onAuthStateChange((event, session) => {
           // Keep Realtime authorised across token refreshes; refreshes are not an "auth change" for the UI (they must not wipe the cache).
           if (session?.access_token) supa.realtime.setAuth(session.access_token);
           const id = session?.user.id ?? null;
-          if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION" || id === last) return;
+          // supabase-js emits SIGNED_IN while it initialises and then INITIAL_SESSION. Everything up to and including INITIAL_SESSION only
+          // records who is signed in: the UI reads that through getSession(), and notifying would make it clear its caches (qc.clear())
+          // while the first queries are in flight, leaving their observers stuck.
+          if (!initialised) { last = id; if (event === "INITIAL_SESSION") initialised = true; return; }
+          if (event === "TOKEN_REFRESHED" || id === last) return;
           last = id;
           // Never await supabase calls inside this callback (deadlock risk): defer.
           setTimeout(() => { if (!id) cb(null); else readSession().then(cb).catch(() => cb(null)); }, 0);
