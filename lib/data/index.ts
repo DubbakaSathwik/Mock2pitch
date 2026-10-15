@@ -23,7 +23,12 @@ export function getData(): DataPort {
 export function setData(port: DataPort | null) { current = port; }
 
 export function getMockControl(): MockControl | null {
-  if (process.env.NEXT_PUBLIC_DATA_MODE === "supabase" || typeof window === "undefined") return null;
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return (require("./mock") as typeof import("./mock")).getBrowserMock().control;
+  // if/else (not an early return) so webpack removes the mock branch from supabase-mode builds
+  if (process.env.NEXT_PUBLIC_DATA_MODE === "supabase") {
+    return null;
+  } else {
+    if (typeof window === "undefined") return null;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return (require("./mock") as typeof import("./mock")).getBrowserMock().control;
+  }
 }

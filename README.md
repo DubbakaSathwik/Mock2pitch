@@ -33,6 +33,14 @@ npm run dev                                               # Next.js shell on :30
 ```
 Local test accounts (email/password, local only) are in the handoff §I.
 
+### Running against the real backend (Phase 3)
+```bash
+cp .env.example .env.local     # set NEXT_PUBLIC_DATA_MODE=supabase, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY (publishable key), NEXT_PUBLIC_APP_URL
+npm run dev                    # http://localhost:3000, Google sign-in via Supabase Auth (see docs/phase-3/owner-steps.md)
+npm run test:integration       # real-stack E2E (needs the @mock2pitch.test users; see e2e-int/README.md)
+```
+`NEXT_PUBLIC_DATA_MODE=supabase` builds contain no mock backend (checked by `scripts/check-prod-bundle.mjs`). Production = Netlify (`netlify.toml`); deploy previews run in mock mode. One Supabase project and one R2 bucket serve as production.
+
 ### Frontend (Phase 2, mock mode)
 ```bash
 npm run dev:mock          # next dev --webpack with NEXT_PUBLIC_DATA_MODE=mock on :3100

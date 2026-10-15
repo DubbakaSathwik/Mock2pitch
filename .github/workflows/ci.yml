@@ -1,0 +1,87 @@
+# Pull-request / main CI: typecheck, lint, unit + DB + function tests (real PostgreSQL), mock-mode Playwright (desktop, mobile, a11y, WebKit smoke),
+# production builds (mock review build and supabase build) with the bundle guards. No Supabase/R2/NVIDIA secrets are used here.
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Unit, frontend, DB and function tests
+        run: npm test
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Review build (mock mode) + guards
+        run: |
+          npm run build:review
+          node scripts/check-prod-bundle.mjs
+          npm run scan:bundle
+      - name: Supabase-mode build (public placeholders) + guards
+        env:
+          NEXT_PUBLIC_DATA_MODE: supabase
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_placeholder
+          NEXT_PUBLIC_APP_URL: https://example.netlify.app
+        run: |
+          rm -rf .next
+          npx next build --webpack
+          node scripts/check-prod-bundle.mjs
+          npm run scan:bundle
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [desktop-chrome, mobile, a11y]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Playwright (${{ matrix.project }}, mock mode)
+        run: npx playwright test --project=${{ matrix.project }} --reporter=list
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright-${{ matrix.project }}, path: test-results, retention-days: 7 }
+  webkit-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx playwright install --with-deps webkit
+      - name: WebKit smoke (mock mode)
+        run: npx playwright test --project=webkit-smoke --reporter=list
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright-webkit, path: test-results, retention-days: 7 }
