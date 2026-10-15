@@ -38,12 +38,15 @@ export function useUploadFlow() {
   const [phase, setPhase] = useState<UploadPhase>({ kind: "idle" });
   const [failure, setFailure] = useState<UploadFailure | null>(null);
   const lastFile = useRef<File | null>(null);
+  /** Set once `complete` succeeded (the daily session is consumed): a retry then resumes this deck instead of creating (and paying for) another. */
+  const resumeDeck = useRef<string | null>(null);
   const busy = useRef(false);
 
   const fail = useCallback((e: unknown, details: Record<string, unknown> = {}) => {
     if (!(e instanceof AppError)) console.error("[upload] unexpected error", e);
     const err = toAppError(e);
     const ui = errorUi(err.code, { ...err.details, ...details });
+    if (["too_many_pages", "not_pdf", "encrypted_pdf", "corrupt_pdf", "size_mismatch", "upload_missing", "invalid_state", "not_found"].includes(err.code)) resumeDeck.current = null; // the deck is dead: start afresh
     if (ui.kind === "route") { router.push(ui.to); setPhase({ kind: "idle" }); return; }
     setFailure({ code: err.code, ui });
     setPhase({ kind: "idle" });
@@ -60,10 +63,16 @@ export function useUploadFlow() {
       doc = check.doc;
       const data = getData();
 
-      const init = await data.upload.init({ filename: file.name, size_bytes: file.size, content_type: "application/pdf" });
-      setPhase({ kind: "uploading", pct: 0 });
-      await putToSignedUrl(init.upload, file, { onProgress: (l, t) => setPhase({ kind: "uploading", pct: t ? Math.round((l / t) * 100) : 0 }) });
-      const done: UploadComplete = await data.upload.complete(init.deck_id);
+      let deckId = resumeDeck.current;
+      if (!deckId) {
+        const init = await data.upload.init({ filename: file.name, size_bytes: file.size, content_type: "application/pdf" });
+        setPhase({ kind: "uploading", pct: 0 });
+        await putToSignedUrl(init.upload, file, { onProgress: (l, t) => setPhase({ kind: "uploading", pct: t ? Math.round((l / t) * 100) : 0 }) });
+        deckId = init.deck_id;
+      }
+      // `complete` is idempotent while the deck awaits its images (it re-issues the image URLs and never consumes a second session).
+      const done: UploadComplete = await data.upload.complete(deckId);
+      resumeDeck.current = deckId;
       void qc.invalidateQueries({ queryKey: qk.stats });
 
       const blobs: Blob[] = [];
@@ -72,24 +81,32 @@ export function useUploadFlow() {
         const r = await renderPageToJpeg(check.doc, p, done.rules);
         blobs.push(r.blob);
       }
+      let images = done.images;
       const send = async (indexes: number[]) => {
         let n = 0;
         setPhase({ kind: "sending-images", done: 0, total: indexes.length });
         await pool(indexes, CONCURRENCY, async (i) => {
-          await putToSignedUrl(done.images.find((x) => x.slide_index === i)!.upload, blobs[i]!);
+          const target = () => images.find((x) => x.slide_index === i)!.upload;
+          try { await putToSignedUrl(target(), blobs[i]!); }
+          catch (e) {
+            if (!(e instanceof AppError) || e.code !== "upload_failed") throw e;
+            images = (await data.upload.complete(deckId!)).images; // expired URL or a network blip: fresh URLs, then one more try
+            await putToSignedUrl(target(), blobs[i]!);
+          }
           setPhase({ kind: "sending-images", done: ++n, total: indexes.length });
         });
       };
       await send(blobs.map((_, i) => i));
       setPhase({ kind: "starting" });
-      try { await data.upload.process(init.deck_id); }
+      try { await data.upload.process(deckId); }
       catch (e) {
         const err = toAppError(e);
         if (err.code !== "images_missing") throw err;
         await send((err.details.missing as number[]) ?? []); // re-upload only the slides the server did not get
-        await data.upload.process(init.deck_id);
+        await data.upload.process(deckId);
       }
-      router.push(`/practice/${init.deck_id}/reading`);
+      resumeDeck.current = null;
+      router.push(`/practice/${deckId}/reading`);
     } catch (e) { fail(e); }
     finally { busy.current = false; if (doc) void closePdf(doc); }
   }, [fail, qc, router]);

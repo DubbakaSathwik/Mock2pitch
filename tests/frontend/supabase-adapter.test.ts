@@ -27,14 +27,14 @@ function fakeSupa(o: {
   };
   const authHandlers: ((e: string, s: unknown) => void)[] = [];
   const channels: { on: ReturnType<typeof vi.fn>; subscribe: ReturnType<typeof vi.fn>; handler?: (p: unknown) => void }[] = [];
-  let session = o.session === undefined ? { access_token: "tok", expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: "u1" } } : o.session;
+  let session = o.session === undefined ? { access_token: "tok", expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: "u1", email: "a@b.c", user_metadata: { name: "Meta Name", picture: "http://pic" } } } : o.session;
   const supa = {
     from: (t: string) => builder(t),
     rpc: (name: string, args: unknown) => { calls.push(`rpc.${name}(${JSON.stringify(args)})`); return Promise.resolve(take(o.rpc, name)); },
     auth: {
       getSession: () => Promise.resolve({ data: { session }, error: null }),
       refreshSession: vi.fn(() => { session = o.refreshed ?? { access_token: "tok2", expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: "u1" } }; return Promise.resolve({ data: { session }, error: null }); }),
-      getUser: () => Promise.resolve({ data: { user: o.user ?? { id: "u1", email: "a@b.c", user_metadata: { name: "Meta Name", picture: "http://pic" } } }, error: null }),
+      getUser: () => Promise.resolve({ data: { user: o.user ?? { id: "u1" } }, error: null }),
       onAuthStateChange: (cb: (e: string, s: unknown) => void) => { authHandlers.push(cb); return { data: { subscription: { unsubscribe: vi.fn() } } }; },
       signInWithOAuth: vi.fn(() => Promise.resolve({ error: null })),
       signOut: vi.fn(() => Promise.resolve({ error: null })),
@@ -164,9 +164,11 @@ describe("adapter: auth", () => {
     const d = mkData(s); const cb = vi.fn();
     d.auth.onChange(cb);
     const h = s.authHandlers[0]!;
-    h("SIGNED_IN", { access_token: "t1", user: { id: "u1" } }); await vi.runAllTimersAsync();
+    h("SIGNED_IN", { access_token: "t0", user: { id: "u1" } }); h("INITIAL_SESSION", { access_token: "t0", user: { id: "u1" } }); await vi.runAllTimersAsync(); // init sequence: baseline, no notification
+    expect(cb).not.toHaveBeenCalled();
+    h("SIGNED_IN", { access_token: "t1", user: { id: "u2" } }); await vi.runAllTimersAsync(); // a different user signed in (another tab)
     h("TOKEN_REFRESHED", { access_token: "t2", user: { id: "u1" } }); await vi.runAllTimersAsync();
-    h("SIGNED_IN", { access_token: "t3", user: { id: "u1" } }); await vi.runAllTimersAsync(); // same user again (tab refocus)
+    h("SIGNED_IN", { access_token: "t3", user: { id: "u2" } }); await vi.runAllTimersAsync(); // same user again (tab refocus)
     expect(cb).toHaveBeenCalledTimes(1);
     expect(s.raw.realtime.setAuth).toHaveBeenLastCalledWith("t3");
     h("SIGNED_OUT", null); await vi.runAllTimersAsync();
@@ -258,6 +260,11 @@ describe("adapter: Edge Functions", () => {
     const f = vi.fn(async () => jsonRes(200, { ok: true, data: { purposes: [{ purpose: "slide_reading", model: "m", slots: [{ slot_id: "a", slot: "primary", configured: true, masked: "••••ab12" }] }] } }));
     const r = await mkData(fakeSupa({}), f as never).admin.aiKeys();
     expect(r.purposes[0]!.slots[0]!.masked).toBe("••••ab12");
+  });
+  it("an unconfigured slot has masked: null on the wire (real backend) and '' in the port", async () => {
+    const f = vi.fn(async () => jsonRes(200, { ok: true, data: { purposes: [{ purpose: "slide_reading", model: "m", slots: [{ slot_id: "b", slot: "fallback_1", configured: false, masked: null }] }] } }));
+    const r = await mkData(fakeSupa({}), f as never).admin.aiKeys();
+    expect(r.purposes[0]!.slots[0]).toMatchObject({ configured: false, masked: "" });
   });
 });
 

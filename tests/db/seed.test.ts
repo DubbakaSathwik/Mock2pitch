@@ -14,7 +14,7 @@ const id = async (email: string) => (await db.admin.query("select id from public
 
 describe("supabase/seed.sql (local dev)", () => {
   it("creates the five test accounts with the right roles", async () => {
-    const r = await db.admin.query("select email, role, is_blocked, college is not null as has_profile from public.profiles order by email");
+    const r = await db.admin.query("select email, role, is_blocked, college is not null as has_profile from public.profiles order by email collate \"C\"");
     expect(r.rows).toEqual([
       { email: "owner@mock2pitch.test", role: "admin", is_blocked: false, has_profile: false },
       { email: "student.a@mock2pitch.test", role: "student", is_blocked: false, has_profile: true },

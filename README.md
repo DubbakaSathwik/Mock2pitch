@@ -1,16 +1,18 @@
 # Mock2Pitch
 
-Rehearse presentations privately: upload a PDF deck, record each slide in a virtual jury room, get an AI feedback report. This repository contains **Phase 1 — the complete backend** (Supabase + Cloudflare R2 + NVIDIA AI pipeline) and **Phase 2 — the complete frontend**, which runs on a typed in-browser **mock data layer** (no hosted Supabase/R2 is contacted). Wiring the UI to the backend is Phase 3. Start with `docs/phase-1/PHASE-1-HANDOFF.md` and `docs/phase-2/PHASE-2-HANDOFF.md`.
+Rehearse presentations privately: upload a PDF deck, record each slide in a virtual jury room, get an AI feedback report. This repository contains **Phase 1 — the complete backend** (Supabase + Cloudflare R2 + NVIDIA AI pipeline), **Phase 2 — the complete frontend** (runs on a typed in-browser mock data layer) and **Phase 3 — the integration**: the UI talks to the real backend through a Supabase/R2 adapter behind the same `DataPort`, proven end to end with real-stack Playwright tests. Start with `PHASE-3-HANDOFF.md`, then `docs/phase-1/PHASE-1-HANDOFF.md` and `docs/phase-2/PHASE-2-HANDOFF.md`.
 
 ```
 supabase/            migrations, seed.sql (local only), Edge Functions (+ _shared: pure TS used by Deno and Vitest)
 app/, features/      Next.js 16 App Router pages + feature modules (Phase 2 UI)
 components/, styles/ design system (ds/), app components, tokens/fonts
 lib/                 env validation, Supabase clients, DataPort (lib/data: types, mock adapter), upload/recording helpers
-e2e/                 Playwright journeys (desktop, mobile, a11y, WebKit smoke)
+e2e/                 Playwright journeys on the mock layer (desktop, mobile, a11y, WebKit smoke)
+e2e-int/             Playwright integration specs against the real Supabase + R2 + NVIDIA stack (Phase 3)
 tests/               unit · db (RLS/limits/policy) · functions (handlers) · r2 · live (opt-in)
 infra/r2-cors.json   bucket CORS
 scripts/             fixtures, type generation, NVIDIA spike, bundle scan, local Postgres helper
+docs/phase-3/        integration results, security review, fillers, device checks, owner steps
 docs/phase-2/        existing-state, frontend, fidelity, port map, handoff, reference + captured screens
 docs/phase-1/        architecture, supabase, r2, ai, api-contracts, security-review, owner-setup, spikes, handoff
 ```
@@ -32,6 +34,14 @@ supabase functions serve --env-file .env.local            # Edge Functions
 npm run dev                                               # Next.js shell on :3000
 ```
 Local test accounts (email/password, local only) are in the handoff §I.
+
+### Running against the real backend (Phase 3)
+```bash
+cp .env.example .env.local     # set NEXT_PUBLIC_DATA_MODE=supabase, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY (publishable key), NEXT_PUBLIC_APP_URL
+npm run dev                    # http://localhost:3000, Google sign-in via Supabase Auth (see docs/phase-3/owner-steps.md)
+npm run test:integration       # real-stack E2E (needs the @mock2pitch.test users; see e2e-int/README.md)
+```
+`NEXT_PUBLIC_DATA_MODE=supabase` builds contain no mock backend (checked by `scripts/check-prod-bundle.mjs`). Production = Netlify (`netlify.toml`); deploy previews run in mock mode. One Supabase project and one R2 bucket serve as production.
 
 ### Frontend (Phase 2, mock mode)
 ```bash

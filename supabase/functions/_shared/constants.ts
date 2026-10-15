@@ -38,6 +38,7 @@ export const ASR_CONCURRENCY = 3;
 // Key routing
 export const DEFAULT_COOLDOWN_429_S = 60;
 export const COOLDOWN_5XX_S = 30;
+export const SAME_KEY_RETRY_DELAY_MS = 1500; // one retry of the last usable key after a transient 5xx/network error, before cooling it down
 export const COOLDOWN_AUTH_S = 600;
 export const LOW_CREDIT_PCT = 75;
 

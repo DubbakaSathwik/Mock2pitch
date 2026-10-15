@@ -49,6 +49,9 @@
     "features/**/*.ts",
     "features/**/*.tsx",
     "e2e/**/*.ts",
+    "e2e-int/**/*.ts",
+    "playwright.integration.config.ts",
+    "proxy.ts",
     "playwright.config.ts",
     "scripts/**/*.ts"
   ],

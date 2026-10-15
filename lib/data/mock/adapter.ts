@@ -200,6 +200,7 @@ export class MockBackend {
         else { this.state.signedIn = true; this.touch(); }
         this.authSubs.forEach((cb) => cb(this.authSession()));
       }),
+      peek: () => this.state.signedIn,
       signOut: () => this.call(() => { this.state.signedIn = false; this.touch(); this.authSubs.forEach((cb) => cb(null)); }),
     },
     profile: {

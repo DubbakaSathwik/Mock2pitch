@@ -1,0 +1,16 @@
+# Netlify (Next.js runtime is auto-detected). Secrets are NOT stored here: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY /
+# NEXT_PUBLIC_APP_URL are set in the Netlify UI for the production context. No server secrets are needed on Netlify.
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Production: the real backend.
+[context.production.environment]
+  NEXT_PUBLIC_DATA_MODE = "supabase"
+
+# Deploy previews run on the in-browser mock backend: R2 CORS and Supabase redirect URLs cannot safely allow arbitrary *.netlify.app origins.
+[context.deploy-preview.environment]
+  NEXT_PUBLIC_DATA_MODE = "mock"
+  NEXT_PUBLIC_ALLOW_MOCK_IN_PROD = "1"

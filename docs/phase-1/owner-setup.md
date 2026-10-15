@@ -46,3 +46,6 @@ Public: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLI
 
 ## 7. Reviewing the legal text
 `policy_versions` v1.0 is a draft. Edit and publish your approved wording as `v1.1` via `select * from admin_publish_policy('v1.1', '<terms>', '<privacy>', 'note')` (or the Phase 2 admin screen). Everyone must then re-accept before starting anything new.
+
+
+> **Phase 3 update:** the Google OAuth client, Supabase provider/URL/hook settings, `APP_ALLOWED_ORIGINS`, `NVIDIA_SLIDE_MODEL`, R2 CORS and Netlify steps are now written click-by-click in `docs/phase-3/owner-steps.md` and take precedence over the older steps above. There is a single Supabase project and a single R2 bucket (production).

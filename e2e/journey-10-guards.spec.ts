@@ -12,6 +12,7 @@ test("10. guards: signed-out deep link → sign in → returns to the deep link;
   // nothing from the protected page was ever rendered while signed out
   expect(await page.evaluate(() => (window as any).__sawProtected)).toBe(false);
   const c = await control(page);
+  await page.waitForFunction(() => !!(window as unknown as { __m2pMock?: unknown }).__m2pMock); // the hook is installed after hydration
   await page.evaluate(() => (window as any).__m2pMock.setNextSignIn("returning_student"));
   void c;
   await page.getByRole("button", { name: "Continue with Google" }).click();
@@ -22,6 +23,7 @@ test("10. guards: signed-out deep link → sign in → returns to the deep link;
 test("10b. open-redirect attempts in ?next= are ignored", async ({ page }) => {
   await seed(page, "signed_out");
   await page.goto("/sign-in?next=https%3A%2F%2Fevil.example%2F");
+  await page.waitForFunction(() => !!(window as unknown as { __m2pMock?: unknown }).__m2pMock); // the hook is installed after hydration
   await page.evaluate(() => (window as any).__m2pMock.setNextSignIn("student"));
   await page.getByRole("button", { name: "Continue with Google" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);

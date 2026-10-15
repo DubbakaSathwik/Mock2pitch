@@ -33,7 +33,8 @@
     "gen:e2e-fixtures": "tsx scripts/gen-e2e-fixtures.mjs",
     "gen:mock-slides": "tsx scripts/gen-mock-slides.mjs",
     "ref:screenshots": "node scripts/ref-screenshots.mjs",
-    "check:prod-bundle": "node scripts/check-prod-bundle.mjs"
+    "check:prod-bundle": "node scripts/check-prod-bundle.mjs",
+    "test:integration": "playwright test -c playwright.integration.config.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.6",

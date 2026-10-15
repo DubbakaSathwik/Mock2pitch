@@ -58,6 +58,28 @@ describe("session-submit-init", () => {
     expect(re.status).toBe(200);
     expect((await audioFiles(sessionId)).filter((f) => f.status !== "deleted").map((f) => f.slide_index)).toEqual([1]);
   });
+  it("re-init for the SAME slide reuses the row (object_key is unique) and keeps clips that were already uploaded with the same size", async () => {
+    const { u, sessionId } = await started("s1c@example.test");
+    const call = (clips: any) => env.call(sessionSubmitInit, { session_id: sessionId, clips }, { token: u.token });
+    const w = wav(1), w2 = wav(2);
+    const first = await call([{ slide_index: 0, size_bytes: w.length }, { slide_index: 1, size_bytes: w.length }]);
+    expect(first.status).toBe(200);
+    // slide 0 arrives, slide 1 fails: the client asks again for the same declaration
+    const [c0] = first.json.data.clips;
+    expect((await put(c0.upload.url, c0.upload.headers, w)).status).toBe(200);
+    await env.db.admin.query("update public.files set status='uploaded', size_bytes=$2 where session_id=$1 and slide_index=0", [sessionId, w.length]);
+    const again = await call([{ slide_index: 0, size_bytes: w.length }, { slide_index: 1, size_bytes: w.length }]);
+    expect(again.status).toBe(200);
+    expect((await audioFiles(sessionId)).map((f) => [f.slide_index, f.status])).toEqual([[0, "uploaded"], [1, "pending"]]); // same two rows, slide 0 kept
+    expect((await put(again.json.data.clips[1].upload.url, again.json.data.clips[1].upload.headers, w)).status).toBe(200);
+    // a different size for slide 0 resets it to pending (the stale object is removed); dropping slide 1 retires it
+    const changed = await call([{ slide_index: 0, size_bytes: w2.length }]);
+    expect(changed.status).toBe(200);
+    expect((await audioFiles(sessionId)).map((f) => [f.slide_index, f.status])).toEqual([[0, "pending"], [1, "deleted"]]);
+    expect((await put(changed.json.data.clips[0].upload.url, changed.json.data.clips[0].upload.headers, w2)).status).toBe(200);
+    // and the whole thing can still be analysed afterwards
+    expect((await env.db.admin.query("select count(*)::int n from public.files where session_id=$1", [sessionId])).rows[0].n).toBe(2);
+  });
   it("other users 404; unauthenticated 401; admin 403; blocked 403; completed session 409", async () => {
     const { u, sessionId } = await started("s2@example.test");
     const body = { session_id: sessionId, clips: [{ slide_index: 0, size_bytes: 100 }] };

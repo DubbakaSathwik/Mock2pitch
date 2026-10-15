@@ -34,3 +34,12 @@ Verified on the hosted database after applying:
 - **10 Edge Functions ACTIVE** (the 9 product functions + `ops-selftest`, deployed by the GitHub workflow on each merge to `main`). `ops-selftest` accepts only the internal secret; it can be deleted once Phase 2 starts.
 - Function secrets are set; the self-test ran R2, NVIDIA (3 purposes) and the full pipeline against them — results in `spikes.md`.
 - Still not done: Google OAuth provider, Netlify site, adding the Netlify origin to the R2 CORS policy. Nobody has signed in yet.
+
+
+## Update — Phase 3 (2026-10-15)
+* **One environment:** project `mkglxcdtfimgmvxtddst` and bucket `mock2pitch-dev` serve as production (owner decision). No separate staging/prod.
+* Migrations: 10 applied (added `20261015000009_auth_hook_google_only`, `20261015000010_auth_users_google_only_guard`).
+* Edge Functions: 10 ACTIVE, version 11 (deployed by the workflow on this branch with the `session-submit-init` fix and the router same-key retry).
+* Auth: users table empty after test cleanup (integration test users removed). Email provider is enabled **only** for the test windows — turn it off before launch. Google provider, the Before-User-Created hook, URL configuration and `APP_ALLOWED_ORIGINS`: pending owner steps (`docs/phase-3/owner-steps.md`).
+* `policy_versions`: `v1.0` plus a harmless test version `v1.0.1` (identical text) awaiting deletion (`docs/phase-3/integration.md` §7).
+* `ai_usage_log`: 44 anonymised rows (credit evidence for Phase 1 and Phase 3).

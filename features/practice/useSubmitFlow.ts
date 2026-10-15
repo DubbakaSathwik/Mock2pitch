@@ -31,6 +31,7 @@ export function useSubmitFlow(sessionId: string) {
   const [failure, setFailure] = useState<SubmitFailure | null>(null);
   const wavs = useRef<Map<number, Uint8Array>>(new Map());
   const init = useRef<SubmitInit | null>(null);
+  const declared = useRef<{ slide_index: number; size_bytes: number }[]>([]);
 
   const setClipState = (slide: number, patch: Partial<ClipProgress>) => setProgress((p) => p.map((c) => (c.slide === slide ? { ...c, ...patch } : c)));
 
@@ -76,6 +77,7 @@ export function useSubmitFlow(sessionId: string) {
         setPrep((p) => ({ ...p, done: p.done + 1 }));
       }
       const clips = [...wavs.current.entries()].map(([slide_index, w]) => ({ slide_index, size_bytes: w.length }));
+      declared.current = clips;
       init.current = await getData().sessions.submitInit(sessionId, clips);
       setProgress(clips.map((c) => ({ slide: c.slide_index, pct: 0, state: "waiting" })));
       const failed = await uploadClips(clips.map((c) => c.slide_index));
@@ -84,17 +86,18 @@ export function useSubmitFlow(sessionId: string) {
     } catch (e) { fail(e); }
   }, [analyse, fail, sessionId, uploadClips]);
 
-  /** Retry: re-send only the failed clips (their signed URLs are still valid for 10 minutes), then analyse. */
+  /** Retry: re-send only the failed clips, then analyse. submit-init is re-callable, so fresh URLs are requested first (the old ones may have expired). */
   const retry = useCallback(async () => {
     setFailure(null);
     try {
       if (!init.current) return submit();
+      init.current = await getData().sessions.submitInit(sessionId, declared.current);
       const failedSlides = progress.filter((c) => c.state !== "done").map((c) => c.slide);
       const failed = failedSlides.length ? await uploadClips(failedSlides) : 0;
       if (failed) { setFailure({ code: "upload_failed", ui: { kind: "inline", title: "Some recordings still didn't upload", body: "Check your connection and try again.", retry: true }, slideIndex: null }); setPhase("idle"); return; }
       await analyse();
     } catch (e) { fail(e); }
-  }, [analyse, fail, progress, submit, uploadClips]);
+  }, [analyse, fail, progress, sessionId, submit, uploadClips]);
 
   return { phase, prep, progress, failure, submit, retry, busy: phase !== "idle" };
 }

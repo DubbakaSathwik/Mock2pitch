@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ds/Button";
 import { useCompact } from "@/components/app/Compact";
 import { errorUi } from "@/features/errors/map";
+import { useRetryDelay } from "@/features/errors/useRetryDelay";
 import { useWatch } from "@/features/realtime/useWatch";
 import { getData } from "@/lib/data";
 import { toAppError } from "@/lib/data/errors";
@@ -55,6 +56,7 @@ export function Analysing() {
 
   const failed = s?.status === "failed" || s?.status === "uploading_audio";
   const code = s?.error_code ?? null;
+  const waitS = useRetryDelay(failed && (code === "ai_unavailable" || code === null) ? `${attempt}:${code ?? ""}` : null);
   const ui = failed && code ? errorUi(code as never) : null;
   const pct = s ? analysisProgress(s.analysis_stage, s.status) : 8;
 
@@ -69,7 +71,7 @@ export function Analysing() {
             <div className={styles.btns}>
               {code === "audio_invalid" ? <Link href={`/session/${sessionId}/review`}><Button variant="inverse">Back to review</Button></Link>
                 : code === "max_attempts" ? <Link href="/dashboard"><Button variant="inverse">Back to dashboard</Button></Link>
-                : <Button variant="inverse" disabled={busy} onClick={() => void retry()}>{busy ? "Trying again…" : "Try again"}</Button>}
+                : <Button variant="inverse" disabled={busy || waitS > 0} onClick={() => void retry()}>{busy ? "Trying again…" : waitS > 0 ? `Try again in ${waitS} s` : "Try again"}</Button>}
             </div>
           </div>
         ) : (
