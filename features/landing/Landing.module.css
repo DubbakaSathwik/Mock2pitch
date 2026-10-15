@@ -34,6 +34,7 @@
 .bandList li{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:14px;background:rgba(166,225,250,.1);color:#fff;font-family:var(--font-body)}
 .footer{border-top:1px solid var(--border-subtle);padding:28px 64px;display:flex;flex-direction:row;gap:16px;justify-content:space-between;align-items:center}
 .footLinks{display:flex;gap:24px;font-family:var(--font-body);font-size:14px}
+.footLinks a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px}
 
 @container app (max-width:1099.98px){
   .hero{grid-template-columns:minmax(0,1fr);gap:32px}

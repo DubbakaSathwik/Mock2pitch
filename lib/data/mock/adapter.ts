@@ -150,7 +150,8 @@ export class MockBackend {
     if (!session) return;
     const clips = this.state.clips[sessionId] ?? [];
     const m = clips.length;
-    this.setSession(session, { status: "transcribing", analysis_stage: "Transcribing your recording", error_code: null });
+    // `session-analyse` already published this stage; do not emit it twice
+    if (session.analysis_stage !== "Transcribing your recording") this.setSession(session, { status: "transcribing", analysis_stage: "Transcribing your recording", error_code: null });
     await this.stage();
     for (let k = 1; k <= m; k++) {
       if (this.disposed) return;

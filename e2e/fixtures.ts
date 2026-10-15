@@ -3,7 +3,9 @@ import { expect, test as base } from "@playwright/test";
 /** `test` that fails when the page logs a console error/warning or throws (no console noise in any journey). */
 export const test = base.extend<{ allowConsole: RegExp[] }>({
   // Next.js route prefetch emits <link rel=preload as=style>; Chrome warns when the next page is not opened within seconds. Framework noise, not app behaviour.
-  allowConsole: [[/was preloaded using link preload but not used/], { option: true }],
+  // The Next *dev* server logs "[Fast Refresh] performing full reload" when it compiles a route for the first time while the test keeps navigating
+  // (it cannot occur in a production build).
+  allowConsole: [[/was preloaded using link preload but not used/, /\[Fast Refresh\] performing full reload/], { option: true }],
   page: async ({ page, allowConsole }, use) => {
     const problems: string[] = [];
     page.on("console", (m) => {

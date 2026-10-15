@@ -10,6 +10,7 @@
 .navDark{color:var(--icy-blue)}
 .navDark:hover{background:rgba(166,225,250,.1);color:#fff}
 .navDarkOn,.navDarkOn:hover{background:rgba(166,225,250,.16);color:#fff}
+.avatarLink{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin-right:-6px}
 .user{display:flex;align-items:center;gap:10px;padding:14px 6px 0}
 .userName{font-family:var(--font-body);font-weight:700;font-size:14px;color:var(--text-strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .main{flex:1;min-width:0;padding:36px 40px;box-sizing:border-box}
@@ -39,7 +40,7 @@
 .dot{width:24px;height:24px;border-radius:50%;background:var(--ink-100);color:var(--text-muted);display:flex;align-items:center;justify-content:center;font-size:12px}
 .dotDone{background:var(--success-500);color:#fff}
 .dotCur{background:var(--imperial-blue);color:#fff}
-.exit{width:40px;height:40px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-700);flex-shrink:0}
+.exit{width:44px;height:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-700);flex-shrink:0}
 .exit:hover{background:var(--ink-100);color:var(--ink-800);text-decoration:none}
 
 .center{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:40px;background:var(--bg-page);box-sizing:border-box}
@@ -48,7 +49,6 @@
 @container app (max-width:759.98px){
   .flowBar{height:56px;padding:0 8px 0 12px;gap:8px}
   .dot{width:22px;height:22px}
-  .exit{width:36px;height:36px}
   .flowMain{padding:16px}
   .stepper{gap:4px}
   .center{padding:20px}

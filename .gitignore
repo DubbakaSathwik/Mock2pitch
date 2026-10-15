@@ -28,3 +28,4 @@ test-results/
 .netlify/
 *.tsbuildinfo
 deno.lock
+.vitest/

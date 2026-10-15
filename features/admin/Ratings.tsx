@@ -28,7 +28,7 @@ export function Ratings() {
   return (
     <AdminShell active="/admin/ratings">
       <Head title="Report ratings" sub="What students think of their reports" right={
-        <Card padding={14} className={styles.avg}><div className={styles.avgNo}>{avg ?? "–"}</div><div><Stars n={Math.round(avg ?? 0)} /><Muted style={{ fontSize: 12 }}>average of {all.data?.count ?? 0} shown</Muted></div></Card>} />
+        <Card padding={14} className={styles.avg}><div className={styles.avgNo}>{avg === undefined || avg === null ? "–" : avg.toFixed(1)}</div><div><Stars n={Math.round(avg ?? 0)} /><Muted style={{ fontSize: 12 }}>average of {all.data?.count ?? 0} shown</Muted></div></Card>} />
       <div style={{ marginBottom: 16 }}><Tabs variant="pill" items={FILTERS} value={f} onChange={setF} label="Filter by stars" /></div>
       {ui?.kind === "inline" ? <ErrorNotice title={ui.title} body={ui.body} onRetry={() => q.refetch()} /> : q.isPending ? <Card padding={24}><Skeleton h={40} /></Card> : (
         <Card padding={0}>

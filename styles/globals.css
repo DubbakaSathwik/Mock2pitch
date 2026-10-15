@@ -33,3 +33,6 @@ img{max-width:100%}
   --warning-text:#9A6106;
   --score-warning:#A86400;
 }
+/* the minutes field is a plain number box (no native spinner) */
+input[type="number"]{-moz-appearance:textfield;appearance:textfield}
+input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}

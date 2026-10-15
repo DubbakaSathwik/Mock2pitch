@@ -64,6 +64,8 @@ It exercises the **real** browser code paths: uploaded PDFs are opened with pdf.
 
 **Dev control panel** (`components/dev/MockPanel.tsx`, bottom-left "Mock" button, dev builds only): switch persona, republish Terms, fail the next upload PUT, expire slide URLs once, arm an AI failure for the next deck-processing or analysis call (`ai_unavailable`, `report_invalid`, `processing_failed`, `analysis_failed`, `audio_invalid`), change latency/stage speed/realtime, reset. The same hooks are on `window.__m2pMock` (dev only) for the E2E tests.
 
+**`?persona=<id>`** on any URL (e.g. `/dashboard?persona=returning_student`) seeds or switches the tab's persona when it differs from the one already in the session (reloading the same URL keeps the state). It is how the review deploy (no panel), Lighthouse and `scripts/capture-screens.mjs` pick a persona.
+
 **Production builds** fail fast with `NEXT_PUBLIC_DATA_MODE=mock` unless `NEXT_PUBLIC_ALLOW_MOCK_IN_PROD=1` (review deploys). The panel, `window.__m2pMock` and the `/dev/design-system` route (a `*.dev.tsx` page) are removed from production builds (`npm run check:prod-bundle`).
 
 ## Browser capabilities
@@ -77,6 +79,12 @@ It exercises the **real** browser code paths: uploaded PDFs are opened with pdf.
 ## Accessibility
 Landmarks + one `h1` per screen, skip link, 3 px focus ring, Dialog with focus trap/Esc/focus return, `aria-live` for stage text/toasts/recording state (overrun announced once), star rating as a five-button radio group, charts with text alternatives (summary label + hidden table), colour never the only signal, `prefers-reduced-motion` honoured. Contrast refinements (handoff tokens untouched; extra aliases in `styles/globals.css`): muted text `#5A6080`, success/danger text on tinted badges `#157A53` / `#B83232`, warning score numbers `#A86400` — the originals measured 2.8–4.5:1.
 
+## Security headers
+`next.config.mjs` sends a Content-Security-Policy (self; Supabase https/wss from `NEXT_PUBLIC_SUPABASE_URL`; `*.r2.cloudflarestorage.com`; Google avatars; `blob:` for audio/images; `worker-src self blob:`; `wasm-unsafe-eval` for pdf.js; `frame-ancestors 'none'`; dev adds `unsafe-eval` + the HMR socket), `Permissions-Policy: microphone=(self), camera=()`, `Referrer-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, and HSTS outside dev. `script-src`/`style-src` keep `'unsafe-inline'` (no nonce pipeline). Browser code imports env from `lib/env.public.ts` only; `lib/env.ts` holds the server schema.
+
+## Performance
+Lighthouse (production build, mock mode, mobile, median of 3): Landing 90, Dashboard 85, Report 82 (target ≥ 85; see `PHASE-2-HANDOFF.md` §D); accessibility 100 on all three. Fonts are self-hosted Latin subsets, the two display/body faces are preloaded; pdf.js and the recorder are lazy, client-only chunks. Run `npm run build:review`, `npx next start -p 3200`, `node scripts/lighthouse.mjs`.
+
 ## Commands
 ```bash
 npm run dev:mock | build:review | check:prod-bundle | scan:bundle
@@ -85,5 +93,7 @@ npm run test:e2e           # Playwright desktop Chrome journeys              (e2
 npm run test:e2e:mobile    # same journeys at 390×844, touch
 npm run test:a11y          # axe on every screen/state, desktop + mobile, and the horizontal-scroll sweep
 npm run test:webkit        # WebKit smoke (needs the WebKit browser installed)
+node scripts/capture-screens.mjs   # re-capture every screen of the new app (dev server on :3100) into docs/phase-2/screens
+node scripts/lighthouse.mjs        # Lighthouse against `next start` on :3200
 npm run ref:screenshots    # re-capture the prototype reference images
 ```

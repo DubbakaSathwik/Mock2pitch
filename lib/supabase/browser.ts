@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { clientEnv } from "../env";
+import { clientEnv } from "../env.public";
 
 /** Browser client (anon key; RLS applies). Auth is Google-only (see docs/phase-1/supabase.md). */
 export function createBrowserSupabase() {

@@ -65,7 +65,7 @@ for (const [vpName, vp] of [["desktop", { width: 1280, height: 800 }], ["mobile"
   await p.page.getByLabel("Attempts").getByText("Attempt 2").click(); await p.page.waitForSelector("text=Slide by slide"); await shot(p, "s14-report-retake-74");
   await go(p, "/settings", "h1"); await shot(p, "s28-settings".replace("s28", "s17"));
   // flow screens via "Practice again"
-  await go(p, "/history", '[data-testid="deck-row"]'); await click(p, "link", /ParkSense hackathon pitch/);
+  await go(p, "/history", '[data-testid="deck-row"]'); await click(p, "link", /ParkSense hackathon pitch/); await p.page.waitForURL(/\/history\/[^/]+$/);
   const deckUrl = p.page.url();
   const deckId = deckUrl.split("/").pop();
   await go(p, `/practice/${deckId}/prepare`, "h1"); await p.page.waitForTimeout(800); await shot(p, "s8-slide-prep");
@@ -81,7 +81,7 @@ for (const [vpName, vp] of [["desktop", { width: 1280, height: 800 }], ["mobile"
   await p.page.getByRole("button", { name: "Stop", exact: true }).click();
   await p.page.getByRole("button", { name: "End session" }).click(); await p.page.waitForTimeout(400); await shot(p, "s11-leave-confirm");
   await p.page.getByRole("button", { name: "Keep practising" }).click();
-  await p.page.getByRole("button", { name: "Review and submit" }).first().click(); await p.page.waitForSelector("text=Review and submit"); await p.page.waitForTimeout(500); await shot(p, "s12-review-some-missing");
+  await p.page.getByRole("button", { name: "Review and submit" }).first().click(); await p.page.waitForURL(/review/); await p.page.getByRole("heading", { level: 1, name: "Review and submit" }).waitFor(); await p.page.waitForTimeout(500); await shot(p, "s12-review-some-missing");
   await p.ctx.close();
   // all slides recorded
   p = await session("returning_student", vp, { stageMs: 1200 });

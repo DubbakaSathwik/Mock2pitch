@@ -1,5 +1,5 @@
 // Single access point for the data port. Components never import an adapter directly.
-import { dataMode } from "@/lib/env";
+import { dataMode } from "@/lib/env.public";
 import { getBrowserMock } from "./mock";
 import type { DataPort } from "./types";
 import type { MockControl } from "./mock";

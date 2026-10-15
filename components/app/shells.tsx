@@ -36,7 +36,7 @@ export function StudentShell({ active, maxW = 1200, children }: { active: Studen
   if (compact) {
     return (
       <div className={styles.mRoot}>
-        <header className={styles.mTop}><Logo size={18} /><Link href="/settings" aria-label="Profile and settings"><Avatar name={name} src={profile.data?.avatar_url} size={32} /></Link></header>
+        <header className={styles.mTop}><Logo size={18} /><Link href="/settings" className={styles.avatarLink}><Avatar name={name} src={profile.data?.avatar_url} size={32} /><span className="sr-only">Profile and settings</span></Link></header>
         <main id="main" className={styles.mMain}>{children}</main>
         <nav className={styles.mTabs} aria-label="Main">
           {items.map((it) => (

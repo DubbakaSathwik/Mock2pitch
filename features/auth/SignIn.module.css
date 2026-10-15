@@ -4,4 +4,4 @@
 .title{font-size:28px}
 .err{display:flex;gap:10px;align-items:center;justify-content:center;text-align:left;margin:0 0 16px;padding:12px 14px;border-radius:14px;background:var(--danger-50);color:var(--danger-text);font-family:var(--font-body);font-weight:700;font-size:14px}
 .note{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:24px;text-align:left}
-.back{display:inline-block;margin-top:20px;font-family:var(--font-body);font-size:14px;min-height:44px;line-height:44px}
+.back{display:flex;align-items:center;justify-content:center;margin-top:20px;font-family:var(--font-body);font-size:14px;min-height:44px}

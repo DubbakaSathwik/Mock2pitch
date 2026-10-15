@@ -20,7 +20,7 @@ import { scoreColor } from "@/lib/score";
 import type { DeckAttempt } from "@/lib/data/types";
 import styles from "./DeckDetail.module.css";
 
-const SUBS: [string, keyof DeckAttempt][] = [["Slide coverage", "coverage_score"], ["Clarity", "clarity_score"], ["Timing", "timing_score"], ["Filler words", "filler_score"]];
+const SUBS: [string, keyof DeckAttempt][] = [["Timing", "timing_score"], ["Filler words", "filler_score"], ["Slide coverage", "coverage_score"], ["Clarity", "clarity_score"]];
 
 /** S16 Deck detail: trend, first vs latest sub-scores, attempts. */
 export function DeckDetail() {

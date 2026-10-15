@@ -123,6 +123,8 @@ test("2. first practice: upload → reading → prep → time → mic → room �
   // a11y on the report
   const a = await axeCheck(page, "report");
   expect(a.bad, JSON.stringify(a.bad, null, 1)).toEqual([]);
+  // the mock inspection hook does not exist in production builds (E2E_PROD=1 runs this journey against `next start`)
+  if (process.env.E2E_PROD) return;
   const c = await control(page);
   const st = await c.snapshot();
   expect(st.reports.length).toBe(1);

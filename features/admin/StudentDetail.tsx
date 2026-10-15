@@ -15,7 +15,7 @@ import { Stars } from "@/components/app/Stars";
 import { H, Muted, P } from "@/components/app/Typography";
 import { errorUi } from "@/features/errors/map";
 import { toAppError } from "@/lib/data/errors";
-import { formatDayMonth } from "@/lib/format";
+import { formatDate, formatDayMonth } from "@/lib/format";
 import { scoreColor } from "@/lib/score";
 import { useSetBlocked, useStudentDetail } from "./queries";
 import styles from "./StudentDetail.module.css";
@@ -63,7 +63,7 @@ export function StudentDetail() {
             <Card padding={0} aria-label="Ratings given">
               <div style={{ padding: "18px 24px" }}><H l={3}>Ratings given</H></div>
               {d.ratings.length === 0 ? <div className={styles.empty}>No ratings given.</div> : d.ratings.map((r, k) => (
-                <div key={k} className={styles.rating}><Stars n={r.stars} size={14} /><P style={{ fontSize: 14 }}>{r.comment || "No comment"}</P><Muted style={{ fontSize: 12 }}>{r.deck_title} · {formatDayMonth(r.date)}</Muted></div>
+                <div key={k} className={styles.rating}><Stars n={r.stars} size={14} /><P style={{ fontSize: 14 }}>{r.comment || "No comment"}</P><Muted style={{ fontSize: 12 }}>{r.deck_title} · {formatDate(r.date)}</Muted></div>
               ))}
             </Card>
           </div>

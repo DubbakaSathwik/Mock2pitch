@@ -49,7 +49,7 @@ export function Overview() {
               {days.isPending ? <Skeleton h={190} /> : <BarChart data={d.map((x) => x.count)} labels={d.map((x) => formatDayMonth(x.day))} h={170} every={2} caption="Practice sessions per day" />}
             </Card>
             <Card padding={0}>
-              <div className={styles.cardHead}><H l={3}>Recent ratings</H><Link href="/admin/ratings">View all</Link></div>
+              <div className={styles.cardHead}><H l={3}>Recent ratings</H><Link href="/admin/ratings" className={styles.viewAll}>View all</Link></div>
               {ratings.isPending ? <div style={{ padding: 24 }}><Skeleton h={60} /></div> : (ratings.data?.rows ?? []).slice(0, 4).map((r, i) => (
                 <div key={i} className={styles.recent}>
                   <div className={styles.recentTop}><b>{r.student_name}</b><Stars n={r.stars} size={14} /></div>

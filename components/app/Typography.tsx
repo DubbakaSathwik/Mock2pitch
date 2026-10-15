@@ -8,7 +8,8 @@ export function Overline({ children, color, style, className, as: Tag = "div" }:
 }
 /** `l` is the visual level (1 = page title 32px, 2 = section 24px, 3 = card title 19px); `as` the semantic element. */
 export function H({ l = 1, as, children, style, className, id }: Common & { l?: 1 | 2 | 3; as?: ElementType }) {
-  const Tag = (as ?? (`h${l}` as ElementType));
+  // level 3 is a *visual* size for card titles; semantically they are second-level sections under the page title (no skipped levels)
+  const Tag = (as ?? ((l === 3 ? "h2" : `h${l}`) as ElementType));
   return <Tag id={id} className={[styles.h, styles[`h${l}`], className ?? ""].join(" ").trim()} style={style}>{children}</Tag>;
 }
 export function P({ children, style, className, id }: Common) {
