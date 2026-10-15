@@ -1,5 +1,5 @@
 // NVIDIA key routing (§7.2). Pure logic over an injected store + transport so it is unit-testable.
-import { COOLDOWN_5XX_S, COOLDOWN_AUTH_S, DEFAULT_COOLDOWN_429_S, SAME_KEY_RETRY_DELAY_MS, type Purpose, type Slot } from "../constants.ts";
+import { COOLDOWN_5XX_S, COOLDOWN_AUTH_S, DEFAULT_COOLDOWN_429_S, SAME_KEY_RETRY_DELAYS_MS, type Purpose, type Slot } from "../constants.ts";
 import { AppError, Errors } from "../http.ts";
 
 export type Outcome = "success" | "rate_limited" | "server_error" | "timeout" | "bad_request" | "invalid_output";
@@ -66,9 +66,9 @@ export async function routeCall<T>(o: RouteOptions<T>): Promise<T> {
     const st = byslot.get(slot)!;
     const isLast = i === eligibleKeys.length - 1;
     const base = { purpose: o.purpose, slotId: st.id, model: o.model, ...o.ctx };
-    // A transient 5xx / network error on the LAST usable key is retried once on the same key before the key is cooled down: with a single
-    // key per purpose the cooldown would otherwise turn one blip into 30 s of "AI busy" (observed live: 503 on the report model).
-    for (let attempt = 0; attempt < 2; attempt++) {
+    // A transient 5xx / network error on the LAST usable key is retried a few times on the same key (with growing pauses) before the key is
+    // cooled down: with a single key per purpose the cooldown would otherwise turn one blip into 30 s of "AI busy" (observed live: 503 on the report model).
+    for (let attempt = 0; attempt <= SAME_KEY_RETRY_DELAYS_MS.length; attempt++) {
       const t0 = Date.now();
       let res: TransportResult;
       try {
@@ -76,7 +76,7 @@ export async function routeCall<T>(o: RouteOptions<T>): Promise<T> {
       } catch (e) {
         const kind = e instanceof TransportError ? e.kind : "network";
         await o.store.log({ ...base, outcome: kind === "timeout" ? "timeout" : "server_error", httpStatus: null, latencyMs: Date.now() - t0 });
-        if (isLast && attempt === 0) { await sleep(SAME_KEY_RETRY_DELAY_MS); continue; }
+        if (isLast && attempt < SAME_KEY_RETRY_DELAYS_MS.length) { await sleep(SAME_KEY_RETRY_DELAYS_MS[attempt]!); continue; }
         await o.store.setCooldown(st.id, new Date(now().getTime() + COOLDOWN_5XX_S * 1000), kind);
         break;
       }
@@ -108,7 +108,7 @@ export async function routeCall<T>(o: RouteOptions<T>): Promise<T> {
       }
       // 5xx and anything else unexpected
       await o.store.log({ ...base, outcome: "server_error", httpStatus: s, latencyMs });
-      if (isLast && attempt === 0) { await sleep(SAME_KEY_RETRY_DELAY_MS); continue; }
+      if (isLast && attempt < SAME_KEY_RETRY_DELAYS_MS.length) { await sleep(SAME_KEY_RETRY_DELAYS_MS[attempt]!); continue; }
       await o.store.setCooldown(st.id, new Date(now().getTime() + COOLDOWN_5XX_S * 1000), `http_${s}`);
       break;
     }

@@ -26,6 +26,8 @@ export interface Deps {
   /** Fire an internal function-to-function call (sweeper resumes, stage chaining). */
   invoke(fn: string, body: Record<string, unknown>): Promise<void>;
   now(): Date;
+  /** Pause used between same-key AI retries; tests inject a no-op. Defaults to a real timer. */
+  sleep?(ms: number): Promise<void>;
 }
 
 export type Ctx = { req: Request; deps: Deps; cors: Record<string, string> };

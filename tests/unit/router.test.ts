@@ -93,15 +93,25 @@ describe("routeCall", () => {
     expect(store.logs.map((l) => l.outcome)).toEqual(["server_error", "success"]);
     expect(store.cooldowns["id-primary"]).toBeUndefined();
   });
-  it("two 5xx in a row on the last key cool it down and surface AI_BUSY; a network error is retried the same way", async () => {
+  it("a 5xx that keeps coming back on the last key is retried 4 times with growing pauses, then the key is cooled down and AI_BUSY surfaces (a network error counts the same)", async () => {
     const now = new Date("2026-01-01T00:00:00Z");
     store = new FakeStore({ fallback_1: { cooldownUntil: new Date(now.getTime() + 60_000) }, fallback_2: { cooldownUntil: new Date(now.getTime() + 60_000) } });
-    let n = 0;
+    let n = 0; const pauses: number[] = [];
     const t: Transport = async () => { n++; if (n === 1) throw new TransportError("network"); return { status: 502, headers: {}, body: {} }; };
-    await expect(routeCall(base(store, t, { now: () => now, sleep: async () => {} }))).rejects.toMatchObject({ code: "AI_BUSY" });
-    expect(n).toBe(2);
-    expect(store.logs.map((l) => l.outcome)).toEqual(["server_error", "server_error"]);
+    await expect(routeCall(base(store, t, { now: () => now, sleep: async (ms: number) => { pauses.push(ms); } }))).rejects.toMatchObject({ code: "AI_BUSY" });
+    expect(n).toBe(5); expect(pauses).toEqual([1500, 3000, 6000, 10000]);
+    expect(store.logs.map((l) => l.outcome)).toEqual(Array(5).fill("server_error"));
     expect(store.cooldowns["id-primary"]!.until.getTime()).toBe(now.getTime() + 30_000);
+  });
+  it("503, 503, then success on the third attempt: no cooldown, the student never sees it (observed live on the report model)", async () => {
+    const now = new Date("2026-01-01T00:00:00Z");
+    store = new FakeStore({ fallback_1: { cooldownUntil: new Date(now.getTime() + 60_000) }, fallback_2: { cooldownUntil: new Date(now.getTime() + 60_000) } });
+    let n = 0; const pauses: number[] = [];
+    const t: Transport = async () => { n++; return n < 3 ? { status: 503, headers: {}, body: {} } : { status: 200, headers: {}, body: { v: 3 } }; };
+    expect(await routeCall(base(store, t, { now: () => now, sleep: async (ms: number) => { pauses.push(ms); } }))).toBe(3);
+    expect(pauses).toEqual([1500, 3000]);
+    expect(store.logs.map((l) => l.outcome)).toEqual(["server_error", "server_error", "success"]);
+    expect(store.cooldowns["id-primary"]).toBeUndefined();
   });
   it("a key that has a usable fallback is NOT retried: it rotates immediately", async () => {
     const now = new Date("2026-01-01T00:00:00Z");

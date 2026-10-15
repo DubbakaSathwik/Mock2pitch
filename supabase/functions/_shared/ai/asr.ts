@@ -20,7 +20,7 @@ export async function transcribePcm(deps: Deps, store: RouterStore, pcm: Uint8Ar
     const t = await routeCall({
       purpose: "speech_to_text", model: modelFor(deps.env, "speech_to_text"), keys: keysFor(deps.env, "speech_to_text"), store,
       transport: ({ key, timeoutMs }) => deps.asr({ pcm: c.pcm, key, timeoutMs }),
-      timeoutMs: TIMEOUT_ASR_MS, rpmSoftLimit: deps.env.NVIDIA_KEY_RPM_SOFT_LIMIT, ctx,
+      timeoutMs: TIMEOUT_ASR_MS, rpmSoftLimit: deps.env.NVIDIA_KEY_RPM_SOFT_LIMIT, ctx, sleep: deps.sleep,
       validate: asTranscript,
     });
     parts.push({ offsetMs: c.offsetMs, t });

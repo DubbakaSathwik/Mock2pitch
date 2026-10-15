@@ -21,7 +21,7 @@ export async function generateReport(deps: Deps, store: RouterStore, slides: Rep
   const attempt = (messages: ChatMessage[]) => routeCall({
     purpose: "report_generation", model, keys: keysFor(deps.env, "report_generation"), store,
     transport: chatTransport(model, messages, { maxTokens: 3072, fetchFn: deps.fetchFn }),
-    timeoutMs: TIMEOUT_REPORT_MS, rpmSoftLimit: deps.env.NVIDIA_KEY_RPM_SOFT_LIMIT, ctx,
+    timeoutMs: TIMEOUT_REPORT_MS, rpmSoftLimit: deps.env.NVIDIA_KEY_RPM_SOFT_LIMIT, ctx, sleep: deps.sleep,
     validate: (body) => reportOut.parse(parseJsonLoose(chatText(body))),
   });
   try {

@@ -96,7 +96,7 @@ export async function createEnv() {
     env: testEnv,
     userClient: (jwt) => makePgSupabase(db.admin, { role: "authenticated", uid: tokens.get(jwt) }, { users: tokens }),
     admin: makePgSupabase(db.admin, { role: "service_role" }, { onDeleteUser: async (id) => { await db.admin.query("delete from auth.users where id=$1", [id]); } }),
-    r2, fetchFn: ai.fetchFn, asr: ai.asr, asrProbe: ai.asrProbe, now: () => state.now(),
+    r2, fetchFn: ai.fetchFn, asr: ai.asr, asrProbe: ai.asrProbe, now: () => state.now(), sleep: async () => {},
     background: (p) => { pending.push(p.catch(() => {})); },
     invoke: async (fn, body) => { invokes.push({ fn, body }); },
   };

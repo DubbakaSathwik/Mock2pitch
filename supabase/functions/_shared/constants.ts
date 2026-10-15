@@ -38,7 +38,12 @@ export const ASR_CONCURRENCY = 3;
 // Key routing
 export const DEFAULT_COOLDOWN_429_S = 60;
 export const COOLDOWN_5XX_S = 30;
-export const SAME_KEY_RETRY_DELAY_MS = 1500; // one retry of the last usable key after a transient 5xx/network error, before cooling it down
+/**
+ * Pauses before each retry of the LAST usable key after a transient 5xx/network error, before the key is cooled down. 5xx answers cost no
+ * credits and come back in ~250 ms; the report model answered 503 to 9 of 13 first attempts on the Phase 4 test day (they cleared after
+ * a few seconds), so one retry was not enough: 5 attempts in ~20 s turn most of those into a success the student never notices.
+ */
+export const SAME_KEY_RETRY_DELAYS_MS = [1500, 3000, 6000, 10000] as const;
 export const COOLDOWN_AUTH_S = 600;
 export const LOW_CREDIT_PCT = 75;
 

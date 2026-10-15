@@ -17,7 +17,7 @@ export function readSlide(deps: Deps, store: RouterStore, jpeg: Uint8Array, ctx:
   return routeCall({
     purpose: "slide_reading", model, keys: keysFor(deps.env, "slide_reading"), store,
     transport: chatTransport(model, messages, { maxTokens: 2048, fetchFn: deps.fetchFn }),
-    timeoutMs: TIMEOUT_SLIDE_MS, rpmSoftLimit: deps.env.NVIDIA_KEY_RPM_SOFT_LIMIT, ctx,
+    timeoutMs: TIMEOUT_SLIDE_MS, rpmSoftLimit: deps.env.NVIDIA_KEY_RPM_SOFT_LIMIT, ctx, sleep: deps.sleep,
     validate: (body) => slideReadingOut.parse(parseJsonLoose(chatText(body))),
   });
 }
