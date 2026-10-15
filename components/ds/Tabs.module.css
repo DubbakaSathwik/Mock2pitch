@@ -1,0 +1,11 @@
+.tab{border:none;background:transparent;cursor:pointer;font-family:var(--font-display);white-space:nowrap}
+.segmented{display:inline-flex;gap:4px;padding:4px;border-radius:var(--radius-pill);background:var(--ink-100)}
+.segmented .tab{height:36px;padding:0 16px;border-radius:var(--radius-pill);color:var(--text-muted);font-size:14px;transition:all var(--dur-fast)}
+.segmented .on{background:var(--white);box-shadow:var(--shadow-sm);color:var(--text-strong)}
+.underline{display:flex;gap:24px;border-bottom:1px solid var(--border-subtle)}
+.underline .tab{padding:10px 0;margin-bottom:-1px;border-bottom:2px solid transparent;color:var(--text-muted);font-size:15px}
+.underline .on{border-bottom-color:var(--bright-marine);color:var(--text-strong)}
+.pill{display:flex;gap:8px;flex-wrap:wrap}
+.pill .tab{height:var(--tab-h,36px);min-width:44px;padding:0 18px;border-radius:99px;border:1px solid var(--border-strong);background:#fff;color:var(--imperial-blue);font-size:14px}
+.pill .on{border-color:var(--imperial-blue);background:var(--imperial-blue);color:#fff}
+@container app (max-width:759.98px){.pill .tab{min-height:44px}}

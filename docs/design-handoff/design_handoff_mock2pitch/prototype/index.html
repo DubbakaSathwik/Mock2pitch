@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock2Pitch — Final prototype</title>
+<link rel="stylesheet" href="design-system/styles.css">
+<link rel="stylesheet" href="vendor/lucide/lucide.css" data-m2p-icons>
+<style>
+html,body{margin:0;height:100%;background:#F6F7FB}
+a{color:var(--bright-marine)}a:hover{color:var(--imperial-blue)}
+button{font-family:inherit}
+@keyframes m2pIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes m2pNod{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(2px) rotate(-1.2deg)}60%{transform:translateY(0) rotate(1deg)}80%{transform:translateY(1.5px) rotate(0)}}
+@keyframes m2pBlink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+@keyframes m2pPulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes m2pSpin{to{transform:rotate(360deg)}}
+</style>
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/babel.min.js"></script>
+<script src="design-system/_ds_bundle.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react" src="src/m2p-app.jsx"></script>
+<script type="text/babel" data-presets="react">
+ReactDOM.createRoot(document.getElementById('root')).render(<window.M2PApp />);
+</script>
+</body>
+</html>

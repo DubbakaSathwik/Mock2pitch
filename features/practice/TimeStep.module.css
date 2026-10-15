@@ -1,0 +1,19 @@
+.setter{display:flex;flex-direction:row;gap:20px;align-items:flex-end}
+.minutes{width:240px}
+.presetsErr{padding-bottom:22px}
+.table{margin-top:20px}
+.tHead{padding:18px 24px;display:flex;justify-content:space-between;align-items:center}
+.rows{list-style:none;margin:0;padding:0}
+.row{display:grid;grid-template-columns:36px minmax(0,1fr) 200px 64px;gap:14px;align-items:center;padding:12px 24px;border-top:1px solid var(--border-subtle);font-family:var(--font-body);font-size:15px;color:var(--text-body)}
+.idx{color:var(--text-muted)}
+.name{color:var(--text-strong);min-width:0}
+.time{text-align:right}
+.note{display:flex;gap:12px;align-items:center;padding:16px 4px}
+.cta{display:flex;gap:16px;align-items:center}
+.cost{margin:0}
+@container app (max-width:759.98px){
+  .setter{flex-direction:column;align-items:stretch}
+  .minutes{width:100%}
+  .row{grid-template-columns:28px minmax(0,1fr) 56px;padding:12px 16px}
+  .cta{flex-direction:column;align-items:stretch;gap:8px}
+}

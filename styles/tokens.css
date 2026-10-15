@@ -1,0 +1,113 @@
+/* Design tokens — values copied unchanged from docs/design-handoff/.../design-system-source/tokens/{colors,typography,spacing,base}.css. */
+:root{
+/* Brand palette (from supplied palette sheet) */
+--prussian-blue:#00072D;
+--deep-navy:#001C55;
+--imperial-blue:#0A2472;
+--bright-marine:#0E6BA8;
+--icy-blue:#A6E1FA;
+/* Logo accent — sampled from logo play glyph / arc end (approximate) */
+--pitch-violet:#7B4DFF;
+--pitch-violet-soft:#EEE8FF;
+--logo-arc:linear-gradient(90deg,#2F5BF0 0%,#7B4DFF 100%);/* @kind color */
+
+/* Tints & shades */
+--marine-50:#EEF8FE;
+--marine-100:#D6F0FC;
+--marine-200:#A6E1FA;
+--marine-400:#3E95CF;
+--marine-500:#0E6BA8;
+--marine-600:#0B5A8E;
+--marine-700:#084770;
+
+/* Cool neutrals (navy-tinted) */
+--ink-900:#00072D;
+--ink-800:#141B3D;
+--ink-700:#2E3557;
+--ink-600:#4A5173;
+--ink-500:#6B718F;
+--ink-400:#9196AE;
+--ink-300:#BCC0D1;
+--ink-200:#DDE0EA;
+--ink-100:#ECEEF4;
+--ink-50:#F6F7FB;
+--white:#FFFFFF;
+
+/* Semantic (feedback report) */
+--success-500:#1F9D6B;--success-50:#E6F6EF;
+--warning-500:#D98A0B;--warning-50:#FDF3E1;
+--danger-500:#D64545;--danger-50:#FCEAEA;
+--info-500:var(--bright-marine);--info-50:var(--marine-50);
+
+/* Semantic aliases */
+--bg-page:var(--ink-50);
+--bg-inverse:var(--prussian-blue);
+--surface-card:var(--white);
+--surface-sunken:var(--ink-100);
+--surface-inverse:var(--deep-navy);
+--surface-inverse-raised:var(--imperial-blue);
+--surface-accent-soft:var(--marine-50);
+
+--text-strong:var(--prussian-blue);
+--text-body:var(--ink-700);
+--text-muted:var(--ink-500);
+--text-on-inverse:var(--white);
+--text-on-inverse-muted:var(--icy-blue);
+--text-link:var(--bright-marine);
+--text-link-hover:var(--imperial-blue);
+
+--border-subtle:var(--ink-200);
+--border-strong:var(--ink-300);
+--border-focus:var(--bright-marine);
+
+--action-primary:var(--imperial-blue);
+--action-primary-hover:var(--deep-navy);
+--action-primary-press:var(--prussian-blue);
+--action-accent:var(--bright-marine);
+--action-accent-hover:var(--marine-600);
+--action-record:var(--danger-500);
+
+--focus-ring:0 0 0 3px rgba(14,107,168,.35);
+}
+
+:root{
+--font-display:"Autour One","Trebuchet MS",system-ui,sans-serif;
+--font-body:"LXGW WenKai TC","Kaiti TC","STKaiti",Georgia,serif;
+--font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+
+--weight-light:300;/* @kind other */--weight-regular:400;/* @kind other */--weight-bold:700;/* @kind other */
+
+--text-display-xl:64px;--lh-display-xl:1.05;/* @kind other */
+--text-display-l:44px;--lh-display-l:1.1;/* @kind other */
+--text-h1:32px;--lh-h1:1.2;/* @kind other */
+--text-h2:24px;--lh-h2:1.25;/* @kind other */
+--text-h3:19px;--lh-h3:1.3;/* @kind other */
+--text-body-l:18px;--lh-body-l:1.6;/* @kind other */
+--text-body:16px;--lh-body:1.6;/* @kind other */
+--text-body-s:14px;--lh-body-s:1.5;/* @kind other */
+--text-caption:12px;--lh-caption:1.4;/* @kind other */
+--text-overline:12px;--tracking-overline:.24em;/* @kind other */
+--text-metric:40px;
+}
+
+:root{
+--space-0:0;--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-10:40px;--space-12:48px;--space-16:64px;--space-20:80px;
+--radius-xs:6px;--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:24px;--radius-pill:999px;
+--border-width:1px;
+--shadow-sm:0 1px 2px rgba(0,7,45,.06),0 1px 3px rgba(0,7,45,.08);
+--shadow-md:0 4px 12px rgba(0,7,45,.08),0 1px 3px rgba(0,7,45,.06);
+--shadow-lg:0 16px 40px rgba(0,7,45,.14),0 4px 12px rgba(0,7,45,.08);
+--shadow-record:0 0 0 6px rgba(214,69,69,.18);
+--ease-out:cubic-bezier(.22,.8,.3,1);/* @kind other */
+--ease-in-out:cubic-bezier(.65,0,.35,1);/* @kind other */
+--dur-fast:120ms;/* @kind other */--dur-base:200ms;/* @kind other */--dur-slow:360ms;/* @kind other */
+--content-max:1200px;--sidebar-w:248px;--topbar-h:64px;
+}
+
+html,body{margin:0;background:var(--bg-page);color:var(--text-body);font-family:var(--font-body);font-size:var(--text-body);line-height:var(--lh-body);-webkit-font-smoothing:antialiased}
+*,*::before,*::after{box-sizing:border-box}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:400;color:var(--text-strong);margin:0;text-wrap:balance}
+p{margin:0;text-wrap:pretty}
+a{color:var(--text-link);text-decoration:none}
+a:hover{color:var(--text-link-hover);text-decoration:underline}
+:focus-visible{outline:none;box-shadow:var(--focus-ring)}

@@ -1,0 +1,5 @@
+.n{display:flex;gap:12px;padding:16px;border-radius:14px;align-items:flex-start}
+.danger{background:var(--danger-50)}.warning{background:var(--warning-50)}.info{background:var(--marine-50)}
+.body{flex:1;min-width:0}
+.title{font-family:var(--font-body);font-weight:700}
+.text{font-family:var(--font-body);color:var(--ink-800)}

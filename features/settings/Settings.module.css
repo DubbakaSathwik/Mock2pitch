@@ -1,0 +1,10 @@
+.who{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.name{font-family:var(--font-display);font-size:19px;color:var(--text-strong)}
+.form{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.limits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.limit{padding:16px;border-radius:12px;background:var(--ink-50)}
+.limitVal{font-family:var(--font-display);font-size:17px;color:var(--text-strong);margin-top:4px}
+.link{display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-family:var(--font-body);color:var(--text-link);min-height:44px}
+.danger{margin-top:20px;border-color:rgba(214,69,69,.35)}
+@container app (max-width:759.98px){.two,.limits{grid-template-columns:minmax(0,1fr)}}

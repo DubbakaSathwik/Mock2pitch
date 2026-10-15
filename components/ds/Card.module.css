@@ -1,0 +1,7 @@
+.card{border-radius:var(--radius-lg);transition:box-shadow var(--dur-base) var(--ease-out),transform var(--dur-base) var(--ease-out)}
+.default{background:var(--surface-card);border:1px solid var(--border-subtle);box-shadow:var(--shadow-sm)}
+.sunken{background:var(--surface-sunken);border:1px solid transparent;--text-muted:#4A5173}
+.inverse{background:var(--surface-inverse);border:1px solid transparent;color:var(--text-on-inverse)}
+.accent{background:var(--surface-accent-soft);border:1px solid var(--marine-100)}
+.interactive{cursor:pointer}
+.interactive:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}

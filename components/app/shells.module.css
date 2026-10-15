@@ -1,0 +1,57 @@
+/* Student / admin desktop shell */
+.root{min-height:100dvh;display:flex;background:var(--bg-page)}
+.aside{width:248px;flex-shrink:0;background:#fff;border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;padding:20px;gap:4px;position:sticky;top:0;height:100dvh;box-sizing:border-box}
+.asideDark{background:var(--prussian-blue);border-right:0}
+.logo{padding:4px 8px 24px}
+.nav{display:flex;flex-direction:column;gap:4px}
+.navItem{display:flex;align-items:center;gap:12px;height:44px;padding:0 14px;border:0;border-radius:999px;cursor:pointer;background:transparent;color:var(--ink-600);font-family:var(--font-display);font-size:15px;text-align:left;text-decoration:none;width:100%;box-sizing:border-box}
+.navItem:hover{background:var(--ink-100);color:var(--ink-800);text-decoration:none}
+.navOn,.navOn:hover{background:var(--marine-50);color:var(--imperial-blue)}
+.navDark{color:var(--icy-blue)}
+.navDark:hover{background:rgba(166,225,250,.1);color:#fff}
+.navDarkOn,.navDarkOn:hover{background:rgba(166,225,250,.16);color:#fff}
+.avatarLink{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin-right:-6px}
+.user{display:flex;align-items:center;gap:10px;padding:14px 6px 0}
+.userName{font-family:var(--font-body);font-weight:700;font-size:14px;color:var(--text-strong);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.main{flex:1;min-width:0;padding:36px 40px;box-sizing:border-box}
+
+/* mobile shell: 56px bar + bottom tab bar */
+.mRoot{min-height:100dvh;display:flex;flex-direction:column;background:var(--bg-page)}
+.mTop{position:sticky;top:0;z-index:20;height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#fff;border-bottom:1px solid var(--border-subtle)}
+.aTop{background:var(--prussian-blue);border-bottom:0}
+.mMain{flex:1;padding:16px 16px 88px;min-width:0}
+.mTabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:#fff;border-top:1px solid var(--border-subtle);padding-bottom:max(6px,env(safe-area-inset-bottom))}
+.aTabs{grid-template-columns:repeat(5,minmax(0,1fr));background:var(--prussian-blue);border-top:0}
+.mTab{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--text-muted);font-family:var(--font-body);font-size:12px;text-decoration:none}
+.mTab:hover{text-decoration:none;color:var(--ink-800)}
+.mTabOn{color:var(--imperial-blue);font-weight:700}
+.aTab{color:var(--ink-400);font-size:11px}
+.aTab:hover{color:#fff}
+.aTabOn{color:#fff}
+
+/* flow shell */
+.flow{min-height:100dvh;display:flex;flex-direction:column;background:var(--bg-page)}
+.flowBar{position:sticky;top:0;z-index:20;flex-shrink:0;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;background:#fff;border-bottom:1px solid var(--border-subtle);gap:12px}
+.flowMain{flex:1;padding:32px 40px;min-width:0}
+.stepper{list-style:none;margin:0;padding:0;display:flex;align-items:center;gap:14px}
+.step{display:flex;align-items:center;gap:8px;color:var(--text-muted);font-family:var(--font-body);font-size:14px}
+.stepOn{color:var(--imperial-blue)}
+.stepCur{font-weight:700}
+.dot{width:24px;height:24px;border-radius:50%;background:var(--ink-100);color:var(--text-muted);display:flex;align-items:center;justify-content:center;font-size:12px}
+.dotDone{background:var(--success-500);color:#fff}
+.dotCur{background:var(--imperial-blue);color:#fff}
+.exit{width:44px;height:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-700);flex-shrink:0}
+.exit:hover{background:var(--ink-100);color:var(--ink-800);text-decoration:none}
+
+.center{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:40px;background:var(--bg-page);box-sizing:border-box}
+.head{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:24px}
+.headTitle{}
+@container app (max-width:759.98px){
+  .flowBar{height:56px;padding:0 8px 0 12px;gap:8px}
+  .dot{width:22px;height:22px}
+  .flowMain{padding:16px}
+  .stepper{gap:4px}
+  .center{padding:20px}
+  .head{flex-direction:column;align-items:stretch}
+  .headTitle{font-size:26px}
+}

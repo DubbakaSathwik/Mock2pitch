@@ -1,0 +1,98 @@
+[
+  {
+    "page": "Landing",
+    "formFactor": "mobile",
+    "performance": 90,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100,
+    "lcp_ms": 3254,
+    "cls": 0,
+    "tbt_ms": 172,
+    "finalUrl": "http://localhost:3200/",
+    "performanceRuns": [
+      91,
+      88,
+      90
+    ]
+  },
+  {
+    "page": "Dashboard",
+    "formFactor": "mobile",
+    "performance": 85,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100,
+    "lcp_ms": 3565,
+    "cls": 0.017,
+    "tbt_ms": 267,
+    "finalUrl": "http://localhost:3200/dashboard?persona=returning_student",
+    "performanceRuns": [
+      85,
+      85,
+      85
+    ]
+  },
+  {
+    "page": "Report",
+    "formFactor": "mobile",
+    "performance": 82,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100,
+    "lcp_ms": 3694,
+    "cls": 0,
+    "tbt_ms": 335,
+    "finalUrl": "http://localhost:3200/reports/00000000-0000-4000-8000-00000000d001-rep2?persona=returning_student",
+    "performanceRuns": [
+      81,
+      82,
+      85
+    ]
+  },
+  {
+    "page": "Landing",
+    "formFactor": "desktop",
+    "performance": 78,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100,
+    "lcp_ms": 3042,
+    "cls": 0,
+    "tbt_ms": 84,
+    "finalUrl": "http://localhost:3200/",
+    "performanceRuns": [
+      78
+    ]
+  },
+  {
+    "page": "Dashboard",
+    "formFactor": "desktop",
+    "performance": 63,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100,
+    "lcp_ms": 3555,
+    "cls": 0.001,
+    "tbt_ms": 295,
+    "finalUrl": "http://localhost:3200/dashboard?persona=returning_student",
+    "performanceRuns": [
+      63
+    ]
+  },
+  {
+    "page": "Report",
+    "formFactor": "desktop",
+    "performance": 65,
+    "accessibility": 100,
+    "bestPractices": 100,
+    "seo": 100,
+    "lcp_ms": 3817,
+    "cls": 0,
+    "tbt_ms": 257,
+    "finalUrl": "http://localhost:3200/reports/00000000-0000-4000-8000-00000000d001-rep2?persona=returning_student",
+    "performanceRuns": [
+      65
+    ]
+  }
+]

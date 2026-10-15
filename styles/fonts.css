@@ -1,0 +1,5 @@
+/* Self-hosted fonts (OFL, licences in /public/fonts). Latin subsets (U+0020-00FF, punctuation, arrows, ₹) of the handoff TTFs.
+   Autour One 400 and LXGW WenKai TC 400 are preloaded in app/layout.tsx; the bold face loads when first needed. */
+@font-face{font-family:"Autour One";src:url("/fonts/AutourOne-Regular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"LXGW WenKai TC";src:url("/fonts/LXGWWenKaiTC-Regular.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"LXGW WenKai TC";src:url("/fonts/LXGWWenKaiTC-Bold.woff2") format("woff2");font-weight:700;font-style:normal;font-display:swap}

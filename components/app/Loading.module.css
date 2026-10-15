@@ -1,0 +1,5 @@
+.shell{min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--bg-page)}
+.spinner{width:36px;height:36px;border-radius:50%;border:4px solid var(--ink-200);border-top-color:var(--bright-marine);animation:spin 1.1s linear infinite}
+.skel{background:linear-gradient(90deg,var(--ink-100) 0,var(--ink-50) 50%,var(--ink-100) 100%);background-size:240px 100%;background-repeat:no-repeat;background-color:var(--ink-100);animation:shimmer 1.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:-240px 0}100%{background-position:calc(240px + 100%) 0}}

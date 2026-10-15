@@ -1,0 +1,6 @@
+.wrap{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-family:var(--font-body);font-size:15px;color:var(--text-body);position:relative;min-height:44px}
+.disabled{cursor:not-allowed;opacity:.5}
+.native{position:absolute;opacity:0;width:20px;height:20px;margin:0;left:0}
+.box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border-strong);background:var(--white);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--dur-fast)}
+.on{border-color:var(--imperial-blue);background:var(--imperial-blue)}
+.native:focus-visible + .box{box-shadow:var(--focus-ring)}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/mock-2-pitch-design-system-feb8dee3-f840-4cef-bd73-44d0d0c408e6/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/mock-2-pitch-design-system-feb8dee3-f840-4cef-bd73-44d0d0c408e6/tokens/colors.css">
+<link rel="stylesheet" href="_ds/mock-2-pitch-design-system-feb8dee3-f840-4cef-bd73-44d0d0c408e6/tokens/typography.css">
+<link rel="stylesheet" href="_ds/mock-2-pitch-design-system-feb8dee3-f840-4cef-bd73-44d0d0c408e6/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/mock-2-pitch-design-system-feb8dee3-f840-4cef-bd73-44d0d0c408e6/tokens/base.css">
+<link rel="stylesheet" href="_ds/mock-2-pitch-design-system-feb8dee3-f840-4cef-bd73-44d0d0c408e6/styles.css">
+<script src="_ds/mock-2-pitch-design-system-feb8dee3-f840-4cef-bd73-44d0d0c408e6/_ds_bundle.js"></script>
+<style>
+html,body{margin:0;height:100%;background:#F6F7FB}
+a{color:var(--bright-marine)}a:hover{color:var(--imperial-blue)}
+button{font-family:inherit}
+@keyframes m2pIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes m2pNod{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(2px) rotate(-1.2deg)}60%{transform:translateY(0) rotate(1deg)}80%{transform:translateY(1.5px) rotate(0)}}
+@keyframes m2pBlink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+@keyframes m2pPulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes m2pSpin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<x-import component-from-global-scope="M2PApp" from="./m2p-app.jsx" hint-size="100%,100vh"></x-import>
+</x-dc>
+</body>
+</html>

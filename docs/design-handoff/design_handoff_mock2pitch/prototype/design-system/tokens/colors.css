@@ -1,0 +1,70 @@
+:root{
+/* Brand palette (from supplied palette sheet) */
+--prussian-blue:#00072D;
+--deep-navy:#001C55;
+--imperial-blue:#0A2472;
+--bright-marine:#0E6BA8;
+--icy-blue:#A6E1FA;
+/* Logo accent — sampled from logo play glyph / arc end (approximate) */
+--pitch-violet:#7B4DFF;
+--pitch-violet-soft:#EEE8FF;
+--logo-arc:linear-gradient(90deg,#2F5BF0 0%,#7B4DFF 100%);/* @kind color */
+
+/* Tints & shades */
+--marine-50:#EEF8FE;
+--marine-100:#D6F0FC;
+--marine-200:#A6E1FA;
+--marine-400:#3E95CF;
+--marine-500:#0E6BA8;
+--marine-600:#0B5A8E;
+--marine-700:#084770;
+
+/* Cool neutrals (navy-tinted) */
+--ink-900:#00072D;
+--ink-800:#141B3D;
+--ink-700:#2E3557;
+--ink-600:#4A5173;
+--ink-500:#6B718F;
+--ink-400:#9196AE;
+--ink-300:#BCC0D1;
+--ink-200:#DDE0EA;
+--ink-100:#ECEEF4;
+--ink-50:#F6F7FB;
+--white:#FFFFFF;
+
+/* Semantic (feedback report) */
+--success-500:#1F9D6B;--success-50:#E6F6EF;
+--warning-500:#D98A0B;--warning-50:#FDF3E1;
+--danger-500:#D64545;--danger-50:#FCEAEA;
+--info-500:var(--bright-marine);--info-50:var(--marine-50);
+
+/* Semantic aliases */
+--bg-page:var(--ink-50);
+--bg-inverse:var(--prussian-blue);
+--surface-card:var(--white);
+--surface-sunken:var(--ink-100);
+--surface-inverse:var(--deep-navy);
+--surface-inverse-raised:var(--imperial-blue);
+--surface-accent-soft:var(--marine-50);
+
+--text-strong:var(--prussian-blue);
+--text-body:var(--ink-700);
+--text-muted:var(--ink-500);
+--text-on-inverse:var(--white);
+--text-on-inverse-muted:var(--icy-blue);
+--text-link:var(--bright-marine);
+--text-link-hover:var(--imperial-blue);
+
+--border-subtle:var(--ink-200);
+--border-strong:var(--ink-300);
+--border-focus:var(--bright-marine);
+
+--action-primary:var(--imperial-blue);
+--action-primary-hover:var(--deep-navy);
+--action-primary-press:var(--prussian-blue);
+--action-accent:var(--bright-marine);
+--action-accent-hover:var(--marine-600);
+--action-record:var(--danger-500);
+
+--focus-ring:0 0 0 3px rgba(14,107,168,.35);
+}

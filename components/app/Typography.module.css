@@ -1,0 +1,5 @@
+.overline{font-family:var(--font-body);font-weight:700;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--bright-marine)}
+.h{font-family:var(--font-display);font-weight:400;line-height:1.2;color:var(--text-strong);margin:0}
+.h1{font-size:var(--text-h1)}.h2{font-size:var(--text-h2)}.h3{font-size:var(--text-h3)}
+.p{font-family:var(--font-body);font-size:16px;line-height:1.6;color:var(--text-body);margin:0}
+.muted{font-family:var(--font-body);font-size:14px;line-height:1.5;color:var(--text-muted);margin:0}

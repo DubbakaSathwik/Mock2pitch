@@ -1,0 +1,3 @@
+.region{position:fixed;left:0;right:0;bottom:28px;display:flex;justify-content:center;pointer-events:none;z-index:200;padding:0 16px}
+.toast{display:flex;gap:8px;align-items:center;background:var(--prussian-blue);color:#fff;padding:12px 20px;border-radius:999px;font-family:var(--font-body);font-size:14px;box-shadow:var(--shadow-lg);animation:m2pIn .25s}
+@media (max-width:759.98px){.region{bottom:80px}}
