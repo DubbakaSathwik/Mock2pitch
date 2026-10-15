@@ -1,4 +1,4 @@
-import { api, AppError, checkCanPractise, Errors, ok, readBody, requireUser } from "./common.ts";
+import { api, AppError, checkCanPractise, Errors, ok, readBody, reopenUploadingSession, requireUser } from "./common.ts";
 import { sessionSubmitInitIn } from "../schemas.ts";
 import { AUDIO_PUT_EXPIRES_S, MAX_CLIP_BYTES } from "../constants.ts";
 import { keys } from "../r2.ts";
@@ -37,6 +37,12 @@ export const sessionSubmitInit = api(async (ctx) => {
     await deps.r2.delete(f.object_key).catch(() => {});
     await deps.admin.from("files").update({ status: "deleted", deleted_at: deps.now().toISOString() }).eq("id", f.id);
   }
+
+  // A session of this student that was left in `uploading_audio` (tab closed mid-upload, rejected clip) holds the one-analysis slot until the
+  // sweeper reopens it (1 h). Once its presigned URLs have expired it can never finish, so release it now instead of blocking this submit.
+  const cutoff = new Date(deps.now().getTime() - (AUDIO_PUT_EXPIRES_S + 60) * 1000).toISOString();
+  const { data: stale } = await deps.admin.from("practice_sessions").select("id").eq("owner_id", a.userId).eq("status", "uploading_audio").neq("id", session_id).lt("updated_at", cutoff);
+  for (const o of (stale ?? []) as { id: string }[]) await reopenUploadingSession(deps, o.id);
 
   // One analysing session per user is enforced by a unique partial index.
   const { error } = await deps.admin.from("practice_sessions").update({

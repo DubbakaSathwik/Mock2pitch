@@ -1,4 +1,4 @@
-import { api, AppError, isInternal, logEvent, ok } from "./common.ts";
+import { api, AppError, isInternal, logEvent, ok, reopenUploadingSession } from "./common.ts";
 import { AUDIO_HARD_TTL_MS, MAX_ANALYSIS_ATTEMPTS, PENDING_FILE_TTL_MS, STUCK_JOB_MS } from "../constants.ts";
 import type { Deps } from "../deps.ts";
 
@@ -26,12 +26,7 @@ export const maintenanceSweep = api(async (ctx) => {
   // 1c) sessions that never finished uploading audio go back to 'in_progress' (the student can submit again).
   const { data: upl } = await deps.admin.from("practice_sessions").select("id").eq("status", "uploading_audio").lt("updated_at", iso(deps, PENDING_FILE_TTL_MS));
   for (const s of (upl ?? []) as { id: string }[]) {
-    const { data: left } = await deps.admin.from("files").select("id, object_key, status").eq("session_id", s.id).eq("kind", "audio_clip").in("status", ["pending", "uploaded"]);
-    let ok_ = true;
-    for (const f of (left ?? []) as { id: string; object_key: string }[]) {
-      try { await deps.r2.delete(f.object_key); await deps.admin.from("files").update({ status: "deleted", deleted_at: deps.now().toISOString() }).eq("id", f.id); } catch { ok_ = false; }
-    }
-    if (ok_) { await deps.admin.from("practice_sessions").update({ status: "in_progress" }).eq("id", s.id); counts.sessions_reopened++; }
+    if (await reopenUploadingSession(deps, s.id)) counts.sessions_reopened++;
   }
   // 1d) never-submitted sessions older than 24h are abandoned.
   const { data: idle } = await deps.admin.from("practice_sessions").select("id").eq("status", "in_progress").lt("created_at", iso(deps, AUDIO_HARD_TTL_MS));

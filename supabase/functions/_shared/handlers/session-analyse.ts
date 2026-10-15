@@ -47,25 +47,32 @@ export const sessionAnalyse = api(async (ctx) => {
 
   // ---- verify the declared clips (exist, exact size, valid 16 kHz mono 16-bit WAV) ----
   const { data: clips } = await deps.admin.from("files").select("id, slide_index, object_key, expected_size_bytes, status").eq("session_id", session_id).eq("kind", "audio_clip").in("status", ["pending", "uploaded"]);
-  if (!clips || clips.length === 0) throw Errors.conflict("no_clips", "There's no audio to analyse.");
-  for (const c of clips as { id: string; slide_index: number; object_key: string; expected_size_bytes: number; status: string }[]) {
-    const head = await deps.r2.head(c.object_key);
-    if (!head) {
-      if (c.status === "uploaded") throw Errors.conflict("audio_expired", "That recording is no longer available.");
-      throw Errors.badRequest("clip_missing", "A recording didn't upload.", { slide_index: c.slide_index });
+  // A clip problem found here (missing, wrong size, not a valid WAV) means the analysis never starts. `uploading_audio` counts as "analysing"
+  // for the one-analysis-per-student rule, so give the slot back: the student fixes the clip and submits again (submit-init accepts in_progress).
+  try {
+    if (!clips || clips.length === 0) throw Errors.conflict("no_clips", "There's no audio to analyse.");
+    for (const c of clips as { id: string; slide_index: number; object_key: string; expected_size_bytes: number; status: string }[]) {
+      const head = await deps.r2.head(c.object_key);
+      if (!head) {
+        if (c.status === "uploaded") throw Errors.conflict("audio_expired", "That recording is no longer available.");
+        throw Errors.badRequest("clip_missing", "A recording didn't upload.", { slide_index: c.slide_index });
+      }
+      if (head.size !== Number(c.expected_size_bytes)) {
+        await deps.r2.delete(c.object_key).catch(() => {});
+        await deps.admin.from("files").update({ status: "failed" }).eq("id", c.id);
+        throw Errors.badRequest("size_mismatch", "A recording didn't match its declared size.", { slide_index: c.slide_index });
+      }
+      const info = parseWav(await deps.r2.getRange(c.object_key, 0, Math.min(HEADER_BYTES, head.size - 1)), head.size);
+      if (!info.ok) {
+        await deps.r2.delete(c.object_key).catch(() => {});
+        await deps.admin.from("files").update({ status: "failed" }).eq("id", c.id);
+        throw Errors.badRequest("audio_invalid", "A recording isn't in the expected audio format.", { slide_index: c.slide_index, reason: info.reason });
+      }
+      if (c.status === "pending") await deps.admin.from("files").update({ status: "uploaded", size_bytes: head.size, uploaded_at: deps.now().toISOString() }).eq("id", c.id);
     }
-    if (head.size !== Number(c.expected_size_bytes)) {
-      await deps.r2.delete(c.object_key).catch(() => {});
-      await deps.admin.from("files").update({ status: "failed" }).eq("id", c.id);
-      throw Errors.badRequest("size_mismatch", "A recording didn't match its declared size.", { slide_index: c.slide_index });
-    }
-    const info = parseWav(await deps.r2.getRange(c.object_key, 0, Math.min(HEADER_BYTES, head.size - 1)), head.size);
-    if (!info.ok) {
-      await deps.r2.delete(c.object_key).catch(() => {});
-      await deps.admin.from("files").update({ status: "failed" }).eq("id", c.id);
-      throw Errors.badRequest("audio_invalid", "A recording isn't in the expected audio format.", { slide_index: c.slide_index, reason: info.reason });
-    }
-    if (c.status === "pending") await deps.admin.from("files").update({ status: "uploaded", size_bytes: head.size, uploaded_at: deps.now().toISOString() }).eq("id", c.id);
+  } catch (e) {
+    if (e instanceof AppError && s.status === "uploading_audio") await deps.admin.from("practice_sessions").update({ status: "in_progress" }).eq("id", session_id).eq("status", "uploading_audio");
+    throw e;
   }
 
   const { error } = await deps.admin.from("practice_sessions").update({

@@ -69,3 +69,19 @@ export async function requireNotAdmin(ctx: Ctx, userId: string) {
 export function logEvent(msg: string, fields: Record<string, string | number | boolean | null> = {}) {
   console.log(JSON.stringify({ level: "info", msg, ...fields })); // counts/ids only; never content, keys or URLs
 }
+
+/**
+ * Puts a session that is stuck in `uploading_audio` back to `in_progress` so the student can submit again, after removing any clip
+ * objects it still holds. `uploading_audio` counts as "analysing" for the one-analysis-per-student rule, so a session that will never
+ * finish (abandoned mid-upload, expired URLs) must not keep blocking the student's other decks. Returns false if an object could not be
+ * deleted (the caller retries later; nothing is half-released).
+ */
+export async function reopenUploadingSession(deps: Deps, sessionId: string): Promise<boolean> {
+  const { data: left } = await deps.admin.from("files").select("id, object_key, status").eq("session_id", sessionId).eq("kind", "audio_clip").in("status", ["pending", "uploaded"]);
+  for (const f of (left ?? []) as { id: string; object_key: string }[]) {
+    try { await deps.r2.delete(f.object_key); } catch { return false; }
+    await deps.admin.from("files").update({ status: "deleted", deleted_at: deps.now().toISOString() }).eq("id", f.id);
+  }
+  await deps.admin.from("practice_sessions").update({ status: "in_progress" }).eq("id", sessionId).eq("status", "uploading_audio");
+  return true;
+}

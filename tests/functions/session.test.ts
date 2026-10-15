@@ -205,7 +205,7 @@ describe("session-analyse: edge cases", () => {
       const r = await env.call(sessionAnalyse, { session_id: sessionId }, { token: u.token });
       expect([r.status, r.json.error.code, r.json.error.slide_index]).toEqual([400, "audio_invalid", 1]);
       expect(await env.r2.head(keys.audioClip(u.id, sessionId, 1))).toBeNull();
-      expect((await sess(sessionId)).status).toBe("uploading_audio");
+      expect((await sess(sessionId)).status).toBe("in_progress"); // the analysis never started: the one-analysis slot is given back
     }
   });
   it("missing clip -> clip_missing; size mismatch -> size_mismatch", async () => {
@@ -213,7 +213,10 @@ describe("session-analyse: edge cases", () => {
     await submit(u, sessionId, [{ slide_index: 0, wav: wav(1) }], { upload: false });
     const r = await env.call(sessionAnalyse, { session_id: sessionId }, { token: u.token });
     expect([r.status, r.json.error.code, r.json.error.slide_index]).toEqual([400, "clip_missing", 0]);
-    await env.r2.put(keys.audioClip(u.id, sessionId, 0), wav(2), "audio/wav"); // different length than declared
+    expect((await sess(sessionId)).status).toBe("in_progress");
+    // the student submits again (clip_missing gave the analysing slot back, so submit-init is the way in), but the object has a different length than declared
+    expect((await env.call(sessionSubmitInit, { session_id: sessionId, clips: [{ slide_index: 0, size_bytes: wav(1).length }] }, { token: u.token })).status).toBe(200);
+    await env.r2.put(keys.audioClip(u.id, sessionId, 0), wav(2), "audio/wav");
     expect((await env.call(sessionAnalyse, { session_id: sessionId }, { token: u.token })).json.error.code).toBe("size_mismatch");
   });
   it("other users 404, unauthenticated 401, admin 403, wrong state 409", async () => {
@@ -341,5 +344,46 @@ describe("session-analyse: failures, retries and resumption", () => {
   });
   it("buildWav sanity: reject non-16k via route of the validation helper", () => {
     expect(buildWav(new Uint8Array(4)).length).toBe(48);
+  });
+});
+
+describe("a session stuck in uploading_audio does not block the student", () => {
+  it("rejected audio gives the analysing slot back at once, so the student can fix the clip and submit again", async () => {
+    const a = await started("rel-a@example.test");
+    await submit(a.u, a.sessionId, [{ slide_index: 0, wav: new Uint8Array(5000).fill(65) }]);
+    expect((await env.call(sessionAnalyse, { session_id: a.sessionId }, { token: a.u.token })).json.error.code).toBe("audio_invalid");
+    expect((await sess(a.sessionId)).status).toBe("in_progress");
+    const again = await submit(a.u, a.sessionId, [{ slide_index: 0, wav: wav(1) }]); // re-record and submit again
+    expect(again.status).toBe(200);
+    expect((await env.call(sessionAnalyse, { session_id: a.sessionId }, { token: a.u.token })).status).toBe(202);
+  });
+  it("an abandoned upload (tab closed) is released by the next submit once its URLs have expired, and not before", async () => {
+    const first = await started("rel-b@example.test");
+    const w = wav(1);
+    expect((await submit(first.u, first.sessionId, [{ slide_index: 0, wav: w }], { upload: false })).status).toBe(200);
+    expect((await sess(first.sessionId)).status).toBe("uploading_audio");
+    // second session of the same student on another deck
+    const { complete, deckId } = await uploadDeck(env, first.u, H, await makePdf(3));
+    for (const im of complete.json.data.images) await put(im.upload.url, im.upload.headers, jpeg());
+    await env.call(deckProcess, { deck_id: deckId }, { token: first.u.token }); await env.settle();
+    const s2 = (await env.db.q(first.u.id, "select * from public.start_practice_session($1,$2)", [deckId, 3]))[0].id as string;
+    // fresh: still blocked, and the first session is untouched
+    const early = await env.call(sessionSubmitInit, { session_id: s2, clips: [{ slide_index: 0, size_bytes: w.length }] }, { token: first.u.token });
+    expect([early.status, early.json.error.code]).toEqual([409, "analysis_in_progress"]);
+    expect((await sess(first.sessionId)).status).toBe("uploading_audio");
+    // 15 minutes later the first session's URLs are dead: it is released and the second submit goes through
+    await env.backdate("practice_sessions", first.sessionId, "15 minutes");
+    const late = await env.call(sessionSubmitInit, { session_id: s2, clips: [{ slide_index: 0, size_bytes: w.length }] }, { token: first.u.token });
+    expect(late.status).toBe(200);
+    expect((await sess(first.sessionId)).status).toBe("in_progress");
+    expect((await audioFiles(first.sessionId)).filter((f) => f.status !== "deleted")).toHaveLength(0);
+  });
+  it("another student's session is never released", async () => {
+    const x = await started("rel-c1@example.test"), y = await started("rel-c2@example.test");
+    const w = wav(1);
+    await submit(x.u, x.sessionId, [{ slide_index: 0, wav: w }], { upload: false });
+    await env.backdate("practice_sessions", x.sessionId, "2 hours");
+    expect((await submit(y.u, y.sessionId, [{ slide_index: 0, wav: w }], { upload: false })).status).toBe(200);
+    expect((await sess(x.sessionId)).status).toBe("uploading_audio");
   });
 });
