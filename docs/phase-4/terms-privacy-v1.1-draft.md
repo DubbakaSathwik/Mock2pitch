@@ -8,7 +8,7 @@
 Mock2Pitch is a practice tool for students. You upload a PDF of your slides, rehearse out loud one slide at a time in a private virtual jury room, and receive AI-generated feedback after your session. It is not a grading or certification service.
 
 ### 2. Who can use it
-You sign in with your Google account. You must be at least 18 years old, or have the permission of a parent or guardian [owner: confirm age rule]. You must give your college, year and branch before you start. You are responsible for the content you upload and for what you say in your recordings.
+You sign in with your Google account. You must be at least 18 years old, or have the permission of a parent or guardian. You must give your college, year and branch before you start. You are responsible for the content you upload and for what you say in your recordings.
 
 ### 3. What you can upload
 PDF files only, up to 10 slides and 5 MB. Upload only material you have the right to use. Do not upload confidential, personal or sensitive information about other people, or anything unlawful.
@@ -31,8 +31,8 @@ When the Terms or Privacy Policy change you will be asked to accept the new vers
 ### 9. Deleting your account
 You can delete your account at any time in Settings. Deletion removes your profile, decks (PDF and slide images), recordings, reports, ratings and acceptances, and cannot be undone.
 
-### 10. Contact
-[owner: contact email]
+### 10. Governing law and contact
+These terms are governed by the laws of India. Questions: dubbakasathwik@gmail.com.
 
 ## Privacy Policy
 
@@ -48,7 +48,7 @@ We do not record video and we do not use advertising or analytics cookies.
 Your PDF and slide images are stored privately and are sent to an AI service (NVIDIA-hosted models) to read each slide and suggest key points and a script. They are kept until you delete your account so you can retake a deck.
 
 ### 3. Recordings
-Audio is recorded one slide at a time, only while you press Record, and is uploaded when you submit. It is sent to an AI speech service (NVIDIA-hosted) to create a transcript and is **deleted as soon as your report is generated**. If a session is never completed, audio is deleted automatically within [24 hours]. Reports keep transcripts, scores and feedback, never audio.
+Audio is recorded one slide at a time, only while you press Record, and is uploaded when you submit. It is sent to an AI speech service (NVIDIA-hosted) to create a transcript and is **deleted as soon as your report is generated**. If a session is never completed, audio is deleted automatically within 24 hours. Reports keep transcripts, scores and feedback, never audio.
 
 ### 4. Who can see what
 - You see your own decks, transcripts, reports and ratings.
@@ -56,13 +56,13 @@ Audio is recorded one slide at a time, only while you press Record, and is uploa
 - We do not sell or share your data. It is processed on our behalf by: Supabase (database and sign-in), Cloudflare (file storage), Netlify (hosting), Google (sign-in) and NVIDIA (AI models).
 
 ### 5. Where data is stored
-With the providers above, in [owner: regions as configured — Supabase project region; R2 location ENAM (North America)]. Your data may therefore be processed outside India.
+With the providers above. Cloudflare R2 file storage is located in North America (ENAM) and the Supabase database in [owner: the region shown in Supabase → Project Settings → General]. Your data may therefore be processed outside India.
 
 ### 6. Retention
 Profile, decks, reports and ratings: until you delete your account (or ask us to). Audio: deleted after the report (see 3). Anonymous AI usage counters (no content, no user identity) may be kept for cost control.
 
 ### 7. Your choices and rights
-You can edit your profile and delete your account in Settings. To ask for a copy of your data or for help deleting it, contact us (below). [owner: add any additional rights required for your jurisdiction.]
+You can edit your profile and delete your account in Settings. To ask for a copy of your data or for help deleting it, contact us (below). You can also ask us to correct your data. We will respond to requests within a reasonable time.
 
 ### 8. Children
 The service is not intended for people under 18 without a parent or guardian's permission.
@@ -71,7 +71,7 @@ The service is not intended for people under 18 without a parent or guardian's p
 We will ask you to accept the updated policy before you continue.
 
 ### 10. Contact
-[owner: contact email]
+dubbakasathwik@gmail.com
 
 ---
 
