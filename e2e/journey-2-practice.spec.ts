@@ -104,6 +104,7 @@ test("2. first practice: upload → reading → prep → time → mic → room �
   for (const l of ["Timing", "Pacing", "Filler words", "Slide coverage", "Clarity"]) await expect(subs.getByText(l, { exact: true })).toBeVisible();
   await expect(subs).toContainText("For your information");
   await expect(subs).toContainText("wpm");
+  await expect(page.getByTestId("filler-note")).toContainText("Short sounds like \u2018um\u2019 may not be picked up."); // Q4
   await expect(page.getByText("Top 3 things to fix next time")).toBeVisible();
   await expect(page.getByText("What you did well")).toBeVisible();
 
@@ -112,6 +113,7 @@ test("2. first practice: upload → reading → prep → time → mic → room �
   await row2.click();
   await expect(page.getByText("Transcript").first()).toBeVisible();
   await expect(page.getByText("Key points").first()).toBeVisible();
+  await expect(page.getByTestId("filler-note-slide").first()).toContainText("We count words like"); // Q4
 
   // rate: exactly five star buttons
   await expect(page.getByRole("radio")).toHaveCount(5);

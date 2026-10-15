@@ -27,6 +27,9 @@ import { SCORE_WORD, scoreBand, scoreColor } from "@/lib/score";
 import { useRateReport, useReport } from "./queries";
 import styles from "./Report.module.css";
 
+/** Parakeet drops short hesitation sounds (Phase 3 finding), so say what is counted (owner decision Q4). */
+export const FILLER_NOTE = "We count words like \u2018like\u2019, \u2018basically\u2019 and \u2018you know\u2019. Short sounds like \u2018um\u2019 may not be picked up.";
+
 type Card5 = { key: string; label: string; icon: IconName; value: string; info?: boolean; sub: string; delta?: number | null; color?: string; band?: string };
 
 function subCards(d: ReportDetail, first: { timing: number; filler: number; coverage: number; clarity: number } | null): Card5[] {
@@ -82,6 +85,7 @@ function SlideRows({ d }: { d: ReportDetail }) {
                           <Overline style={{ marginBottom: 8 }}>Time and fillers</Overline>
                           <P style={{ fontSize: 14 }}>You took {mmss(t)} against {mmss(g)} suggested ({t > g ? `${Math.round(t - g)}s over` : `${Math.round(g - t)}s under`}).</P>
                           <P style={{ fontSize: 14, marginTop: 6 }}>{fn ? `${fn} filler ${fn === 1 ? "word" : "words"}: ${(res?.fillers ?? []).map((f) => `"${f.word}" × ${f.count}`).join(", ")}` : "No filler words. Well done."}</P>
+                          <div data-testid="filler-note-slide"><Muted style={{ fontSize: 12, marginTop: 6 }}>{FILLER_NOTE}</Muted></div>
                         </div>
                       </div>
                       {(res?.off_topic_quotes ?? []).length > 0 && (
@@ -173,6 +177,7 @@ export function Report() {
                     <div className={styles.subLabel}>{c.label}</div>
                     {c.info ? <Badge tone="neutral" style={{ marginTop: 4 }}>For your information</Badge> : <span className="sr-only">{c.band}. </span>}
                     <Muted style={{ fontSize: 12, marginTop: 2 }}>{c.sub}</Muted>
+                    {c.key === "fillers" && <div data-testid="filler-note"><Muted style={{ fontSize: 12, marginTop: 6 }}>{FILLER_NOTE}</Muted></div>}
                   </Card>
                 </li>
               ))}
