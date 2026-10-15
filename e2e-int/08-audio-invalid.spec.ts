@@ -20,12 +20,8 @@ test("stereo / 44.1 kHz / not-RIFF clips → audio_invalid (400), object deleted
     sessionId = (start.data as { id: string }).id;
   }
 
-  const cases: [string, string, RegExp][] = [
-    ["stereo", "clip-invalid-stereo.wav", /./],
-    ["44.1 kHz", "clip-invalid-44k.wav", /./],
-    ["not RIFF", "clip-invalid-not-riff.wav", /./],
-  ];
-  for (const [label, file, _reason] of cases) {
+  const cases: [string, string][] = [["stereo", "clip-invalid-stereo.wav"], ["44.1 kHz", "clip-invalid-44k.wav"], ["not RIFF", "clip-invalid-not-riff.wav"]];
+  for (const [label, file] of cases) {
     const bytes = fixtureBytes(file);
     const init = await api.fn("session-submit-init", { session_id: sessionId, clips: [{ slide_index: 0, size_bytes: bytes.length }] });
     expect(init.ok, `${label}: ${JSON.stringify(init.error)}`).toBe(true);
