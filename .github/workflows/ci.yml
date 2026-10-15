@@ -71,7 +71,10 @@ jobs:
         run: npx playwright test --project=${{ matrix.project }} --reporter=list
       - uses: actions/upload-artifact@v4
         if: failure()
-        with: { name: playwright-${{ matrix.project }}, path: test-results, retention-days: 7 }
+        with:
+          name: playwright-${{ matrix.project }}
+          path: test-results
+          retention-days: 7
   webkit-smoke:
     runs-on: ubuntu-latest
     steps:
@@ -84,4 +87,7 @@ jobs:
         run: npx playwright test --project=webkit-smoke --reporter=list
       - uses: actions/upload-artifact@v4
         if: failure()
-        with: { name: playwright-webkit, path: test-results, retention-days: 7 }
+        with:
+          name: playwright-webkit
+          path: test-results
+          retention-days: 7
