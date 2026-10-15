@@ -26,13 +26,16 @@ export const sessionSubmitInit = api(async (ctx) => {
     if (c.size_bytes < 44) throw Errors.badRequest("clip_empty", "That recording is empty.");
   }
 
-  // Re-init (e.g. a failed upload): retire the previous pending clips first.
-  if (s.status === "uploading_audio") {
-    const { data: old } = await deps.admin.from("files").select("id, object_key").eq("session_id", session_id).eq("kind", "audio_clip").in("status", ["pending", "uploaded"]);
-    for (const f of (old ?? []) as { id: string; object_key: string }[]) {
-      await deps.r2.delete(f.object_key).catch(() => {});
-      await deps.admin.from("files").update({ status: "deleted", deleted_at: deps.now().toISOString() }).eq("id", f.id);
-    }
+  // Re-init (e.g. after a failed upload): clip keys are deterministic and `files.object_key` is unique, so the existing rows are reused.
+  // Clips that were already uploaded with the same size are kept (the client only re-sends the failed ones); clips that are no longer part
+  // of the submission are retired.
+  type Old = { id: string; slide_index: number; object_key: string; expected_size_bytes: number; status: string };
+  const { data: oldRows } = await deps.admin.from("files").select("id, slide_index, object_key, expected_size_bytes, status").eq("session_id", session_id).eq("kind", "audio_clip");
+  const old = new Map(((oldRows ?? []) as Old[]).map((f) => [f.slide_index, f]));
+  for (const f of old.values()) {
+    if (seen.has(f.slide_index) || !["pending", "uploaded"].includes(f.status)) continue;
+    await deps.r2.delete(f.object_key).catch(() => {});
+    await deps.admin.from("files").update({ status: "deleted", deleted_at: deps.now().toISOString() }).eq("id", f.id);
   }
 
   // One analysing session per user is enforced by a unique partial index.
@@ -47,11 +50,21 @@ export const sessionSubmitInit = api(async (ctx) => {
   const out = [];
   for (const c of clips) {
     const key = keys.audioClip(a.userId, session_id, c.slide_index);
-    const { error: fe } = await deps.admin.from("files").insert({
-      owner_id: a.userId, session_id, kind: "audio_clip", slide_index: c.slide_index, bucket: deps.r2.bucket, object_key: key,
-      mime_type: "audio/wav", expected_size_bytes: c.size_bytes, status: "pending",
-    });
-    if (fe) throw new AppError("internal", 500, "Something went wrong.");
+    const prev = old.get(c.slide_index);
+    if (prev) {
+      const keep = prev.status === "uploaded" && Number(prev.expected_size_bytes) === c.size_bytes;
+      if (!keep) {
+        if (prev.status === "pending" || prev.status === "uploaded") await deps.r2.delete(prev.object_key).catch(() => {}); // a stale object must not satisfy the new declaration
+        const { error: ue } = await deps.admin.from("files").update({ status: "pending", expected_size_bytes: c.size_bytes, size_bytes: null, uploaded_at: null, deleted_at: null }).eq("id", prev.id);
+        if (ue) throw new AppError("internal", 500, "Something went wrong.");
+      }
+    } else {
+      const { error: fe } = await deps.admin.from("files").insert({
+        owner_id: a.userId, session_id, kind: "audio_clip", slide_index: c.slide_index, bucket: deps.r2.bucket, object_key: key,
+        mime_type: "audio/wav", expected_size_bytes: c.size_bytes, status: "pending",
+      });
+      if (fe) throw new AppError("internal", 500, "Something went wrong.");
+    }
     out.push({ slide_index: c.slide_index, upload: await deps.r2.presignPut(key, { contentType: "audio/wav", contentLength: c.size_bytes, expiresS: AUDIO_PUT_EXPIRES_S }) });
   }
   await deps.admin.rpc("svc_touch_active", { p_uid: a.userId });
