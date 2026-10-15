@@ -7,6 +7,7 @@ import { useAuthSession } from "@/features/auth/queries";
 import { useMyProfile } from "@/features/profile/queries";
 import { useHasAcceptedPolicy } from "@/features/policy/queries";
 import { decideAdmin, decideStudent, type Decision } from "@/features/guards/gate";
+import { prefetchForPath } from "@/features/guards/prefetch";
 import { LoadingShell } from "./Loading";
 
 function useRedirect(d: Decision) {
@@ -24,6 +25,7 @@ export function StudentGate({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   // A new policy version can be published at any time: re-check on every navigation (never during an in-progress session — see gate.ts).
   useEffect(() => { void qc.invalidateQueries({ queryKey: qk.acceptedPolicy }); }, [pathname, qc]);
+  useEffect(() => { prefetchForPath(qc, pathname); }, [pathname, qc]);
   const d = decideStudent({
     pathname, search: typeof window !== "undefined" ? window.location.search : "",
     session: session.isPending ? undefined : session.data ?? null,

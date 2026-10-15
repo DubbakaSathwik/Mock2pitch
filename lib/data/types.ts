@@ -88,6 +88,8 @@ export interface AuthPort {
   /** Real adapter: redirects to Google. Mock adapter: signs in immediately as the selected persona (`hint: "owner"` → the admin). */
   signInWithGoogle(opts?: { next?: string; hint?: "owner" }): Promise<void>;
   signOut(): Promise<void>;
+  /** Synchronous, network-free hint that a session probably exists (cookie / local state). Only used to start route prefetches early; never for authorisation. */
+  peek?(): boolean;
 }
 export interface ProfilePort {
   getMine(): Promise<ProfileRow>;

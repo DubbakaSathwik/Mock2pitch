@@ -27,14 +27,14 @@ function fakeSupa(o: {
   };
   const authHandlers: ((e: string, s: unknown) => void)[] = [];
   const channels: { on: ReturnType<typeof vi.fn>; subscribe: ReturnType<typeof vi.fn>; handler?: (p: unknown) => void }[] = [];
-  let session = o.session === undefined ? { access_token: "tok", expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: "u1" } } : o.session;
+  let session = o.session === undefined ? { access_token: "tok", expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: "u1", email: "a@b.c", user_metadata: { name: "Meta Name", picture: "http://pic" } } } : o.session;
   const supa = {
     from: (t: string) => builder(t),
     rpc: (name: string, args: unknown) => { calls.push(`rpc.${name}(${JSON.stringify(args)})`); return Promise.resolve(take(o.rpc, name)); },
     auth: {
       getSession: () => Promise.resolve({ data: { session }, error: null }),
       refreshSession: vi.fn(() => { session = o.refreshed ?? { access_token: "tok2", expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: "u1" } }; return Promise.resolve({ data: { session }, error: null }); }),
-      getUser: () => Promise.resolve({ data: { user: o.user ?? { id: "u1", email: "a@b.c", user_metadata: { name: "Meta Name", picture: "http://pic" } } }, error: null }),
+      getUser: () => Promise.resolve({ data: { user: o.user ?? { id: "u1" } }, error: null }),
       onAuthStateChange: (cb: (e: string, s: unknown) => void) => { authHandlers.push(cb); return { data: { subscription: { unsubscribe: vi.fn() } } }; },
       signInWithOAuth: vi.fn(() => Promise.resolve({ error: null })),
       signOut: vi.fn(() => Promise.resolve({ error: null })),

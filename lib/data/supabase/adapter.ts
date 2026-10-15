@@ -34,14 +34,14 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
   async function readSession(): Promise<AuthSession | null> {
     const { data: s, error } = await supa.auth.getSession();
     if (error || !s.session) return null;
-    // Role and profile come from the server: getUser() validates the token with the Auth server; the profile is read under RLS.
-    const { data: u, error: ue } = await supa.auth.getUser();
-    if (ue || !u.user) return null;
-    const prof = await t.db(() => supa.from("profiles").select("role,full_name,avatar_url,email").eq("id", u.user.id).maybeSingle());
+    // Role and profile come from the server: the profile is read under RLS, which makes PostgREST validate the JWT (an invalid or revoked
+    // token fails here), so no separate getUser() round trip is needed. Claims in the token are never used to decide the role.
+    const user = s.session.user;
+    const prof = await t.db(() => supa.from("profiles").select("role,full_name,avatar_url,email").eq("id", user.id).maybeSingle());
     if (!prof) return null; // signed in but the profile row does not exist (yet): treated as signed out
-    const meta = (u.user.user_metadata ?? {}) as Record<string, unknown>;
+    const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
     return {
-      userId: u.user.id, email: prof.email ?? u.user.email ?? "", role: prof.role === "admin" ? "admin" : "student",
+      userId: user.id, email: prof.email ?? user.email ?? "", role: prof.role === "admin" ? "admin" : "student",
       fullName: prof.full_name ?? (typeof meta.full_name === "string" ? meta.full_name : typeof meta.name === "string" ? meta.name : null),
       avatarUrl: prof.avatar_url ?? (typeof meta.avatar_url === "string" ? meta.avatar_url : typeof meta.picture === "string" ? meta.picture : null),
     };
@@ -94,6 +94,7 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
         if (error) throw fromAuth(error);
         await new Promise<void>(() => { /* the browser is navigating to Google: keep the button in its pending state */ });
       },
+      peek: () => typeof document !== "undefined" && /(?:^|;\s*)sb-[^=;]+-auth-token/.test(document.cookie),
       signOut: async () => {
         for (const ch of channels) void supa.removeChannel(ch);
         channels.clear();
