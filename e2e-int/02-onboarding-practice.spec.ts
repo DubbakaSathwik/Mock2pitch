@@ -8,11 +8,12 @@ import { watchRealtime } from "./support/realtime";
 import { signedInContext } from "./support/session";
 
 const fixture = (n: string) => path.resolve("tests/fixtures", n);
-const ids: Record<string, unknown> = {};
-const save = () => fs.writeFileSync("test-results/it-ids.json", JSON.stringify(ids, null, 2));
+const STATE = ".integration-state.json";
+const ids: Record<string, unknown> = fs.existsSync(STATE) ? JSON.parse(fs.readFileSync(STATE, "utf8")) : {};
+const save = () => fs.writeFileSync(STATE, JSON.stringify(ids, null, 2));
 const t0 = Date.now();
 const mark = (k: string) => { (ids.timings as Record<string, number>)[k] = Math.round((Date.now() - t0) / 100) / 10; save(); };
-ids.timings = {};
+ids.timings = ids.timings ?? {};
 
 test.describe.configure({ mode: "serial" });
 

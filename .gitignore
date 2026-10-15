@@ -29,3 +29,4 @@ test-results/
 *.tsbuildinfo
 deno.lock
 .vitest/
+.integration-state.json
