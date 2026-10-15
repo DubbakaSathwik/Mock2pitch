@@ -83,7 +83,7 @@ test("block / unblock: reads keep working, every write is refused, UI shows the 
   await ap.getByLabel("Search students").fill("it.new");
   await ap.getByRole("button", { name: "Block IT New Student" }).click();
   await expect(ap.getByText("Student blocked")).toBeVisible();
-  await expect(ap.getByRole("row", { name: /IT New Student/ }).getByText("Blocked")).toBeVisible();
+  await expect(ap.getByRole("main").getByText("Blocked").first()).toBeVisible(); // row on desktop, card on mobile
 
   const stu = await signedInContext(browser, "NEW", baseURL!);
   const sp = await stu.ctx.newPage(); const con = watchConsole(sp, [/Failed to load resource: the server responded with a status of (400|403)/]);

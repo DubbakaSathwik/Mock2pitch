@@ -22,11 +22,6 @@ export async function passwordSession(u: ItUser): Promise<{ session: Session; co
   const { data, error } = await ssr.auth.signInWithPassword(creds(u));
   if (error || !data.session) throw new Error(`password sign-in failed for ${u}: ${error?.message}`);
   const client = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: `Bearer ${data.session.access_token}` } } });
-  return { session: data.session, cookies: captured, client };
-}
-
-export async function signedInContext(browser: Browser, u: ItUser, baseURL: string, opts: Parameters<Browser["newContext"]>[0] = {}): Promise<{ ctx: BrowserContext; client: SupabaseClient; userId: string }> {
-  const { session, cookies, client } = await passwordSession(u);
   // Pre-onboarded users re-accept a newer policy version (spec 09 publishes one); NEW is left alone: it exercises the first-time Terms screen.
   if (u !== "NEW") {
     const has = await client.rpc("has_accepted_latest_policy");
@@ -35,6 +30,11 @@ export async function signedInContext(browser: Browser, u: ItUser, baseURL: stri
       await client.rpc("accept_policy", { p_version_id: latest!.id });
     }
   }
+  return { session: data.session, cookies: captured, client };
+}
+
+export async function signedInContext(browser: Browser, u: ItUser, baseURL: string, opts: Parameters<Browser["newContext"]>[0] = {}): Promise<{ ctx: BrowserContext; client: SupabaseClient; userId: string }> {
+  const { session, cookies, client } = await passwordSession(u);
   const ctx = await browser.newContext({ baseURL, permissions: ["microphone"], ...opts });
   const host = new URL(baseURL);
   await ctx.addCookies(cookies.map((c) => ({ name: c.name, value: c.value, domain: host.hostname, path: "/", httpOnly: false, secure: host.protocol === "https:", sameSite: "Lax" as const, expires: Math.floor(Date.now() / 1000) + 400 * 86400 })));
