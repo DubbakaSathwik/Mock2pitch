@@ -30,7 +30,7 @@ no production-environment task. All test traffic used `@mock2pitch.test` users a
 | `tsc --noEmit`, `eslint .` | | clean |
 | Supabase-mode production build | `NEXT_PUBLIC_DATA_MODE=supabase npm run build`, `scan:bundle`, `check-prod-bundle` | 32 routes; bundle clean; no mock backend |
 | Cleanup | `scripts/integration/cleanup-via-api.mjs` + residue SQL | **0** rows in every table except 44 anonymised `ai_usage_log` rows; one harmless test policy version left (§F.1) |
-| CI | `ci.yml` on PR #13 | see the PR checks (workflow YAML was fixed in `4da8ce8`); not claimed green here |
+| CI | `ci.yml` on PR #13, run 20 (head `9fd5905`) | all 6 jobs green: quality (typecheck, lint, 397 tests passed + 4 skipped by design), both builds + bundle guards, mock E2E desktop/mobile/a11y, WebKit smoke (first WebKit evidence: sign-in → Terms → profile → dashboard → upload → prepare) |
 
 ## D. Test results (numbers)
 * Integration desktop: specs 01, 03, 04, 05, 06 → 22 tests pass (two runs, after B's seed date fix); 02, 07 pass (earlier runs; 07 re-run on mobile), 08, 09, 10 pass.
@@ -96,7 +96,7 @@ Presigned PUT binds Content-Type and Content-Length; a wrong type or short body 
 | Docs and handoff | ✅ |
 | Deployed site, CORS, Lighthouse on deployed site | ⏳ deferred by owner decision |
 | Real-device recording, human filler clip | ⏳ owner (checklist) |
-| CI green on the PR | ⏳ check the PR (not asserted) |
+| CI green on the PR | ✅ run 20 |
 
 ## M. Next phase (Phase 4)
 No production-environment task (single environment). Candidates: (1) deploy to Netlify and run the deployed-origin checks (F.4); (2) real Google sign-in verification, publish the OAuth consent screen, Email provider off; (3) second report key + monitoring of AI 503/latency (`ai_usage_log`); (4) let a user abandon a session stuck in `uploading_audio`; (5) decide JWT signing-key migration; (6) filler wording / ASR options; (7) real-device fixes from `device-checks.md`.
