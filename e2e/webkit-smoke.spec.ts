@@ -8,11 +8,12 @@ test("@smoke landing → sign in → terms → profile → dashboard → upload 
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: /Rehearse your pitch in private/ })).toBeVisible();
   await page.getByRole("button", { name: "Sign in" }).click();
-  await page.getByRole("button", { name: "Continue with Google" }).click();
-  // diagnostics for CI (the first WebKit runs): say where we are instead of timing out on a label
-  await page.waitForURL(/onboarding\/terms/, { timeout: 20_000 }).catch(async () => {
-    throw new Error(`not on the Terms screen: ${page.url()} :: ${(await page.locator("body").innerText().catch(() => "")).replace(/\s+/g, " ").slice(0, 500)}`);
-  });
+  // A cold `next dev` in a fresh CI job can still be hydrating when the button first appears, so a click can land before React attached
+  // its handler (seen in WebKit, the only test in that job). Retry the click until the app actually moves on.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Continue with Google" }).click();
+    await expect(page).toHaveURL(/onboarding\/terms/, { timeout: 4_000 });
+  }).toPass({ timeout: 60_000 });
   await page.getByLabel("I have read and agree to the Terms and the Privacy Policy").check();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("College").fill("RV Institute of Technology");
