@@ -83,6 +83,34 @@ describe("routeCall", () => {
     expect(store.logs.map((l) => l.outcome)).toEqual(["server_error", "timeout", "success"]);
   });
 
+  it("a transient 5xx on the LAST usable key is retried once on the same key (no cooldown when the retry succeeds)", async () => {
+    const now = new Date("2026-01-01T00:00:00Z");
+    store = new FakeStore({ fallback_1: { cooldownUntil: new Date(now.getTime() + 60_000) }, fallback_2: { cooldownUntil: new Date(now.getTime() + 60_000) } }); // only the primary is usable
+    const calls: string[] = []; const pauses: number[] = [];
+    const t: Transport = async ({ key }) => { calls.push(key); return calls.length === 1 ? { status: 503, headers: {}, body: {} } : { status: 200, headers: {}, body: { v: 7 } }; };
+    expect(await routeCall(base(store, t, { now: () => now, sleep: async (ms: number) => { pauses.push(ms); } }))).toBe(7);
+    expect(calls).toEqual(["k0", "k0"]); expect(pauses).toEqual([1500]);
+    expect(store.logs.map((l) => l.outcome)).toEqual(["server_error", "success"]);
+    expect(store.cooldowns["id-primary"]).toBeUndefined();
+  });
+  it("two 5xx in a row on the last key cool it down and surface AI_BUSY; a network error is retried the same way", async () => {
+    const now = new Date("2026-01-01T00:00:00Z");
+    store = new FakeStore({ fallback_1: { cooldownUntil: new Date(now.getTime() + 60_000) }, fallback_2: { cooldownUntil: new Date(now.getTime() + 60_000) } });
+    let n = 0;
+    const t: Transport = async () => { n++; if (n === 1) throw new TransportError("network"); return { status: 502, headers: {}, body: {} }; };
+    await expect(routeCall(base(store, t, { now: () => now, sleep: async () => {} }))).rejects.toMatchObject({ code: "AI_BUSY" });
+    expect(n).toBe(2);
+    expect(store.logs.map((l) => l.outcome)).toEqual(["server_error", "server_error"]);
+    expect(store.cooldowns["id-primary"]!.until.getTime()).toBe(now.getTime() + 30_000);
+  });
+  it("a key that has a usable fallback is NOT retried: it rotates immediately", async () => {
+    const now = new Date("2026-01-01T00:00:00Z");
+    const calls: string[] = [];
+    const t: Transport = async ({ key }) => { calls.push(key); return key === "k0" ? { status: 500, headers: {}, body: {} } : { status: 200, headers: {}, body: { v: 1 } }; };
+    expect(await routeCall(base(store, t, { now: () => now, sleep: async () => { throw new Error("must not sleep"); } }))).toBe(1);
+    expect(calls).toEqual(["k0", "k1"]);
+  });
+
   it("skips slots in cooldown, over the RPM soft limit, or out of credits", async () => {
     const now = new Date("2026-01-01T00:00:00Z");
     store = new FakeStore({

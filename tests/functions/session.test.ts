@@ -65,7 +65,7 @@ describe("session-submit-init", () => {
     const first = await call([{ slide_index: 0, size_bytes: w.length }, { slide_index: 1, size_bytes: w.length }]);
     expect(first.status).toBe(200);
     // slide 0 arrives, slide 1 fails: the client asks again for the same declaration
-    const [c0, c1] = first.json.data.clips;
+    const [c0] = first.json.data.clips;
     expect((await put(c0.upload.url, c0.upload.headers, w)).status).toBe(200);
     await env.db.admin.query("update public.files set status='uploaded', size_bytes=$2 where session_id=$1 and slide_index=0", [sessionId, w.length]);
     const again = await call([{ slide_index: 0, size_bytes: w.length }, { slide_index: 1, size_bytes: w.length }]);

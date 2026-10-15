@@ -79,7 +79,7 @@ test("student RPCs and functions on NEW's objects look like 'does not exist'", a
   expect((await b.client.rpc("start_practice_session", { p_deck_id: ids.deckId, p_total_minutes: 5 })).error?.message).toBe("not_found");
   expect((await b.client.rpc("my_deck_detail", { p_deck_id: ids.deckId })).data).toEqual([]);
   for (const [fn, body] of [["asset-urls", { deck_id: ids.deckId, kinds: ["slide_image"] }], ["session-submit-init", { session_id: ids.sessionId, clips: [{ slide_index: 0, size_bytes: 1000 }] }], ["session-analyse", { session_id: ids.sessionId }], ["deck-process", { deck_id: ids.deckId }], ["deck-upload-complete", { deck_id: ids.deckId }]] as [string, object][]) {
-    const r = await b.fn(fn, body);
+    const r = await b.fn(fn, body as Record<string, unknown>);
     expect(r.status, fn).toBeGreaterThanOrEqual(400);
     expect(r.error?.code, fn).toMatch(/not_found|forbidden/);
   }

@@ -31,6 +31,7 @@ test("expired image URL → fresh URLs + retry; aborted clip upload → Try agai
     return route.continue();
   });
 
+  const base = ((await client.from("usage_events").select("id")).data ?? []).length; // re-runnable: count relative to what the user already used
   await page.goto("/practice/new");
   await page.getByTestId("file-input").setInputFiles(path.resolve("tests/fixtures/deck-3.pdf"));
   await expect(page).toHaveURL(/\/practice\/[^/]+\/reading/, { timeout: 120_000 });
@@ -40,7 +41,7 @@ test("expired image URL → fresh URLs + retry; aborted clip upload → Try agai
   expect(imagePuts).toBe(4); // 3 slides + the one that was refused and retried with fresh URLs
   expect(calls["deck-upload-complete"]).toBeGreaterThanOrEqual(2); // re-issued the image URLs (idempotent)
   const { data: usage } = await client.from("usage_events").select("id");
-  expect(usage).toHaveLength(1); // the refused PUT did not consume another session
+  expect(usage).toHaveLength(base + 1); // the refused PUT did not consume another session
   const { data: deck } = await client.from("decks").select("status,processed_slides").eq("id", deckId).single();
   expect(deck).toMatchObject({ status: "ready", processed_slides: 3 });
 
@@ -74,7 +75,7 @@ test("expired image URL → fresh URLs + retry; aborted clip upload → Try agai
   await expect(page).toHaveURL(/\/reports\//, { timeout: 10_000 });
   await expect(page.getByText("Not recorded").first()).toBeVisible(); // slides 2 and 3 were skipped
   const { data: usage2 } = await client.from("usage_events").select("id");
-  expect(usage2).toHaveLength(1);
+  expect(usage2).toHaveLength(base + 1);
   const { data: sess } = await client.from("practice_sessions").select("status,attempt_number").eq("deck_id", deckId);
   expect(sess).toEqual([{ status: "completed", attempt_number: 1 }]);
   expect(con.errors(), con.errors().join("\n")).toEqual([]);
