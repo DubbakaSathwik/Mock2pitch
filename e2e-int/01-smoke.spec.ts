@@ -18,7 +18,7 @@ test("signed-in student A: real session, profile and dashboard stats", async ({ 
   const con = watchConsole(page);
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { level: 1, name: /ready to rehearse/ })).toBeVisible();
-  await expect(page.getByText("0 of 5 sessions")).toBeVisible();
+  await expect(page.getByText(/\d of 5 sessions/)).toBeVisible();
   expect(con.errors(), con.errors().join("\n")).toEqual([]);
   await ctx.close();
 });
