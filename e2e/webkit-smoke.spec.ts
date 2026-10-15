@@ -11,9 +11,9 @@ test("@smoke landing → sign in → terms → profile → dashboard → upload 
   // A cold `next dev` in a fresh CI job can still be hydrating when the button first appears, so a click can land before React attached
   // its handler (seen in WebKit, the only test in that job). Retry the click until the app actually moves on.
   await expect(async () => {
-    await page.getByRole("button", { name: "Continue with Google" }).click();
-    await expect(page).toHaveURL(/onboarding\/terms/, { timeout: 4_000 });
-  }).toPass({ timeout: 60_000 });
+    if (!/onboarding\/terms/.test(page.url())) await page.getByRole("button", { name: "Continue with Google" }).click({ timeout: 5_000 });
+    await expect(page).toHaveURL(/onboarding\/terms/, { timeout: 8_000 });
+  }).toPass({ timeout: 90_000 });
   await page.getByLabel("I have read and agree to the Terms and the Privacy Policy").check();
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByLabel("College").fill("RV Institute of Technology");
