@@ -27,7 +27,7 @@ Landing → Google sign-in → accept Terms → college/year/branch → dashboar
 
 ## Known limitations (say these openly)
 - **Filler words:** the speech model usually drops short sounds like "um" and "uh". The app counts words such as "like", "basically", "you know" and says so on the report.
-- **Browser:** Chrome is recommended; Safari and Firefox work for recording but are less tested. PowerPoint users must "Save as PDF" first (a hint says so).
+- **Browser:** Chrome is recommended; Safari and Firefox are less tested (real-device checks are tracked in `docs/phase-4/device-matrix.md`). PowerPoint users must "Save as PDF" first (a hint says so).
 - **PDF only**, up to 10 slides and 5 MB; recordings up to 10 minutes per slide.
 - **AI availability:** the free NVIDIA tier has rate limits; busy moments show a friendly retry message.
 - **Free hosting limits:** the database project pauses after about a week without any activity (the first visit afterwards needs a manual "Restore" in Supabase), and there is no automatic point-in-time backup on the free plan.
