@@ -27,6 +27,14 @@ export async function passwordSession(u: ItUser): Promise<{ session: Session; co
 
 export async function signedInContext(browser: Browser, u: ItUser, baseURL: string, opts: Parameters<Browser["newContext"]>[0] = {}): Promise<{ ctx: BrowserContext; client: SupabaseClient; userId: string }> {
   const { session, cookies, client } = await passwordSession(u);
+  // Pre-onboarded users re-accept a newer policy version (spec 09 publishes one); NEW is left alone: it exercises the first-time Terms screen.
+  if (u !== "NEW") {
+    const has = await client.rpc("has_accepted_latest_policy");
+    if (has.data === false) {
+      const { data: latest } = await client.from("policy_versions").select("id").order("published_at", { ascending: false }).limit(1).single();
+      await client.rpc("accept_policy", { p_version_id: latest!.id });
+    }
+  }
   const ctx = await browser.newContext({ baseURL, permissions: ["microphone"], ...opts });
   const host = new URL(baseURL);
   await ctx.addCookies(cookies.map((c) => ({ name: c.name, value: c.value, domain: host.hostname, path: "/", httpOnly: false, secure: host.protocol === "https:", sameSite: "Lax" as const, expires: Math.floor(Date.now() / 1000) + 400 * 86400 })));
