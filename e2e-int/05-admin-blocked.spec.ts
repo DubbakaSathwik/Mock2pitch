@@ -23,7 +23,7 @@ test("admin: lands on /admin, never sees the student UI or the Terms gate; overv
 
   await page.getByRole("navigation", { name: "Admin" }).getByRole("link", { name: "Students" }).click();
   await page.getByLabel("Search students").fill("it.new");
-  await expect(page.getByRole("row", { name: /IT New Student/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "View IT New Student" })).toBeVisible(); // table row on desktop, card on mobile
   await page.getByLabel("Search students").fill("zzz-nobody-zzz");
   await expect(page.getByText(/No students match/)).toBeVisible();
   await page.getByLabel("Search students").fill("it.new");

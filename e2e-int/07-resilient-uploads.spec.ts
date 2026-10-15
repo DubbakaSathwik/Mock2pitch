@@ -1,6 +1,6 @@
 // Flow 5.6 on the real stack: R2 failures injected in the browser (an expired/refused presigned PUT for a slide image, an aborted clip PUT).
 // The UI must recover through the real backend without consuming a second daily session. Student A: 1 upload (3 slide-reading credits),
-// 1 analysis of one clip.
+// 1 analysis of one clip. IT_07_USER=DEL runs it with a fresh user (e.g. the mobile project once A is at the daily limit).
 import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { watchConsole } from "./support/console";
@@ -8,7 +8,7 @@ import { signedInContext } from "./support/session";
 
 test("expired image URL → fresh URLs + retry; aborted clip upload → Try again re-sends only that clip; one daily session", async ({ browser, baseURL }) => {
   test.setTimeout(540_000);
-  const { ctx, client } = await signedInContext(browser, "A", baseURL!);
+  const { ctx, client } = await signedInContext(browser, (process.env.IT_07_USER as "A" | "DEL" | undefined) ?? "A", baseURL!);
   const page = await ctx.newPage(); const con = watchConsole(page, [/Failed to load resource/, /net::ERR_FAILED/, /CORS|ERR_BLOCKED/]);
   const calls: Record<string, number> = {};
   page.on("request", (r) => { const m = r.url().match(/\/functions\/v1\/([a-z-]+)/); if (m && r.method() === "POST") calls[m[1]!] = (calls[m[1]!] ?? 0) + 1; });
