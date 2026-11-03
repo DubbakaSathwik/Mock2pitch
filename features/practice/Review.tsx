@@ -74,7 +74,7 @@ export function Review() {
               })}
             </ol>
           </Card>
-          <div className={styles.delete}><Icon name="trash-2" size={18} color="var(--bright-marine)" /><Muted>Audio is deleted once your report is generated. Your report keeps scores and transcripts only.</Muted></div>
+          <div className={styles.delete}><Icon name="trash-2" size={18} color="var(--bright-marine)" /><Muted>Audio is deleted from our servers once your report is generated. You can still play it back on your report until you leave it. Your report keeps scores and transcripts only.</Muted></div>
           {submit.phase === "preparing" && <div className={styles.prep} role="status"><ProgressBar value={submit.prep.done} max={Math.max(1, submit.prep.total)} label="Preparing your recordings…" valueLabel={`${submit.prep.done} of ${submit.prep.total}`} /></div>}
           {f && f.ui && (
             <div className={styles.fail} data-testid="submit-error">

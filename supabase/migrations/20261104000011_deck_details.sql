@@ -9,11 +9,17 @@ alter table public.decks
   add column if not exists abstract text check (char_length(abstract) between 1 and 600),
   add column if not exists target_minutes integer check (target_minutes between 1 and 20);
 
--- "Others" needs the free-text description; the other audiences must not carry one.
-alter table public.decks
-  add constraint decks_audience_other_matches check (
-    (coalesce(audience, '') = 'others' and audience_other is not null) or (coalesce(audience, '') <> 'others' and audience_other is null)
-  );
+-- "Others" needs the free-text description; the other audiences must not carry one. (Guarded so the file can be re-run, e.g. by `db push`
+-- after the SQL was applied by hand.)
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'decks_audience_other_matches' and conrelid = 'public.decks'::regclass) then
+    alter table public.decks
+      add constraint decks_audience_other_matches check (
+        (coalesce(audience, '') = 'others' and audience_other is not null) or (coalesce(audience, '') <> 'others' and audience_other is null)
+      );
+  end if;
+end $$;
 
 comment on column public.decks.audience is 'Who the student presents to: student | teachers | jury | others';
 comment on column public.decks.audience_other is 'Free-text audience when audience = others';

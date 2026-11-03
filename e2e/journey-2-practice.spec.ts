@@ -96,7 +96,7 @@ test("2. first practice: upload → reading → prep → time → mic → room �
 
   // S12 → submit
   await expect(page).toHaveURL(/\/review/);
-  await expect(page.getByText("Audio is deleted once your report is generated.")).toBeVisible();
+  await expect(page.getByText("Audio is deleted from our servers once your report is generated.")).toBeVisible();
   await page.getByRole("button", { name: "Submit for feedback" }).click();
 
   // S13 → S14
@@ -117,6 +117,14 @@ test("2. first practice: upload → reading → prep → time → mic → room �
   await expect(page.getByText("Transcript").first()).toBeVisible();
   await expect(page.getByText("Key points").first()).toBeVisible();
 
+  // playback after submitting: the recordings are still in this tab, so each recorded slide can be played back from its panel
+  await expect(page.getByText("They are only on this device and disappear when you leave this report.")).toBeVisible();
+  await expect(page.getByTestId("playback-1")).toContainText("Your recording");
+  await page.getByRole("button", { name: "Play your recording of slide 2" }).click();
+  await expect(page.getByRole("button", { name: "Stop your recording of slide 2" })).toBeVisible();
+  await page.getByRole("button", { name: "Stop your recording of slide 2" }).click();
+  await expect(page.getByRole("button", { name: "Play your recording of slide 2" })).toBeVisible();
+
   // rate: exactly five star buttons
   await expect(page.getByRole("radio")).toHaveCount(5);
   await page.getByRole("radio", { name: "4 stars" }).click();
@@ -127,6 +135,15 @@ test("2. first practice: upload → reading → prep → time → mic → room �
   // a11y on the report
   const a = await axeCheck(page, "report");
   expect(a.bad, JSON.stringify(a.bad, null, 1)).toEqual([]);
+
+  // leaving the report discards the recordings: coming back (inside the app) shows no playback
+  const reportUrl = page.url();
+  await page.getByRole("link", { name: "History" }).first().click();
+  await expect(page).toHaveURL(/\/history/);
+  await page.waitForTimeout(700); // the store clears shortly after the report unmounts
+  await page.goto(reportUrl.replace(/^https?:\/\/[^/]+/, ""));
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(page.getByTestId("playback-1")).toHaveCount(0);
   // the mock inspection hook does not exist in production builds (E2E_PROD=1 runs this journey against `next start`)
   if (process.env.E2E_PROD) return;
   const c = await control(page);
