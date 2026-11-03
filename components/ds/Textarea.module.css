@@ -1,0 +1,8 @@
+.field{display:flex;flex-direction:column;gap:6px;font-family:var(--font-body);min-width:0}
+.label{font-size:14px;font-weight:700;color:var(--text-strong)}
+.area{width:100%;min-height:88px;padding:11px 14px;border-radius:var(--radius-md);background:var(--white);border:1px solid var(--border-strong);font-family:var(--font-body);font-size:16px;line-height:1.5;color:var(--text-strong);resize:vertical;outline:none;transition:box-shadow var(--dur-fast),border-color var(--dur-fast)}
+.area:focus{border-color:var(--border-focus);box-shadow:var(--focus-ring)}
+.err{border-color:var(--danger-500)}
+.err:focus{box-shadow:0 0 0 3px rgba(214,69,69,.2)}
+.foot{display:flex;justify-content:space-between;gap:12px}
+.msg,.msgErr{font-size:13px}.msg{color:var(--text-muted)}.msgErr{color:var(--danger-text)}

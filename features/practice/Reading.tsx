@@ -58,7 +58,7 @@ export function Reading() {
   const retryLabel = retrying ? "Trying again…" : waitS > 0 ? `Try again in ${waitS} s` : "Try again";
   const retryUi = retryErr ? errorUi(retryErr.code, retryErr.details) : null;
   return (
-    <FlowShell step="upload" back={{ href: "/practice/new", label: "Back to upload" }}>
+    <FlowShell step="details" back={{ href: "/practice/new", label: "Back to upload" }}>
       <div className={styles.wrap} style={{ paddingTop: compact ? 8 : 40 }}>
         <div className={styles.badge}><AIBadge>AI is reading your slides</AIBadge></div>
         <H l={1}><span aria-live="polite">{failed || unfinished ? "We couldn't finish reading" : `${stage}…`}</span></H>

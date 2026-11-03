@@ -130,6 +130,11 @@ export type Database = {
           pinned_at: string | null
           created_at: string
           updated_at: string
+          audience: string | null
+          audience_other: string | null
+          goal: string | null
+          abstract: string | null
+          target_minutes: number | null
         }
         Insert: {
           id?: string
@@ -144,6 +149,11 @@ export type Database = {
           pinned_at?: string | null
           created_at?: string
           updated_at?: string
+          audience?: string | null
+          audience_other?: string | null
+          goal?: string | null
+          abstract?: string | null
+          target_minutes?: number | null
         }
         Update: {
           id?: string
@@ -158,6 +168,11 @@ export type Database = {
           pinned_at?: string | null
           created_at?: string
           updated_at?: string
+          audience?: string | null
+          audience_other?: string | null
+          goal?: string | null
+          abstract?: string | null
+          target_minutes?: number | null
         }
         Relationships: []
       }
@@ -653,6 +668,10 @@ export type Database = {
       has_accepted_latest_policy: {
         Args: never
         Returns: boolean
+      }
+      hook_before_user_created: {
+        Args: { event: Json }
+        Returns: Json
       }
       is_admin: {
         Args: never

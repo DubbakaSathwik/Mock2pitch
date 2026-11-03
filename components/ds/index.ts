@@ -7,6 +7,7 @@ export { ProgressBar } from "./ProgressBar";
 export { ScoreRing } from "./ScoreRing";
 export { Input } from "./Input";
 export { Select } from "./Select";
+export { Textarea } from "./Textarea";
 export { Checkbox } from "./Checkbox";
 export { Dialog } from "./Dialog";
 export { ToastProvider, useToast, TOAST_MS } from "./Toast";

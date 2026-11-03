@@ -90,7 +90,7 @@ function adminRatings(st: StudentSeed[]): MockState["adminRatings"] {
 /** ParkSense with two reports (62 → 74), as in the design. */
 function parksenseHistory(ownerId: string, sessionsToday: number) {
   const created = "2026-10-02T09:30:00Z";
-  const deck: DeckRow = { id: DECK_ID, owner_id: ownerId, title: PARKSENSE_TITLE, original_filename: "ParkSense-pitch.pdf", page_count: 8, status: "ready", processing_stage: null, processed_slides: 8, error_code: null, pinned_at: null, created_at: created, updated_at: created };
+  const deck: DeckRow = { id: DECK_ID, owner_id: ownerId, title: PARKSENSE_TITLE, original_filename: "ParkSense-pitch.pdf", page_count: 8, status: "ready", processing_stage: null, processed_slides: 8, error_code: null, pinned_at: null, created_at: created, updated_at: created, audience: null, audience_other: null, goal: null, abstract: null, target_minutes: null };
   const slides: SlideRow[] = PARKSENSE.map((s, i) => ({ id: `${DECK_ID}-s${i}`, deck_id: DECK_ID, slide_index: i, title: s.title, extracted_text: [s.title, ...s.bullets].join("\n"), key_points: s.keyPoints, suggested_script: s.script, time_weight: s.weight, image_file_id: `seed-${i}`, created_at: created, updated_at: created }));
   const sessions: SessionRow[] = []; const results: ResultRow[] = []; const reports: ReportRow[] = [];
   const sugg = PARKSENSE.map((s) => s.weight); // 5:00 → seconds == weight (weights sum to 300)

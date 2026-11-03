@@ -12,7 +12,7 @@ beforeAll(async () => { env = await createEnv(); });
 afterAll(async () => { await env.close(); });
 
 const used = async (uid: string) => (await env.db.admin.query("select private.sessions_used_today($1) n", [uid])).rows[0].n as number;
-const deckRow = async (id: string) => (await env.db.admin.query("select status, error_code, page_count, processed_slides from public.decks where id=$1", [id])).rows[0];
+const deckRow = async (id: string) => (await env.db.admin.query("select status, error_code, page_count, processed_slides, audience, audience_other, goal, abstract, target_minutes from public.decks where id=$1", [id])).rows[0];
 const sleepTick = () => new Promise((r) => setTimeout(r, 5));
 
 describe("common behaviour (all functions)", () => {
@@ -188,11 +188,14 @@ describe("deck-process", () => {
     expect(slides).toHaveLength(4);
     expect(slides[0].key_points).toEqual(["Point A", "Point B", "Point C"]);
     expect(slides.every((s: any) => s.image_file_id && s.time_weight >= 1)).toBe(true);
-    expect(env.ai.chatCalls.filter((c) => c.model === "slide-model")).toHaveLength(4);
-    const msg = env.ai.chatCalls[0]!.messages[1].content;
-    expect(msg[1].image_url.url.startsWith("data:image/jpeg;base64,")).toBe(true);
+    // the whole deck goes to Gemini in ONE request: a prompt part, then "Slide N:" + image for every slide
+    expect(env.ai.chatCalls.filter((c) => c.model === "slide-model")).toHaveLength(1);
+    const parts = env.ai.chatCalls[0]!.messages[1].content;
+    expect(parts.filter((p: any) => p.type === "image_url")).toHaveLength(4);
+    expect(parts.filter((p: any) => /^Slide \d+:$/.test(p.text ?? "")).map((p: any) => p.text)).toEqual(["Slide 1:", "Slide 2:", "Slide 3:", "Slide 4:"]);
+    expect(parts[2].image_url.url.startsWith("data:image/jpeg;base64,")).toBe(true);
     const usage = (await env.db.admin.query("select outcome, purpose, user_id, deck_id from public.ai_usage_log where deck_id=$1", [deckId])).rows;
-    expect(usage).toHaveLength(4);
+    expect(usage).toHaveLength(1);
     expect(usage.every((x: any) => x.outcome === "success" && x.purpose === "slide_reading" && x.user_id === u.id)).toBe(true);
     expect(await env.r2.head(keys.slideImage(u.id, deckId, 0))).not.toBeNull();
   });
@@ -291,6 +294,74 @@ describe("deck-process", () => {
     expect(retry.status).toBe(202); await env.settle();
     expect(await deckRow(deckId)).toMatchObject({ status: "ready" });
   });
+  it("the Details step: audience / goal / summary / time are stored with the first start and written into the prompt", async () => {
+    env.ai.deckPrompts.length = 0;
+    const orig = env.ai.slideOut; let k = 0;
+    env.ai.slideOut = () => ({ title: `S${++k}`, slide_text: "t", key_points: ["a"], suggested_script: "x", seconds: [15, 20, 25][k - 1] });
+    const { u, deckId } = await readyForProcessing("pd1@example.test", 3);
+    const details = { audience: "others", audience_other: "Rotary club members", goal: "Win the seed round", abstract: "A parking app for campuses.", total_minutes: 7 };
+    const r = await env.call(deckProcess, { deck_id: deckId, details }, { token: u.token });
+    expect(r.status).toBe(202); await env.settle();
+    env.ai.slideOut = orig;
+    expect(await deckRow(deckId)).toMatchObject({ status: "ready", audience: "others", audience_other: "Rotary club members", goal: "Win the seed round", abstract: "A parking app for campuses.", target_minutes: 7 });
+    expect(env.ai.deckPrompts).toHaveLength(1);
+    const prompt = env.ai.deckPrompts[0]!;
+    expect(prompt).toContain("this audience: Rotary club members");
+    expect(prompt).toContain('"presentation_reason_or_goal":"Win the seed round"');
+    expect(prompt).toContain('"presentation_summary":"A parking app for campuses."');
+    expect(prompt).toContain('"total_time_limit_seconds":420');
+    expect(prompt).toContain("START with a short introduction"); // slide 1 carries the introduction
+    // weights are each slide's share of the 7-minute limit (the fake model answers 15 / 20 / 25 seconds)
+    const w = (await env.db.admin.query("select time_weight from public.slides where deck_id=$1 order by slide_index", [deckId])).rows.map((x: any) => x.time_weight);
+    expect(w).toEqual([4, 5, 6]);
+  });
+  it("a retry after a failure reuses the stored details (none are sent again); details sent for a ready deck are ignored", async () => {
+    const { u, deckId } = await readyForProcessing("pd2@example.test", 2);
+    for (const k of ["slide-k0", "slide-k1", "slide-k2"]) env.ai.chatStatus[k] = 429;
+    await env.call(deckProcess, { deck_id: deckId, details: { audience: "jury", total_minutes: 4, goal: "Impress" } }, { token: u.token }); await env.settle();
+    expect(await deckRow(deckId)).toMatchObject({ status: "failed", error_code: "ai_unavailable", audience: "jury", target_minutes: 4 });
+    env.ai.chatStatus = {}; await env.db.admin.query("update public.ai_key_slots set cooldown_until=null");
+    env.ai.deckPrompts.length = 0;
+    await env.call(deckProcess, { deck_id: deckId }, { token: u.token }); await env.settle();
+    expect(await deckRow(deckId)).toMatchObject({ status: "ready" });
+    expect(env.ai.deckPrompts[0]).toContain('"target_audience":"jury"');
+    expect(env.ai.deckPrompts[0]).toContain('"total_time_limit_seconds":240');
+    await env.call(deckProcess, { deck_id: deckId, details: { audience: "teachers", total_minutes: 9 } }, { token: u.token });
+    expect(await deckRow(deckId)).toMatchObject({ audience: "jury", target_minutes: 4 });
+  });
+  it("invalid details are rejected with 400 and change nothing (others needs a description, abstract <= 50 words, minutes 1-20)", async () => {
+    const { u, deckId } = await readyForProcessing("pd3@example.test", 2);
+    for (const details of [
+      { audience: "others", total_minutes: 5 }, { audience: "student", total_minutes: 0 }, { audience: "student", total_minutes: 5, abstract: Array(51).fill("w").join(" ") },
+      { audience: "boss", total_minutes: 5 }, { audience: "student", total_minutes: 5, role: "admin" },
+    ]) expect((await env.call(deckProcess, { deck_id: deckId, details }, { token: u.token })).status).toBe(400);
+    expect(await deckRow(deckId)).toMatchObject({ status: "awaiting_images", audience: null, target_minutes: null });
+  });
+  it("a deck without details (old client) still reads with a neutral prompt and the default 5 minutes", async () => {
+    env.ai.deckPrompts.length = 0;
+    const { u, deckId } = await readyForProcessing("pd4@example.test", 2);
+    await env.call(deckProcess, { deck_id: deckId }, { token: u.token }); await env.settle();
+    expect(await deckRow(deckId)).toMatchObject({ status: "ready", audience: null });
+    expect(env.ai.deckPrompts[0]).toContain("did not specify");
+    expect(env.ai.deckPrompts[0]).toContain('"total_time_limit_seconds":300');
+  });
+  it("slides the model skipped are asked for again on their own; unusable output splits the deck so good slides are kept", async () => {
+    env.ai.chatCalls.length = 0; env.ai.omitOnce = [2];
+    const a = await readyForProcessing("pd5@example.test", 3);
+    await env.call(deckProcess, { deck_id: a.deckId }, { token: a.u.token }); await env.settle();
+    expect((await deckRow(a.deckId)).status).toBe("ready");
+    const calls = env.ai.chatCalls.filter((c) => c.model === "slide-model").map((c) => c.messages[1].content.filter((p: any) => /^Slide \d+:$/.test(p.text ?? "")).map((p: any) => p.text));
+    expect(calls).toEqual([["Slide 1:", "Slide 2:", "Slide 3:"], ["Slide 2:"]]);
+    const orig = env.ai.slideOut;
+    env.ai.slideOut = (n, bytes) => (bytes === 1501 ? "garbage not json" : orig(n, bytes)); // slide 1's image
+    env.ai.chatCalls.length = 0;
+    const b = await readyForProcessing("pd6@example.test", 3);
+    await env.call(deckProcess, { deck_id: b.deckId }, { token: b.u.token }); await env.settle();
+    env.ai.slideOut = orig;
+    const rows = (await env.db.admin.query("select slide_index, key_points, title from public.slides where deck_id=$1 order by slide_index", [b.deckId])).rows;
+    expect(rows.map((r: any) => r.key_points[0] === "Introduce this slide")).toEqual([false, true, false]); // only the garbled slide is generic
+    expect(env.ai.chatCalls.length).toBeGreaterThan(1);
+  });
   it("429 on the primary key falls back to fallback_1 transparently (same model)", async () => {
     env.ai.chatCalls.length = 0; env.ai.chatStatus = { "slide-k0": 429 };
     await env.db.admin.query("update public.ai_key_slots set cooldown_until=null");
@@ -311,7 +382,7 @@ describe("deck-process", () => {
     expect((await deckRow(deckId)).status).toBe("ready");
     const rows = (await env.db.admin.query("select key_points, time_weight, title from public.slides where deck_id=$1 order by slide_index", [deckId])).rows;
     expect(rows).toHaveLength(3);
-    expect(rows.some((r: any) => r.key_points[0] === "Introduce this slide" && r.time_weight === 10)).toBe(true);
+    expect(rows.some((r: any) => r.key_points[0] === "Introduce this slide" && r.time_weight === 5)).toBe(true); // 15 s of a 5-minute default
     const outcomes = (await env.db.admin.query("select outcome from public.ai_usage_log where deck_id=$1", [deckId])).rows.map((r: any) => r.outcome);
     expect(outcomes).toContain("invalid_output");
   });
@@ -341,7 +412,9 @@ describe("deck-process", () => {
     const res = await env.call(deckProcess, { deck_id: r2.deckId }, { token: r2.u.token });
     expect(res.status).toBe(202); await env.settle();
     expect((await deckRow(r2.deckId)).status).toBe("ready");
-    expect(env.ai.chatCalls.filter((c) => c.model === "slide-model")).toHaveLength(2); // the finished slide was skipped
+    const calls = env.ai.chatCalls.filter((c) => c.model === "slide-model");
+    expect(calls).toHaveLength(1); // one request for the two slides still to do; the finished slide was skipped
+    expect(calls[0]!.messages[1].content.filter((p: any) => /^Slide \d+:$/.test(p.text ?? "")).map((p: any) => p.text)).toEqual(["Slide 2:", "Slide 3:"]);
     await sleepTick();
   });
 });

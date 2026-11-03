@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { control, fixture, seed } from "./helpers";
+import { control, fixture, seed, submitDetails } from "./helpers";
 
 test.describe("4. upload errors render below the dropzone", () => {
   test.beforeEach(async ({ page }) => { await seed(page, "student", { stageMs: 150 }); await page.goto("/practice/new"); });
@@ -41,6 +41,7 @@ test.describe("4. upload errors render below the dropzone", () => {
     await page.getByTestId("file-input").setInputFiles(fixture("deck-3.pdf"));
     await expect(err(page)).toContainText("Upload failed");
     await err(page).getByRole("button", { name: "Try again" }).click();
+    await submitDetails(page); // the retry resumes the same deck and lands on the Details step
     await expect(page).toHaveURL(/\/reading|\/prepare/, { timeout: 60_000 });
   });
 
@@ -50,7 +51,7 @@ test.describe("4. upload errors render below the dropzone", () => {
     await expect(err(page)).toBeVisible();
     expect((await c.snapshot()).usageEvents.length).toBe(0);
     await page.getByTestId("file-input").setInputFiles(fixture("deck-3.pdf"));
-    await expect(page).toHaveURL(/\/prepare/, { timeout: 60_000 });
+    await expect(page).toHaveURL(/\/details/, { timeout: 60_000 }); // the session is consumed when the upload completes, before the Details step
     expect((await c.snapshot()).usageEvents.length).toBe(1);
   });
 });

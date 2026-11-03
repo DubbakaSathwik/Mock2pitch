@@ -35,7 +35,8 @@ export function TimeStep() {
   const attempts = useDeckAttempts(deckId);
   const start = useStartSession();
   const [v, setV] = useState("5");
-  const seeded = deck.data?.latest_total_minutes;
+  // A retake starts from the last session's time; a first practice from the time chosen on the Details step.
+  const seeded = deck.data?.latest_total_minutes ?? deck.data?.deck.target_minutes;
   useEffect(() => { if (seeded) setV(String(seeded)); }, [seeded]);
   const err = validateMinutes(v);
   const n = Number(v);

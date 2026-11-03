@@ -1,9 +1,10 @@
 import { api, AppError, Errors, isInternal, logEvent, ok, readBody, requireUser } from "./common.ts";
-import { deckIdIn, BLANK_SLIDE, type SlideReadingOut } from "../schemas.ts";
-import { SLIDE_CONCURRENCY, SLIDE_IMAGE_MAX_BYTES } from "../constants.ts";
+import { deckProcessIn } from "../schemas.ts";
+import { SLIDE_IMAGE_MAX_BYTES, type Audience } from "../constants.ts";
 import { isJpegSignature } from "../files.ts";
 import { supabaseRouterStore } from "../ai/store.ts";
-import { readSlide } from "../ai/slide.ts";
+import { DEFAULT_TOTAL_MINUTES, readSlides, type SlideImage } from "../ai/deck.ts";
+import type { DeckPromptDetails } from "../prompts/deck-reading.ts";
 import type { Deps } from "../deps.ts";
 
 const FRESH_MS = 2 * 60 * 1000; // a user re-call within this window of the last heartbeat is a no-op
@@ -12,9 +13,9 @@ export const deckProcess = api(async (ctx) => {
   const internal = isInternal(ctx.req, ctx.deps);
   const { deps } = ctx;
   const userId = internal ? null : (await requireUser(ctx)).userId;
-  const { deck_id } = await readBody(ctx.req, deckIdIn);
+  const { deck_id, details } = await readBody(ctx.req, deckProcessIn);
 
-  let q = deps.admin.from("decks").select("id, owner_id, status, page_count, error_code, updated_at").eq("id", deck_id);
+  let q = deps.admin.from("decks").select("id, owner_id, status, page_count, error_code, updated_at, audience, audience_other, goal, abstract, target_minutes").eq("id", deck_id);
   if (userId) q = q.eq("owner_id", userId);
   const { data: deck } = await q.maybeSingle();
   if (!deck) throw Errors.notFound();
@@ -53,11 +54,20 @@ export const deckProcess = api(async (ctx) => {
   }
   if (missing.length) throw Errors.badRequest("images_missing", "Some slide images didn't upload.", { missing });
 
+  // The Details step sends its answers with the FIRST start only (status awaiting_images); a retry after a failure, or a sweeper resume,
+  // reuses what is stored on the deck (decks created before the Details step have none: a neutral prompt and the default time).
+  const fresh = deck.status === "awaiting_images" ? details : undefined;
+  const detailCols = fresh
+    ? { audience: fresh.audience, audience_other: fresh.audience_other ?? null, goal: fresh.goal ?? null, abstract: fresh.abstract ?? null, target_minutes: fresh.total_minutes }
+    : {};
+  const effective: DeckPromptDetails = fresh
+    ? { audience: fresh.audience as Audience, audience_other: fresh.audience_other, goal: fresh.goal, abstract: fresh.abstract, total_minutes: fresh.total_minutes }
+    : { audience: (deck.audience ?? undefined) as Audience | undefined, audience_other: deck.audience_other ?? undefined, goal: deck.goal ?? undefined, abstract: deck.abstract ?? undefined, total_minutes: deck.target_minutes ?? DEFAULT_TOTAL_MINUTES };
   // The unique "one active deck per owner" index can reject re-activating a failed deck.
-  const { error } = await deps.admin.from("decks").update({ status: "processing", error_code: null, processing_stage: `Reading slide 1 of ${n}` }).eq("id", deck_id);
+  const { error } = await deps.admin.from("decks").update({ ...detailCols, status: "processing", error_code: null, processing_stage: `Reading your ${n} slide${n === 1 ? "" : "s"}` }).eq("id", deck_id);
   if (error) throw error.code === "23505" ? Errors.conflict("deck_in_progress", "Finish your current deck first.") : new AppError("internal", 500, "Something went wrong.");
 
-  deps.background(runDeckProcessing(deps, deck_id, owner, n).catch((e) => failDeckProcessing(deps, deck_id, e)));
+  deps.background(runDeckProcessing(deps, deck_id, owner, n, effective).catch((e) => failDeckProcessing(deps, deck_id, e)));
   return ok({ deck_id, status: "processing" }, ctx.cors, 202);
 });
 
@@ -69,52 +79,34 @@ async function failDeckProcessing(deps: Deps, deckId: string, e: unknown) {
   await deps.admin.from("decks").update({ status: "failed", error_code: code, processing_stage: null }).eq("id", deckId);
 }
 
-/** Idempotent + resumable: slides already stored are skipped; rows are upserted per (deck, slide_index). */
-export async function runDeckProcessing(deps: Deps, deckId: string, owner: string, n: number): Promise<void> {
+/**
+ * Idempotent + resumable: slides already stored are skipped; rows are upserted per (deck, slide_index).
+ * One Gemini request reads every slide still to do (with the student's details) and the rows are written together; only unusable
+ * output splits the work into smaller requests (see ai/deck.ts). AI_BUSY / model_unavailable propagate and fail the deck.
+ */
+export async function runDeckProcessing(deps: Deps, deckId: string, owner: string, n: number, details: DeckPromptDetails = { total_minutes: DEFAULT_TOTAL_MINUTES }): Promise<void> {
   const store = supabaseRouterStore(deps.admin);
   const { data: done } = await deps.admin.from("slides").select("slide_index").eq("deck_id", deckId);
   const have = new Set<number>((done ?? []).map((r: any) => r.slide_index));
   const todo = Array.from({ length: n }, (_, i) => i).filter((i) => !have.has(i));
-  let processed = have.size;
-  let fatal: unknown = null;
 
-  const queue = [...todo];
-  const worker = async () => {
-    while (queue.length && !fatal) {
-      const i = queue.shift()!;
-      try {
-        const { data: file } = await deps.admin.from("files").select("id, object_key").eq("deck_id", deckId).eq("kind", "slide_image").eq("slide_index", i).eq("status", "uploaded").maybeSingle();
-        if (!file) throw new Error("image_missing");
-        const jpeg = await deps.r2.get(file.object_key);
-        const out = await readOneSlide(deps, store, jpeg, owner, deckId);
-        const { error } = await deps.admin.from("slides").upsert({
-          deck_id: deckId, slide_index: i, title: out.title, extracted_text: out.slide_text, key_points: out.key_points,
-          suggested_script: out.suggested_script, time_weight: out.time_weight, image_file_id: file.id,
-        }, { onConflict: "deck_id,slide_index" });
-        if (error) throw new Error("slide_write_failed");
-        processed++;
-        await deps.admin.from("decks").update({ processed_slides: processed, processing_stage: `Reading slide ${Math.min(processed + 1, n)} of ${n}` }).eq("id", deckId);
-      } catch (e) {
-        fatal = e; // AI_BUSY or infrastructure error: stop all workers
-      }
+  if (todo.length) {
+    const { data: files } = await deps.admin.from("files").select("id, slide_index, object_key").eq("deck_id", deckId).eq("kind", "slide_image").eq("status", "uploaded");
+    const fileBy = new Map<number, { id: string; object_key: string }>((files ?? []).map((f: any) => [f.slide_index, f]));
+    const images: SlideImage[] = [];
+    for (const i of todo) {
+      const f = fileBy.get(i);
+      if (!f) throw new Error("image_missing");
+      images.push({ index: i, jpeg: await deps.r2.get(f.object_key) });
     }
-  };
-  await Promise.all(Array.from({ length: Math.min(SLIDE_CONCURRENCY, todo.length) }, worker));
-  if (fatal) throw fatal;
-  await deps.admin.from("decks").update({ status: "ready", processed_slides: n, processing_stage: null, error_code: null }).eq("id", deckId);
-}
-
-/** One slide: invalid output is retried once, then (like an unreadable image) falls back to a generic row. AI_BUSY propagates. */
-async function readOneSlide(deps: Deps, store: ReturnType<typeof supabaseRouterStore>, jpeg: Uint8Array, userId: string, deckId: string): Promise<SlideReadingOut> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      return await readSlide(deps, store, jpeg, { userId, deckId });
-    } catch (e) {
-      const code = (e as { code?: string }).code;
-      if (code === "AI_BUSY") throw e;
-      if (code === "bad_request") break; // the image itself is the problem: retrying won't help
-      if (code !== "invalid_output") throw e;
-    }
+    const read = await readSlides(deps, store, images, details, n, { userId: owner, deckId });
+    const rows = todo.map((i) => {
+      const r = read.get(i);
+      if (!r) throw new Error("slide_missing");
+      return { deck_id: deckId, slide_index: i, title: r.title, extracted_text: r.slide_text, key_points: r.key_points, suggested_script: r.script, time_weight: r.weight, image_file_id: fileBy.get(i)!.id };
+    });
+    const { error } = await deps.admin.from("slides").upsert(rows, { onConflict: "deck_id,slide_index" });
+    if (error) throw new Error("slide_write_failed");
   }
-  return { ...BLANK_SLIDE };
+  await deps.admin.from("decks").update({ status: "ready", processed_slides: n, processing_stage: null, error_code: null }).eq("id", deckId);
 }

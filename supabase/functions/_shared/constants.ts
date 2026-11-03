@@ -51,6 +51,17 @@ export const FILLER_PENALTY_PER_MIN = 15;
 export const FILLER_MIN_MINUTES = 0.5;
 export const FILLER_REGEX_SOURCE = "\\b(um|uh|like|basically|you know|actually)\\b";
 
+// Presentation details form (audience / goal / summary / time), see migration 20261104000011.
+export const AUDIENCES = ["student", "teachers", "jury", "others"] as const;
+export type Audience = (typeof AUDIENCES)[number];
+export const AUDIENCE_LABELS: Record<Audience, string> = { student: "Students", teachers: "Teachers", jury: "Jury", others: "Others" };
+export const MAX_AUDIENCE_OTHER_CHARS = 80;
+export const MAX_GOAL_CHARS = 300;
+export const MAX_ABSTRACT_WORDS = 50;
+export const MAX_ABSTRACT_CHARS = 600;
+/** Spoken English pace used to size scripts: about 130 words a minute. */
+export const WORDS_PER_SECOND = 130 / 60;
+
 export const MAX_ANALYSIS_ATTEMPTS = 3;
 export const STUCK_JOB_MS = 5 * 60 * 1000;
 export const PENDING_FILE_TTL_MS = 60 * 60 * 1000;

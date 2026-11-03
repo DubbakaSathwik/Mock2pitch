@@ -36,7 +36,7 @@ test("1. new student: landing → sign in → terms → profile → empty dashbo
 
   await expect(page).toHaveURL(/\/dashboard/);
   await expect(page.getByRole("heading", { level: 1, name: /Hi Ananya, ready to rehearse/ })).toBeVisible();
-  await expect(page.getByText("Ananya Rao-Iyer").first()).toBeVisible(); // the edited name is what the app shows
+  if ((page.viewportSize()?.width ?? 1280) >= 760) await expect(page.getByText("Ananya Rao-Iyer").first()).toBeVisible(); // the edited name is what the sidebar shows (mobile shows initials only)
   await expect(page.getByText("Your first practice starts here")).toBeVisible();
   await expect(page.getByText("Ready for your first practice")).toBeVisible();
   await expect(page.getByText("0 of 5 sessions")).toBeVisible();

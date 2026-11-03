@@ -75,10 +75,10 @@ export function StudentShell({ active, maxW = 1200, back, children }: { active: 
   );
 }
 
-const STEPS = [["upload", "Upload"], ["prep", "Prepare"], ["time", "Time"], ["mic", "Mic check"]] as const;
+const STEPS = [["upload", "Upload"], ["details", "Details"], ["prep", "Prepare"], ["time", "Time"], ["mic", "Mic check"]] as const;
 export type FlowStep = (typeof STEPS)[number][0];
 
-/** Flow shell (Upload → Prepare → Time → Mic check): top bar with a 4-step stepper and an exit button. */
+/** Flow shell (Upload → Details → Prepare → Time → Mic check): top bar with a 5-step stepper and an exit button. */
 export function FlowShell({ step, wide, back, children }: { step: FlowStep; wide?: boolean; back?: { href: string; label?: string }; children: ReactNode }) {
   const compact = useCompact();
   const idx = STEPS.findIndex((s) => s[0] === step);

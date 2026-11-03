@@ -8,6 +8,12 @@ export function hashString(s: string): number { let h = 2166136261; for (let i =
 export function rng(seed: string) { let a = hashString(seed); return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 /** What "the AI reads the slide" produces in mock mode, from the text pdf.js found on the page. */
+/** Opening line for slide 1, like the real reader: greeting, who is presenting and what the talk is about (the student's summary when given). */
+export function introFor(name: string | null, deckTitle: string, abstract: string | null): string {
+  const topic = abstract ? abstract.replace(/[.\s]+$/, "") : deckTitle;
+  return `Hello everyone, I'm ${name?.split(" ")[0] ?? "your presenter"}. Today I'll walk you through ${topic}.`;
+}
+
 export function readSlideFromText(text: string | null, index: number): { title: string; extracted_text: string; key_points: string[]; script: string; weight: number } {
   const lines = (text ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
   const title = (lines[0] ?? `Slide ${index + 1}`).slice(0, 120);

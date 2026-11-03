@@ -27,7 +27,7 @@ Timeouts: slide 30 s, ASR 60 s per ≤ 60 s chunk, report 90 s. Measured live: s
 No NVIDIA balance API exists. "Used" = billable outcomes (`success`, `invalid_output`) since the slot's `credit_period_start`; "limit" = `ai_key_slots.credit_limit` (seeded 1000, editable with `admin_set_credit_limit`, which can also start a new period for a fresh key). `running_low` = > 75 % used. `NVIDIA_KEY_DEFAULT_CREDIT_LIMIT` is validated but the DB default (1000) is what seeds slots.
 
 ## Prompts (committed as files)
-`_shared/prompts/slide-reading.ts`, `_shared/prompts/report.ts`. Copy rules for the report: calm encouraging coach, "you", specific numbers and slide numbers, British/Indian English, no emoji.
+`_shared/prompts/deck-reading.ts` (slides: the whole deck in one request, written for the student's audience, goal, summary and time limit; see `docs/phase-5/deck-details.md`), `_shared/prompts/report.ts`. Copy rules for the report: calm encouraging coach, "you", specific numbers and slide numbers, British/Indian English, no emoji.
 
 ## Output schemas (Zod, `_shared/schemas.ts`)
 - Slide: `{title ≤120, slide_text ≤4000, key_points[1..5] each ≤200, suggested_script ≤1500, time_weight 1..100}`. Extra fields are dropped; numbers clamped; strings truncated. Invalid twice, or a 400 from the API ⇒ a generic row (`"Introduce this slide"`, weight 10); only `AI_BUSY` fails the deck.

@@ -29,6 +29,10 @@ export const testEnv: Env = {
 export class FakeAi {
   chatCalls: { model: string; key: string; messages: any[] }[] = [];
   asrCalls: { key: string; bytes: number }[] = [];
+  /** The first (text) part of every slide-reading request: the prompt with the student's details. */
+  deckPrompts: string[] = [];
+  /** Slide numbers the model "forgets" in its NEXT slide-reading answer only (a parseable answer that skips some slides). */
+  omitOnce: number[] = [];
   /** per-key forced HTTP status for chat calls (e.g. { "slide-k0": 429 }) */
   chatStatus: Record<string, number> = {};
   asrStatus: Record<string, number> = {};
@@ -47,12 +51,22 @@ export class FakeAi {
     const forced = this.chatStatus[key];
     if (forced) return new Response(JSON.stringify({ error: "forced" }), { status: forced, headers: forced === 429 ? { "Retry-After": "30" } : {} });
     let content: unknown;
-    const structuring = String(body.messages[0]?.content ?? "").includes("sends ONE slide image") && !Array.isArray(body.messages[1]?.content);
-    if (structuring) content = this.slideOut(++this.slideCounter, 1500);
-    else if (body.model === "slide-model") {
-      const imgPart = (body.messages.find((m: any) => Array.isArray(m.content))?.content ?? []).find((c: any) => c.type === "image_url");
-      const b64 = String(imgPart?.image_url?.url ?? "").split(",")[1] ?? "";
-      content = this.slideOut(++this.slideCounter, Buffer.from(b64, "base64").length);
+    const userParts: any[] = Array.isArray(body.messages.find((m: any) => Array.isArray(m.content))?.content) ? body.messages.find((m: any) => Array.isArray(m.content)).content : [];
+    if (body.model === "slide-model" || body.model === "slide-fallback") {
+      // Slide reading: one request carries one or more slide images, each preceded by a "Slide N:" text part (see prompts/deck-reading.ts).
+      this.deckPrompts.push(String(userParts[0]?.text ?? ""));
+      const slides: any[] = [];
+      let garbage: unknown = null;
+      for (let i = 0; i < userParts.length; i++) {
+        if (userParts[i]?.type !== "image_url") continue;
+        const no = Number(/Slide (\d+):/.exec(String(userParts[i - 1]?.text ?? ""))?.[1] ?? 1);
+        const b64 = String(userParts[i].image_url?.url ?? "").split(",")[1] ?? "";
+        const out = this.slideOut(++this.slideCounter, Buffer.from(b64, "base64").length) as any;
+        if (typeof out === "string") { garbage = out; continue; }
+        slides.push({ slide_no: no, title: out.title, slide_text: out.slide_text, key_points: out.key_points, script: out.suggested_script ?? out.script, seconds: out.seconds ?? out.time_weight ?? 10 + no * 5 });
+      }
+      if (this.omitOnce.length) { const drop = new Set(this.omitOnce); this.omitOnce = []; content = garbage ?? { slides: slides.filter((x) => !drop.has(x.slide_no)) }; }
+      else content = garbage ?? { slides };
     }
     else {
       if (this.invalidReportOnce) { this.invalidReportOnce = false; content = "this is not json"; }

@@ -1,0 +1,7 @@
+.card{display:flex;flex-direction:column;gap:20px}
+.row{display:flex;flex-direction:row;gap:20px;align-items:flex-end;flex-wrap:wrap}
+.minutes{width:200px}
+.presetsErr{padding-bottom:22px}
+.note{display:flex;gap:12px;align-items:flex-start;padding:16px 4px 0}
+.cta{display:flex;gap:16px;align-items:center;margin-top:20px;flex-wrap:wrap}
+.fail{margin-top:16px}

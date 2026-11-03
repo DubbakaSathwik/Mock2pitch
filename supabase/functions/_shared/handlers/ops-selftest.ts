@@ -9,8 +9,8 @@ import { PURPOSES, SLIDE_IMAGE_MAX_BYTES } from "../constants.ts";
 import { keysFor, modelFor } from "../env.ts";
 import { keys } from "../r2.ts";
 import { chatText, parseJsonLoose, modelsUrl, GEMINI_CHAT_URL, NVIDIA_CHAT_URL } from "../nvidia/chat.ts";
-import { slideReadingOut } from "../schemas.ts";
-import { SLIDE_READING_SYSTEM, SLIDE_READING_USER } from "../prompts/slide-reading.ts";
+import { deckReadingOut } from "../schemas.ts";
+import { DECK_READING_SYSTEM, buildDeckReadingUser } from "../prompts/deck-reading.ts";
 import { toBase64 } from "../ai/base64.ts";
 import { pcmOf } from "../audio.ts";
 import { countFillers } from "../scoring.ts";
@@ -246,7 +246,7 @@ async function pipelineCheck(deps0: Deps, s: Steps) {
       return { ok: (used ?? []).length === 1, detail: { sessions_consumed_today: (used ?? []).length } };
     });
 
-    await s.run("deck-process: vision model reads both slides -> deck ready", async () => {
+    await s.run("deck-process: vision model reads both slides in one request -> deck ready", async () => {
       const r = await call(deckProcess, { deck_id: deckId });
       await settle();
       const { data: deck } = await admin.from("decks").select("status, error_code, processed_slides").eq("id", deckId).single();
@@ -284,7 +284,7 @@ async function pipelineCheck(deps0: Deps, s: Steps) {
       const rows = [...(data ?? []), ...(data2 ?? [])];
       const by: Record<string, number> = {};
       for (const r of rows) by[`${r.purpose}:${r.outcome}`] = (by[`${r.purpose}:${r.outcome}`] ?? 0) + 1;
-      return { ok: rows.length >= 4, detail: by };
+      return { ok: rows.length >= 3, detail: by }; // one whole-deck slide reading + one transcription + one report
     });
   } finally {
     await s.run("cleanup: delete synthetic user (cascade) and every R2 object", async () => {
@@ -333,21 +333,28 @@ async function geminiCheck(deps: Deps, s: Steps, part: "all" | "models" | "slide
   };
 
   if (slideKey && want("slide")) {
-    await s.run("slide model: reads the fixture slide (3 calls, schema-valid)", async () => {
-      const lat: number[] = []; let valid = 0; const statuses: number[] = []; let sample = ""; const loopStart = Date.now();
+    await s.run("slide model: reads the fixture slide (3 calls, schema-valid, real deck prompt)", async () => {
+      const lat: number[] = []; let valid = 0; const statuses: number[] = []; let sample = ""; let intro = 0; const loopStart = Date.now();
       const rejected: { issues: string[]; raw_head: string }[] = [];
+      const messages = [
+        { role: "system", content: DECK_READING_SYSTEM },
+        { role: "user", content: [
+          { type: "text", text: buildDeckReadingUser({ details: { audience: "student", goal: "Selftest", abstract: "A synthetic slide used to check the pipeline.", total_minutes: 1 }, from: 1, to: 1, total: 1 }) },
+          { type: "text", text: "Slide 1:" }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${toBase64(jpeg)}` } },
+        ] },
+      ];
       for (let i = 0; i < 3 && Date.now() - loopStart < 80_000; i++) {
-        const r = await chat(slideKey, env.GEMINI_SLIDE_MODEL, [{ role: "system", content: SLIDE_READING_SYSTEM }, { role: "user", content: [{ type: "text", text: SLIDE_READING_USER }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${toBase64(jpeg)}` } }] }], { max_tokens: 8192, temperature: 0.2 });
+        const r = await chat(slideKey, env.GEMINI_SLIDE_MODEL, messages, { max_tokens: 8192, temperature: 0.2 });
         lat.push(r.ms); statuses.push(r.status);
         let rawText = "";
-        try { rawText = chatText(r.json); const out = slideReadingOut.parse(parseJsonLoose(rawText)); valid++; sample = out.title; }
+        try { rawText = chatText(r.json); const out = deckReadingOut.parse(parseJsonLoose(rawText)); if (!out.slides.some((x) => x.slide_no === 1)) throw new Error("slide_no 1 missing"); valid++; sample = out.slides[0]!.title; if (out.slides[0]!.script.length > 0) intro++; }
         catch (e) {
           // synthetic fixture content only: safe to show a short head of the model's answer and which fields failed
           const issues = (e as { issues?: { path: (string | number)[]; message: string }[] }).issues?.map((i) => `${i.path.join(".")}: ${i.message}`.slice(0, 80)) ?? [String((e as Error)?.message ?? "parse_failed").slice(0, 80)];
           rejected.push({ issues: issues.slice(0, 4), raw_head: rawText.slice(0, 240) });
         }
       }
-      return { ok: valid === statuses.length && statuses.length > 0, detail: { statuses, schema_valid: `${valid}/${statuses.length}`, p50_ms: pct(lat, 50), p95_ms: pct(lat, 95), sample_title: sample, ...(rejected.length ? { rejected: rejected.slice(0, 2) } : {}) } };
+      return { ok: valid === statuses.length && statuses.length > 0, detail: { statuses, schema_valid: `${valid}/${statuses.length}`, p50_ms: pct(lat, 50), p95_ms: pct(lat, 95), sample_title: sample, with_script: `${intro}/${statuses.length}`, ...(rejected.length ? { rejected: rejected.slice(0, 2) } : {}) } };
     });
     if (env.GEMINI_SLIDE_FALLBACK_MODEL) {
       await s.run("slide fallback model: answers a tiny vision call", async () => {
