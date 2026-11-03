@@ -1,4 +1,4 @@
-// Integration E2E against the REAL stack (hosted Supabase + R2 + NVIDIA). Not part of the normal test run.
+// Integration E2E against the REAL stack (hosted Supabase + R2 + NVIDIA + Gemini). Not part of the normal test run.
 //   local app:     npm run test:integration            (starts `next dev` on :3000 using .env.local = supabase mode)
 //   deployed site: INTEGRATION_BASE_URL=https://<site>.netlify.app npm run test:integration
 // Needs IT_USER_*_EMAIL / IT_USER_*_PASSWORD (scripts/integration/provision-test-users.mjs writes .env.integration.local) and the public

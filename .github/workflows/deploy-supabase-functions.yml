@@ -2,7 +2,7 @@
 # One-time setup: GitHub repo -> Settings -> Secrets and variables -> Actions -> add
 #   SUPABASE_ACCESS_TOKEN  (Supabase dashboard -> Account -> Access Tokens -> Generate new token)
 #   SUPABASE_PROJECT_REF   (mkglxcdtfimgmvxtddst)
-# Function secrets (R2, NVIDIA, ...) are NOT handled here: set them in Supabase -> Edge Functions -> Secrets.
+# Function secrets (R2, NVIDIA, Gemini, ...) are NOT handled here: set them in Supabase -> Edge Functions -> Secrets.
 name: Deploy Supabase Edge Functions
 on:
   workflow_dispatch:

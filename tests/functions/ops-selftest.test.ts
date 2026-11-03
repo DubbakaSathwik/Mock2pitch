@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createEnv, SECRET, type Env_ } from "./harness";
+import { createEnv, SECRET, testEnv, type Env_ } from "./harness";
 import { opsSelftest } from "@shared/handlers/ops-selftest.ts";
 import { TransportError } from "@shared/nvidia/router.ts";
 
@@ -38,31 +38,47 @@ describe("ops-selftest (operator diagnostics)", () => {
     expect(r.text).not.toMatch(/X-Amz-Signature|X-Amz-Credential|sekrit/);
   });
 
-  it("nvidia: every configured key is tried, latency/usage/vision/size probe/ASR are reported", async () => {
+  it("nvidia + gemini: every configured key is tried; latency/usage/vision/size probe/ASR are reported", async () => {
     const r = await run("nvidia");
-    const failed = r.json.data.steps.filter((s: any) => !s.ok);
-    expect(failed).toEqual([]);
-    expect(r.json.data.steps.filter((s: any) => s.name.includes("accepted by /v1/models")).length).toBe(9);
+    const g = await run("gemini");
+    for (const x of [r, g]) expect(x.json.data.steps.filter((s: any) => !s.ok)).toEqual([]);
+    expect(r.json.data.steps.filter((s: any) => s.name.includes("accepted by /v1/models")).length).toBe(6); // report + ASR keys only: slide reading is Gemini now
+    expect(g.json.data.steps.filter((s: any) => s.name.includes("accepted by Gemini /models")).length).toBe(3);
+    expect(step(g, "accepted by Gemini /models").detail).toMatchObject({ status: 200, configured_model_listed: true });
     expect(step(r, "report model: 5").detail.statuses).toEqual([200, 200, 200, 200, 200]);
-    expect(step(r, "slide model: reads").detail.schema_valid).toBe("3/3");
-    expect(Object.keys(step(r, "size probe").detail.http_status_by_image_size).length).toBeGreaterThan(0);
+    expect(step(g, "slide model: reads").detail.schema_valid).toBe("3/3");
+    expect(Object.keys(step(g, "size probe").detail.http_status_by_image_size).length).toBeGreaterThan(0);
     expect(step(r, "over gRPC").detail).toMatchObject({ audio_seconds: 6, fillers_in_script: 4 });
-    for (const secret of ["slide-k0", "asr-k0", "rep-k0", "Bearer"]) expect(r.text).not.toContain(secret);
+    expect(r.text).not.toMatch(/slide-model/); // the NVIDIA check no longer touches the slide model
+    for (const secret of ["slide-k0", "asr-k0", "rep-k0", "Bearer"]) { expect(r.text).not.toContain(secret); expect(g.text).not.toContain(secret); }
   });
 
-  it("nvidia sub-checks run independently so a slow model cannot exhaust the time budget", async () => {
+  it("sub-checks run independently so a slow model cannot exhaust the time budget", async () => {
     env.ai.chatCalls.length = 0; env.ai.asrCalls.length = 0;
     const models = await run("nvidia_models");
     expect(models.json.data.steps.every((s: any) => s.name.includes("/v1/models"))).toBe(true);
+    const gmodels = await run("gemini_models");
+    expect(gmodels.json.data.steps.every((s: any) => s.name.includes("Gemini /models"))).toBe(true);
     expect(env.ai.chatCalls.length).toBe(0);
-    const slide = await run("nvidia_slide");
+    const slide = await run("gemini_slide");
     expect(slide.json.data.steps.map((s: any) => s.name.split(":")[0])).toEqual(["slide model", "slide model"]);
+    expect(env.ai.chatCalls.every((c) => c.model === "slide-model")).toBe(true);
     expect(env.ai.asrCalls.length).toBe(0);
     const asr = await run("nvidia_asr");
     expect(asr.json.data.steps.length).toBe(2);
     const report = await run("nvidia_report");
     expect(report.json.data.steps.length).toBe(2);
-    expect(report.json.data.ok && slide.json.data.ok && asr.json.data.ok && models.json.data.ok).toBe(true);
+    expect(report.json.data.ok && slide.json.data.ok && asr.json.data.ok && models.json.data.ok && gmodels.json.data.ok).toBe(true);
+  });
+
+  it("gemini: a wrongly named model is reported as a failing step, and the optional fallback model is probed", async () => {
+    env.deps.env = { ...env.deps.env, GEMINI_SLIDE_FALLBACK_MODEL: "slide-fallback" };
+    const r = await run("gemini_slide");
+    env.deps.env = testEnv;
+    expect(step(r, "slide fallback model").detail).toMatchObject({ status: 200, model: "slide-fallback" });
+    const bad = await env.call(opsSelftest, { check: "gemini_slide", slide_model: "retired-model" }, { internal: true });
+    expect(bad.json.data.ok).toBe(false); // the fake answers with its non-vision text reply, which is not a valid slide
+    expect(step(bad, "slide model: reads").detail.schema_valid).toBe("0/3");
   });
 
   it("pipeline: a synthetic user runs upload-completion -> deck processing -> analysis -> report, then everything is cleaned up", async () => {
@@ -95,25 +111,15 @@ describe("ops-selftest (operator diagnostics)", () => {
   });
 
   it("model overrides apply to every check, are validated, and never change the stored configuration", async () => {
-    const r = await env.call(opsSelftest, { check: "env", slide_model: "meta/llama-3.2-90b-vision-instruct", report_model: "nvidia/some-model" }, { internal: true });
-    expect(step(r, "models").detail).toMatchObject({ slide_reading: "meta/llama-3.2-90b-vision-instruct", report_generation: "nvidia/some-model" });
+    const r = await env.call(opsSelftest, { check: "env", slide_model: "gemini-other-flash", report_model: "nvidia/some-model" }, { internal: true });
+    expect(step(r, "models").detail).toMatchObject({ slide_reading: "gemini-other-flash", report_generation: "nvidia/some-model" });
     expect((await env.call(opsSelftest, { check: "env", slide_model: "bad model; drop table" }, { internal: true })).status).toBe(400);
     const again = await run("env");
     expect(step(again, "models").detail.slide_reading).toBe("slide-model");
-    // the override reaches the NVIDIA calls themselves
+    // the override reaches the Gemini calls themselves
     env.ai.chatCalls.length = 0;
-    await env.call(opsSelftest, { check: "nvidia", slide_model: "override-vision" }, { internal: true });
+    await env.call(opsSelftest, { check: "gemini", slide_model: "override-vision" }, { internal: true });
     expect(env.ai.chatCalls.some((c) => c.model === "override-vision")).toBe(true);
-  });
-
-  it("slide strategies check tries each way of getting clean JSON and reports per-strategy validity", async () => {
-    const r = await run("nvidia_slide_strategies");
-    const names = r.json.data.steps.map((s: any) => s.name);
-    expect(names).toEqual([
-      "slide strategy B: JSON-first prompt with an example", "slide strategy C: response_format json_object",
-      "slide strategy D: nvext guided_json schema", "slide strategy E: vision describes, text model structures (json_object)",
-    ]);
-    expect(r.json.data.steps.every((s: any) => s.ok && /^\d\/\d$/.test(s.detail.valid))).toBe(true);
   });
 
   it("asr: the gRPC probe runs first and a longer timeout can be requested", async () => {

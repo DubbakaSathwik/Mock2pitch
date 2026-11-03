@@ -55,7 +55,7 @@ export const ERROR_UI: Record<ErrorCode, (d: D) => ErrorUi> = {
   comment_too_long: () => inline("That comment is too long", "Keep it under 500 characters."),
   already_rated: () => inline("You've already rated this report", "Thank you for your feedback."),
   not_latest_policy: () => inline("A newer version was published", "Reload to read it, then accept."),
-  misconfigured: () => inline("The service isn't set up yet", "Please let the owner know."),
+  misconfigured: () => inline("The service isn't set up yet", "Please let the owner know, then try again.", true),
   invalid_label: () => inline("Use a label like v4.0", "Letters other than v, numbers and a dot aren't allowed."),
   invalid_body: () => inline("Both texts are required", "Add the Terms and the Privacy Policy before publishing."),
   label_not_increasing: () => inline("That label comes too early", "Use a version after the current one."),

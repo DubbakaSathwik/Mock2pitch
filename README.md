@@ -18,7 +18,7 @@ docs/phase-1/        architecture, supabase, r2, ai, api-contracts, security-rev
 ```
 
 ## Prerequisites
-Node ≥ 20 · npm · (for the real stack) Docker + Supabase CLI · a Cloudflare account · NVIDIA keys. Tests additionally need a local PostgreSQL ≥ 15 with `citext` and `pgcrypto` (`scripts/pg-test-server.sh`) — they do **not** need Docker. `ffmpeg` is needed only to regenerate fixtures.
+Node ≥ 20 · npm · (for the real stack) Docker + Supabase CLI · a Cloudflare account · NVIDIA keys (report + speech) · a Google Gemini key (slide reading). Tests additionally need a local PostgreSQL ≥ 15 with `citext` and `pgcrypto` (`scripts/pg-test-server.sh`) — they do **not** need Docker. `ffmpeg` is needed only to regenerate fixtures.
 
 ## Install and configure
 ```bash
@@ -54,7 +54,7 @@ Open the app and use the **Mock controls** panel (bottom corner, dev only) to sw
 scripts/pg-test-server.sh            # once, if no Postgres is running
 npm test                             # everything except live AI
 npm run test:unit | test:db | test:functions | test:r2
-RUN_LIVE_AI_TESTS=1 npm run test:live-ai    # spends NVIDIA credits; needs the NVIDIA_* env
+RUN_LIVE_AI_TESTS=1 npm run test:live-ai    # spends Gemini + NVIDIA credits; needs the GEMINI_SLIDE_* and NVIDIA_* env
 npm run test:frontend                # Phase 2 unit / component tests (jsdom)
 npm run test:e2e                     # Playwright desktop-chrome (1280x800); :mobile = 390x844; test:a11y = axe sweep; test:webkit = smoke
 npm run typecheck && npm run lint

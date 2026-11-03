@@ -26,7 +26,7 @@ export const deckProcess = api(async (ctx) => {
     if (!internal && age < FRESH_MS) return ok({ deck_id, status: "processing" }, ctx.cors, 202);
     // else: stale (worker died) => resume below
   } else if (deck.status === "failed") {
-    if (!["ai_unavailable", "processing_failed"].includes(deck.error_code)) throw Errors.conflict("invalid_state");
+    if (!["ai_unavailable", "processing_failed", "misconfigured"].includes(deck.error_code)) throw Errors.conflict("invalid_state");
   } else if (deck.status !== "awaiting_images") {
     throw Errors.conflict("invalid_state");
   }
@@ -62,7 +62,9 @@ export const deckProcess = api(async (ctx) => {
 });
 
 async function failDeckProcessing(deps: Deps, deckId: string, e: unknown) {
-  const code = (e as { code?: string })?.code === "AI_BUSY" ? "ai_unavailable" : "processing_failed";
+  // model_unavailable = the configured Gemini model was retired/renamed: an owner problem, not "busy" (the UI says so and still offers Try again once it is fixed)
+  const c = (e as { code?: string })?.code;
+  const code = c === "AI_BUSY" ? "ai_unavailable" : c === "model_unavailable" ? "misconfigured" : "processing_failed";
   logEvent("deck_processing_failed", { deck_id: deckId, code });
   await deps.admin.from("decks").update({ status: "failed", error_code: code, processing_stage: null }).eq("id", deckId);
 }
