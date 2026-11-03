@@ -444,6 +444,8 @@ verify_jwt = true
 verify_jwt = false   # users (JWT checked in code) + internal re-invocation
 [functions.account-delete]
 verify_jwt = true
+[functions.admin-diagnose]
+verify_jwt = true   # owner only (checked in code): real provider calls
 [functions.admin-ai-keys]
 verify_jwt = true
 [functions.ops-selftest]

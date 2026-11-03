@@ -67,6 +67,12 @@ export const assetUrls = z.object({ deck_id: z.string(), expires_at: z.string(),
 export const submitInit = z.object({ session_id: z.string(), clips: z.array(z.object({ slide_index: num, upload: signedUpload })) }).passthrough();
 export const analyseResult = z.object({ session_id: z.string(), status: z.enum(["transcribing", "completed"]), report_id: z.string().optional() }).passthrough();
 export const accountDelete = z.object({ deleted: z.literal(true), storage_cleanup: z.enum(["complete", "pending"]) }).passthrough();
+export const diagnosisResult = z.object({
+  target: z.string(), mode: z.string(), ran_at: z.string(), ok: z.boolean(), verdict: z.enum(["pass", "fail", "unchecked"]), ms: z.number(), http_status: z.number().nullable(),
+  model: z.string().nullable(), key: z.object({ slot: z.string(), masked: z.string() }).nullable(), request: z.string(), expected: z.string(), actual: z.string(),
+  checks: z.array(z.object({ name: z.string(), ok: z.boolean(), detail: z.string().optional() })),
+  error: z.object({ kind: z.string(), reason: z.string(), hint: z.string(), upstream: z.string().optional() }).nullable(),
+}).passthrough();
 export const adminAiKeys = z.object({ purposes: z.array(z.object({ purpose: z.string(), model: z.string(), slots: z.array(z.object({ slot_id: z.string(), slot: z.string(), configured: z.boolean(), masked: z.string().nullable().transform((m) => m ?? "") })) })) }).passthrough(); // the backend sends null for an empty slot (the contract said string)
 
 // ---- admin RPCs

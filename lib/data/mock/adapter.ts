@@ -6,7 +6,7 @@ import { suggestedSeconds } from "@shared/scoring.ts";
 import { AppError, toAppError } from "../errors";
 import { istDateString, nextIstMidnight } from "@/lib/format";
 import type {
-  ActiveDeck, AdminAiKeys, AdminAiUsage, AdminOverview, AdminPolicyVersion, AdminRatings, AdminStudent, AdminStudentDetail, AuthSession, DashboardStats, DataPort, DeckAttempt,
+  ActiveDeck, DiagnosisResult, AdminAiKeys, AdminAiUsage, AdminOverview, AdminPolicyVersion, AdminRatings, AdminStudent, AdminStudentDetail, AuthSession, DashboardStats, DataPort, DeckAttempt,
   DeckDetail, DeckEvent, DeckRow, DeckSummary, ProcessResult, RatingRow, ReportDetail, ReportListItem, SessionEvent, SessionRow, SessionsPerDay, SignedUpload,
   UploadComplete, UploadInit, Unsubscribe,
 } from "../types";
@@ -552,6 +552,28 @@ export class MockBackend {
             };
           }),
         };
+      }),
+      diagnose: (input) => this.call((): DiagnosisResult => {
+        this.requireAdmin();
+        const custom = input.mode === "custom";
+        const ai = input.target === "gemini_slide" || input.target === "nvidia_report" || input.target === "nvidia_asr";
+        const model = input.target === "gemini_slide" ? input.model ?? "gemini-flash-lite-latest" : input.target === "nvidia_report" ? input.model ?? "nvidia/nemotron-3-ultra-550b-a55b" : input.target === "nvidia_asr" ? "parakeet-tdt-0.6b-v2" : null;
+        const slot = input.slot ?? "primary";
+        const base = { target: input.target, mode: custom ? "custom" as const : "preset" as const, ran_at: iso(this.now()), ms: 420, model, key: ai ? { slot, masked: "••••••••7c2e" } : null };
+        const sent = custom ? (input.prompt ?? "") : input.target === "gemini_slide" ? "The real slide-reading prompt with a sample slide image" : input.target === "nvidia_report" ? 'Reply with exactly {"ok":true}' : input.target === "nvidia_asr" ? "A 6-second synthetic speech clip" : input.target === "storage" ? "put → head → get → delete one small object" : "select id from ai_key_slots";
+        // Simulated failures so the screens can be exercised: a model named "retired-*" is not found, a slot named fallback_2 has no key.
+        if (ai && (input.model ?? "").startsWith("retired")) return { ...base, ok: false, verdict: "fail", http_status: 404, request: sent, expected: "", actual: "models/" + input.model + " is not found for API version v1beta", checks: [], error: { kind: "not_found", reason: "Gemini does not know this model (HTTP 404). It was retired, renamed, or is not available to this key.", hint: "Pick a model that is listed for this key and update the model secret. A *-latest alias avoids retirements.", upstream: "models/" + input.model + " is not found for API version v1beta" } };
+        if (ai && slot === "fallback_2") return { ...base, ok: false, verdict: "fail", http_status: null, key: null, request: sent, expected: "", actual: "", checks: [], error: { kind: "not_configured", reason: "The fallback_2 key is not configured.", hint: "Set the key / setting in Supabase → Edge Functions → Secrets.", upstream: "" } };
+        if (custom) {
+          if (!(input.prompt ?? "").trim()) return { ...base, ok: false, verdict: "fail", http_status: null, request: "", expected: "", actual: "", checks: [], error: { kind: "bad_request", reason: "Type a prompt to send.", hint: "Custom mode sends exactly what you type.", upstream: "" } };
+          const actual = `Mock answer to: ${input.prompt}`;
+          const checks = input.expect ? [{ name: `answer contains "${input.expect.slice(0, 60)}"`, ok: actual.toLowerCase().includes(input.expect.toLowerCase()) }] : [];
+          const verdict = checks.length === 0 ? "unchecked" as const : checks.every((c) => c.ok) ? "pass" as const : "fail" as const;
+          return { ...base, ok: verdict !== "fail", verdict, http_status: 200, request: sent, expected: input.expect ? `contains: ${input.expect}` : "(no expectation set; read the answer yourself)", actual, checks, error: null };
+        }
+        const expected = input.target === "gemini_slide" ? 'JSON {"slides":[{"slide_no":1,…}]}' : input.target === "nvidia_report" ? '{"ok":true}' : input.target === "nvidia_asr" ? "So um we built the system, and uh it actually works." : "the round trip succeeds";
+        const actual = input.target === "gemini_slide" ? "title: Sample slide\nkey points (3): Introduce the topic | Show the numbers | Close with the ask\nseconds: 40\nscript: Hello everyone…" : input.target === "nvidia_report" ? '{"ok":true}' : input.target === "nvidia_asr" ? "So um we built the system and uh it actually works." : input.target === "storage" ? "stored 20 bytes, read 20 bytes, deleted: true" : "9 key slots";
+        return { ...base, ok: true, verdict: "pass", http_status: ai ? 200 : null, request: sent, expected, actual, checks: [{ name: "service answered", ok: true }, { name: "answer matches what was expected", ok: true }], error: null };
       }),
       aiKeys: () => this.call((): AdminAiKeys => {
         this.requireAdmin();

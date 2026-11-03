@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Badge } from "@/components/ds/Badge";
 import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
@@ -27,7 +27,6 @@ import { useGo } from "@/lib/use-go";
 export function Review() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const compact = useCompact();
-  const router = useRouter();
   const nav = useGo();
   const session = useSessionStatusRedirect(sessionId, "pre-submit");
   const deck = useDeck(session.data?.deck_id);
@@ -42,7 +41,7 @@ export function Review() {
   const slides = deck.data?.slides ?? [];
   const sugg = session.data?.suggested_seconds ?? [];
   const done = clips.size, miss = slides.length - done;
-  const reRecord = (i: number) => { recordingStore.removeClip(sessionId, i); router.push(`/session/${sessionId}/room?slide=${i}`); };
+  const reRecord = (i: number) => { recordingStore.removeClip(sessionId, i); nav.go(`/session/${sessionId}/room?slide=${i}`); };
   const run = () => { setWarn(false); void submit.submit(); };
   const f = submit.failure;
   const audioBad = f?.code === "audio_invalid" || f?.code === "clip_missing";
@@ -67,7 +66,7 @@ export function Review() {
                     </div>
                     {!compact && (c ? <Badge tone={o ? "warning" : "success"}>{mmss(c.durationMs / 1000)} / {mmss(g)}</Badge> : <Badge tone="warning">Not recorded</Badge>)}
                     <div className={styles.btns}>
-                      <IconButton icon={c ? "rotate-ccw" : "mic"} label={c ? `Re-record slide ${i + 1}` : `Record slide ${i + 1}`} variant="secondary" size={44} onClick={() => reRecord(i)} disabled={submit.busy} />
+                      <IconButton icon={c ? "rotate-ccw" : "mic"} label={c ? `Re-record slide ${i + 1}` : `Record slide ${i + 1}`} variant="secondary" size={44} onClick={() => reRecord(i)} disabled={submit.busy} loading={nav.pending} />
                     </div>
                     {c && <div className={styles.player}><ClipPlayer blob={c.blob} url={c.url} durationMs={c.durationMs} playLabel={`Play back slide ${i + 1}`} pauseLabel={`Pause playback of slide ${i + 1}`} seekLabel={`Seek slide ${i + 1} recording`} disabled={submit.busy} /></div>}
                   </li>

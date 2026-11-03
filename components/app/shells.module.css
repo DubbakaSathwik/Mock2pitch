@@ -21,7 +21,7 @@
 .aTop{background:var(--prussian-blue);border-bottom:0}
 .mMain{flex:1;padding:16px 16px 88px;min-width:0}
 .mTabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:#fff;border-top:1px solid var(--border-subtle);padding-bottom:max(6px,env(safe-area-inset-bottom))}
-.aTabs{grid-template-columns:repeat(5,minmax(0,1fr));background:var(--prussian-blue);border-top:0}
+.aTabs{grid-template-columns:repeat(6,minmax(0,1fr));background:var(--prussian-blue);border-top:0}
 .mTab{min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--text-muted);font-family:var(--font-body);font-size:12px;text-decoration:none}
 .mTab:hover{text-decoration:none;color:var(--ink-800)}
 .mTabOn{color:var(--imperial-blue);font-weight:700}

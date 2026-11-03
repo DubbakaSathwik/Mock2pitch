@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ds/Badge";
 import { Button } from "@/components/ds/Button";
 import { Dialog } from "@/components/ds/Dialog";
@@ -21,6 +21,7 @@ import { recordingStore, useRecordingStore } from "@/features/recording/store";
 import { useSessionStatusRedirect } from "@/features/sessions/queries";
 import { mmss } from "@/lib/format";
 import styles from "./Room.module.css";
+import { useGo } from "@/lib/use-go";
 
 type Status = "none" | "rec" | "done" | "over";
 const STAT: Record<Status, { color: string; label: string }> = {
@@ -43,7 +44,7 @@ function Ctl({ icon, label, onClick, disabled, kind, big, compact }: { icon: Ico
 export function Room() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const compact = useCompact();
-  const router = useRouter();
+  const pageNav = useGo();
   const params = useSearchParams();
   const { toast } = useToast();
   const session = useSessionStatusRedirect(sessionId, "pre-submit");
@@ -144,8 +145,8 @@ export function Room() {
   const totalTarget = (session.data?.total_minutes ?? 0) * 60;
   const name = auth.data?.fullName ?? auth.data?.email ?? "You";
   const slide = slides[i];
-  const goReview = () => router.push(`/session/${sessionId}/review`);
-  const doLeave = () => { recordingStore.clearSession(sessionId); recordingStore.closeMic(); router.push("/dashboard"); };
+  const goReview = () => pageNav.go(`/session/${sessionId}/review`);
+  const doLeave = () => { recordingStore.clearSession(sessionId); recordingStore.closeMic(); pageNav.go("/dashboard"); };
 
   const timers: ReactNode = (
     <div className={styles.timers}>
@@ -221,14 +222,14 @@ export function Room() {
       <header className={styles.bar} style={{ height: compact ? 52 : 64, padding: compact ? "0 12px" : "0 24px" }}>
         {compact ? <div className={styles.barL}>Slide {i + 1}/{N}</div> : <div className={styles.barLeft}><Logo dark size={18} /><span className={styles.deckName}>{deck.data?.deck.title} · Slide {i + 1} of {N}</span></div>}
         {!compact && timers}
-        {compact ? <div className={styles.barR}>Total {mmss(total)} / {mmss(totalTarget)}</div> : <Button variant="inverse" size="sm" disabled={recording} onClick={goReview}>Review and submit</Button>}
+        {compact ? <div className={styles.barR}>Total {mmss(total)} / {mmss(totalTarget)}</div> : <Button variant="inverse" size="sm" disabled={recording} loading={pageNav.pending} onClick={goReview}>Review and submit</Button>}
       </header>
       <div className="sr-only" role="status" aria-live="polite" data-testid="room-announce">{announce}</div>
-      {micErr && <div className={styles.micErr}><Notice tone="danger" title="We can't use your microphone" action={<Button size="sm" variant="secondary" onClick={() => router.push(`/session/${sessionId}/mic`)}>Mic check</Button>}>Go back to the mic check to allow it, then return here.</Notice></div>}
+      {micErr && <div className={styles.micErr}><Notice tone="danger" title="We can't use your microphone" action={<Button size="sm" variant="secondary" loading={pageNav.pending} onClick={() => pageNav.go(`/session/${sessionId}/mic`)}>Mic check</Button>}>Go back to the mic check to allow it, then return here.</Notice></div>}
       <h1 className="sr-only">Practice room</h1>
       {compact ? (
         <>
-          <main id="main" className={styles.mBody}>{stage}<div className={styles.mTiles}>{tiles(true)}</div>{strip}{notesP}<Button variant="inverse" disabled={recording} onClick={goReview}>Review and submit</Button></main>
+          <main id="main" className={styles.mBody}>{stage}<div className={styles.mTiles}>{tiles(true)}</div>{strip}{notesP}<Button variant="inverse" disabled={recording} loading={pageNav.pending} onClick={goReview}>Review and submit</Button></main>
           <div className={styles.sheet}><div className={styles.sheetTimers}>{timers}</div>{ctls}</div>
         </>
       ) : (
@@ -241,7 +242,7 @@ export function Room() {
         </>
       )}
       <Dialog open={leave} title="Leave this session?" onClose={() => setLeave(false)} width={440}
-        actions={<><Button variant="secondary" onClick={() => setLeave(false)}>Keep practising</Button><Button variant="record" onClick={doLeave}>Leave session</Button></>}>
+        actions={<><Button variant="secondary" onClick={() => setLeave(false)}>Keep practising</Button><Button variant="record" loading={pageNav.pending} onClick={doLeave}>Leave session</Button></>}>
         <P>Your recordings for this session will be discarded and no report will be created.</P>
       </Dialog>
     </div>

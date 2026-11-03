@@ -9,7 +9,9 @@ export function NavProgress() {
   const active = useSyncExternalStore(navProgress.subscribe, navProgress.isActive, () => false);
   const pathname = usePathname();
   const search = useSearchParams().toString();
-  useEffect(() => { navProgress.done(); }, [pathname, search]);
+  const clearMarks = () => document.querySelectorAll("[data-nav-pending]").forEach((el) => el.removeAttribute("data-nav-pending"));
+  useEffect(() => { navProgress.done(); clearMarks(); }, [pathname, search]);
+  useEffect(() => { if (!active) clearMarks(); }, [active]); // also when the navigation was cancelled or timed out
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -18,6 +20,7 @@ export function NavProgress() {
       const url = new URL(a.href, window.location.href);
       if (url.origin !== window.location.origin) return;
       if (url.pathname === window.location.pathname && url.search === window.location.search) return; // same page / hash only
+      a.setAttribute("data-nav-pending", "true");
       navProgress.start();
     };
     document.addEventListener("click", onClick);

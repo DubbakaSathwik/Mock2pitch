@@ -4,7 +4,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { Supa } from "@/lib/supabase/browser";
 import { AppError } from "../errors";
 import type {
-  ActiveDeck, AdminAiKeys, AdminAiUsage, AdminOverview, AdminPolicyVersion, AdminRatings, AdminStudent, AdminStudentDetail, AuthSession, DashboardStats, DataPort, DeckAttempt, DeckDetail,
+  ActiveDeck, DiagnosisResult, AdminAiKeys, AdminAiUsage, AdminOverview, AdminPolicyVersion, AdminRatings, AdminStudent, AdminStudentDetail, AuthSession, DashboardStats, DataPort, DeckAttempt, DeckDetail,
   DeckEvent, DeckRow, DeckSummary, PolicyVersionRow, ProfileRow, RatingRow, ReportDetail, ReportListItem, SessionEvent, SessionRow, SessionsPerDay, SlideRow, Unsubscribe,
 } from "../types";
 import { fromAuth, fromPostgrest } from "./errors";
@@ -223,6 +223,7 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
     },
 
     admin: {
+      diagnose: async (input): Promise<DiagnosisResult> => parse(S.diagnosisResult, await t.fn("admin-diagnose", input as Record<string, unknown>), "admin-diagnose") as unknown as DiagnosisResult,
       overview: async (): Promise<AdminOverview> => parse(S.adminOverview, one(await t.rpc<unknown[]>("admin_overview")), "admin_overview") as unknown as AdminOverview,
       sessionsPerDay: async (days): Promise<SessionsPerDay[]> => arr(S.sessionsPerDay, "admin_sessions_per_day")(await t.rpc<unknown[]>("admin_sessions_per_day", { p_days: days })),
       listStudents: async (input): Promise<AdminStudent[]> => arr(S.adminStudent, "admin_list_students")(await t.rpc<unknown[]>("admin_list_students", { p_search: input.search?.trim() || null, p_limit: input.limit ?? 50, p_offset: input.offset ?? 0 })) as unknown as AdminStudent[],

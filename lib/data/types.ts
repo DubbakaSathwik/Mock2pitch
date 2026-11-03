@@ -149,7 +149,17 @@ export interface RealtimePort {
   subscribeSession(sessionId: string, cb: (e: SessionEvent) => void): Unsubscribe;
 }
 export interface AccountPort { delete(confirm: "DELETE"): Promise<{ deleted: true; storage_cleanup: "complete" | "pending" }> }
+/** Admin Diagnosis: one real call to a service with a preset (or the owner's own) input. See supabase/functions/_shared/handlers/admin-diagnose.ts. */
+export type DiagnosisTarget = "gemini_slide" | "nvidia_report" | "nvidia_asr" | "storage" | "database";
+export type DiagnosisInput = { target: DiagnosisTarget; mode?: "preset" | "custom"; prompt?: string; expect?: string; model?: string; slot?: Slot; include_image?: boolean };
+export type DiagnosisFailure = { kind: "bad_key" | "not_found" | "quota" | "overloaded" | "timeout" | "network" | "bad_request" | "invalid_output" | "not_configured" | "other"; reason: string; hint: string; upstream?: string };
+export type DiagnosisResult = {
+  target: DiagnosisTarget; mode: "preset" | "custom"; ran_at: string; ok: boolean; verdict: "pass" | "fail" | "unchecked"; ms: number; http_status: number | null;
+  model: string | null; key: { slot: string; masked: string } | null; request: string; expected: string; actual: string;
+  checks: { name: string; ok: boolean; detail?: string }[]; error: DiagnosisFailure | null;
+};
 export interface AdminPort {
+  diagnose(input: DiagnosisInput): Promise<DiagnosisResult>;
   overview(): Promise<AdminOverview>;
   sessionsPerDay(days: number): Promise<SessionsPerDay[]>;
   listStudents(input: { search?: string; limit?: number; offset?: number }): Promise<AdminStudent[]>;

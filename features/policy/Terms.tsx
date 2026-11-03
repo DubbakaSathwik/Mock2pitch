@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
 import { Checkbox } from "@/components/ds/Checkbox";
@@ -18,6 +18,7 @@ import { formatDate } from "@/lib/format";
 import { safeNext } from "@/lib/safe-next";
 import { useAcceptedVersions, useAcceptPolicy, useLatestPolicy } from "./queries";
 import styles from "./Terms.module.css";
+import { useGo } from "@/lib/use-go";
 
 const TABS = [{ value: "terms", label: "Terms" }, { value: "privacy", label: "Privacy Policy" }] as const;
 
@@ -66,7 +67,7 @@ function PolicyError({ onRetry }: { onRetry: () => void }) {
 /** S3 first time ("Before you start") and updated (marine banner with version + date). Continue stays disabled until the box is ticked. */
 export function AcceptTerms() {
   const compact = useCompact();
-  const router = useRouter();
+  const nav = useGo();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
   const [tab, setTab] = useState<string>("terms");
@@ -76,7 +77,7 @@ export function AcceptTerms() {
   const accept = useAcceptPolicy();
   const updated = (accepted.data?.length ?? 0) > 0;
   const loading = policy.isPending || accepted.isPending;
-  const submit = () => { if (policy.data) accept.mutate(policy.data.id, { onSuccess: () => router.replace(next) }); };
+  const submit = () => { if (policy.data) accept.mutate(policy.data.id, { onSuccess: () => nav.go(next, { replace: true }) }); };
   const err = accept.error ? toAppError(accept.error) : null;
   return (
     <Center w={760}>
@@ -90,7 +91,7 @@ export function AcceptTerms() {
         {policy.isError ? <PolicyError onRetry={() => policy.refetch()} /> : loading || !policy.data ? <PolicyLoading compact={compact} /> : <PolicyBox tab={tab} terms={policy.data.terms_body} privacy={policy.data.privacy_body} compact={compact} />}
         <div className={styles.agree}><Checkbox checked={ok} onChange={setOk} label="I have read and agree to the Terms and the Privacy Policy" /></div>
         {err && <div role="alert" className={styles.error} style={{ marginBottom: 12 }}><Icon name="triangle-alert" size={20} color="var(--danger-500)" /><div><b>We couldn&apos;t save that.</b><Muted>{err.code === "not_latest_policy" ? "A newer version was just published. Reload to read it." : err.message}</Muted></div></div>}
-        <Button fullWidth disabled={!ok || !policy.data} loading={accept.isPending} onClick={submit}>{accept.isPending ? "Saving…" : "Continue"}</Button>
+        <Button fullWidth disabled={!ok || !policy.data} loading={accept.isPending || nav.pending} onClick={submit}>{accept.isPending ? "Saving…" : "Continue"}</Button>
       </Card>
     </Center>
   );

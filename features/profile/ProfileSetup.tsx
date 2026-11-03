@@ -17,11 +17,13 @@ import { useAuthSession } from "@/features/auth/queries";
 import { useMyProfile, useUpdateProfile } from "./queries";
 import { profileSchema } from "./schema";
 import styles from "./ProfileSetup.module.css";
+import { useGo } from "@/lib/use-go";
 
 /** S4 Profile setup (shown once, before the first practice). */
 export function ProfileSetup() {
   const compact = useCompact();
   const router = useRouter();
+  const nav = useGo();
   const next = safeNext(useSearchParams().get("next"));
   const session = useAuthSession();
   const profile = useMyProfile();
@@ -43,7 +45,7 @@ export function ProfileSetup() {
       if (!r.error.issues.some((i) => i.path[0] === "full_name" || i.path[0] === "college")) setErr("Check your details");
       return;
     }
-    update.mutate(r.data, { onSuccess: () => router.replace(next) });
+    update.mutate(r.data, { onSuccess: () => nav.go(next, { replace: true }) });
   };
   const failure = update.error ? toAppError(update.error) : null;
   return (
@@ -64,7 +66,7 @@ export function ProfileSetup() {
             <Select label="Branch" options={BRANCHES} value={f.branch} onChange={(e) => setF({ ...f, branch: e.target.value })} />
           </div>
           {failure && <div role="alert" className={styles.fail}><Icon name="triangle-alert" size={18} color="var(--danger-500)" />{failure.code === "blocked" ? "Your account is paused." : "We couldn't save your details. Try again."}</div>}
-          <Button type="submit" fullWidth style={{ marginTop: 8 }} loading={update.isPending}>{update.isPending ? "Saving…" : "Save and continue"}</Button>
+          <Button type="submit" fullWidth style={{ marginTop: 8 }} loading={update.isPending || nav.pending}>{update.isPending || nav.pending ? "Saving…" : "Save and continue"}</Button>
         </form>
       </Card>
     </Center>

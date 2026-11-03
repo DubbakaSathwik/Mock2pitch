@@ -1,0 +1,20 @@
+.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.cardHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.cardTitle{display:flex;gap:12px;align-items:center}
+.cfg{display:grid;grid-template-columns:200px minmax(0,1fr);gap:12px;margin:16px 0 4px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.custom{margin-top:16px;padding-top:16px;border-top:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:12px}
+.result{margin-top:18px;padding-top:16px;border-top:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:14px}
+.facts{display:flex;gap:8px 18px;flex-wrap:wrap;font-family:var(--font-body);font-size:14px;color:var(--text-body)}
+.facts b{color:var(--text-strong)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.box h4{margin:0 0 6px;font-family:var(--font-display);font-size:13px;color:var(--text-muted);font-weight:400;letter-spacing:.04em;text-transform:uppercase}
+.pre{margin:0;padding:12px;border-radius:12px;background:var(--ink-50);border:1px solid var(--border-subtle);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.55;color:var(--text-body);white-space:pre-wrap;word-break:break-word;max-height:280px;overflow:auto}
+.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-family:var(--font-body);font-size:14px}
+.checks li{display:flex;gap:8px;align-items:flex-start}
+.upstream{margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;word-break:break-word;color:var(--ink-700)}
+.hist{width:100%;border-collapse:collapse;font-family:var(--font-body);font-size:14px}
+.hist th{text-align:left;font-weight:700;color:var(--text-muted);padding:8px 10px;border-bottom:1px solid var(--border-subtle)}
+.hist td{padding:8px 10px;border-bottom:1px solid var(--border-subtle);color:var(--text-body)}
+@container app (max-width:759.98px){.cfg{grid-template-columns:minmax(0,1fr)}.two{grid-template-columns:minmax(0,1fr)}}
