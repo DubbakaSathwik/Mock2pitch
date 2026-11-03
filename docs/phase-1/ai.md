@@ -16,12 +16,12 @@ Candidates are tried primary → fallback_1 → fallback_2. A slot is skipped if
 | 2xx and output valid | return; log `success` |
 | 2xx but output invalid | log `invalid_output` (billable); **do not rotate**; caller retries once |
 | 429 | cooldown = `Retry-After` (default 60 s); log `rate_limited`; next slot immediately |
-| 5xx / network / timeout | cooldown 30 s; log `server_error` / `timeout`; next slot |
+| 5xx / network / timeout | cooldown 30 s; log `server_error` / `timeout`; next slot. **Slide reading skips this cool-down** (`cooldownOnTransient:false`): Gemini 503s are per-model overload, so the key must stay usable for the fallback model |
 | 401 / 403, or Gemini's HTTP 400 "API key not valid" | cooldown 10 min, `last_error_code='auth'`; next slot (shown in `admin_ai_usage`) |
-| 404 / 410 (model retired or renamed) | log `server_error`; **no cooldown, no rotation**; `model_unavailable`. Slide reading then tries `GEMINI_SLIDE_FALLBACK_MODEL` once; otherwise the deck fails with `error_code='misconfigured'` ("The service isn't set up yet", with Try again once fixed) instead of a misleading "AI is busy" |
+| 404 / 410 (model retired or renamed) | log `server_error`; **no cooldown, no rotation**; `model_unavailable`. Slide reading then tries `GEMINI_SLIDE_FALLBACK_MODEL` (also when the primary is overloaded on every key); otherwise the deck fails with `error_code='misconfigured'` ("The service isn't set up yet", with Try again once fixed) instead of a misleading "AI is busy" |
 | 400 / 422 | log `bad_request`; **do not rotate**; fail the step |
 | nothing eligible | `AI_BUSY` (HTTP 429, retryable) |
-Timeouts: slide 45 s, ASR 60 s per ≤ 60 s chunk, report 90 s. Measured live: slide ≈ 8 s, ASR ≈ 1.7 s per 6 s clip, report up to ≈ 30 s for the full prompt. Concurrency: 3 slides / 3 clips at once. Every attempt writes one `ai_usage_log` row (purpose, slot, model, outcome, status, latency, tokens or audio ms, user/deck/session ids). **Never** prompt text, transcripts or keys.
+Timeouts: slide 30 s, ASR 60 s per ≤ 60 s chunk, report 90 s. Measured live: slide ≈ 8 s, ASR ≈ 1.7 s per 6 s clip, report up to ≈ 30 s for the full prompt. Concurrency: 3 slides / 3 clips at once. Every attempt writes one `ai_usage_log` row (purpose, slot, model, outcome, status, latency, tokens or audio ms, user/deck/session ids). **Never** prompt text, transcripts or keys.
 
 ## Credit accounting
 No NVIDIA balance API exists. "Used" = billable outcomes (`success`, `invalid_output`) since the slot's `credit_period_start`; "limit" = `ai_key_slots.credit_limit` (seeded 1000, editable with `admin_set_credit_limit`, which can also start a new period for a fresh key). `running_low` = > 75 % used. `NVIDIA_KEY_DEFAULT_CREDIT_LIMIT` is validated but the DB default (1000) is what seeds slots.

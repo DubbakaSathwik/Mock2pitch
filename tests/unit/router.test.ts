@@ -83,6 +83,24 @@ describe("routeCall", () => {
     expect(store.cooldowns).toEqual({});
   });
 
+  it("cooldownOnTransient:false keeps keys usable after 5xx / timeouts (per-model overload), but 429 and auth still cool down", async () => {
+    const s = new FakeStore();
+    const t503 = respond({ k0: { status: 503 }, k1: { status: 503 }, k2: { status: 503 } });
+    await expect(routeCall(base(s, t503, { cooldownOnTransient: false, sleep: async () => {} }))).rejects.toMatchObject({ code: "AI_BUSY" });
+    expect(s.cooldowns).toEqual({});
+    const s2 = new FakeStore();
+    const timeouts: Transport = async () => { throw new TransportError("timeout"); };
+    await expect(routeCall(base(s2, timeouts, { cooldownOnTransient: false, sleep: async () => {} }))).rejects.toMatchObject({ code: "AI_BUSY" });
+    expect(s2.cooldowns).toEqual({});
+    const s3 = new FakeStore();
+    await routeCall(base(s3, respond({ k0: { status: 429 }, k1: { status: 401 }, k2: { status: 200 } }), { cooldownOnTransient: false }));
+    expect(Object.keys(s3.cooldowns).sort()).toEqual(["id-fallback_1", "id-primary"]);
+    // default behaviour is unchanged: 5xx cools the key down
+    const s4 = new FakeStore();
+    await expect(routeCall(base(s4, t503, { sleep: async () => {} }))).rejects.toMatchObject({ code: "AI_BUSY" });
+    expect(Object.keys(s4.cooldowns)).toHaveLength(3);
+  });
+
   it("400 does not rotate keys", async () => {
     const calls: string[] = [];
     const t: Transport = async ({ key }) => { calls.push(key); return { status: 400, headers: {}, body: {} }; };

@@ -29,7 +29,7 @@ export const AUDIO_PUT_EXPIRES_S = 10 * 60;
 export const GET_EXPIRES_S = 10 * 60;
 
 // AI timeouts (ms) and concurrency
-export const TIMEOUT_SLIDE_MS = 45_000;
+export const TIMEOUT_SLIDE_MS = 30_000; // a healthy Gemini Flash answer takes a few seconds; anything slower is overload, so move on to the next key / model
 export const TIMEOUT_ASR_MS = 60_000;
 export const TIMEOUT_REPORT_MS = 90_000;
 export const SLIDE_CONCURRENCY = 3;

@@ -13,7 +13,7 @@ Single environment: **one** Supabase project (`mkglxcdtfimgmvxtddst`) and **one*
 2. Same page → Email: enabled **only while automated tests run** (the hook below blocks all non-Google sign-ups). Turn it off before launch.
 3. Authentication → Hooks → Before User Created → Postgres function `public.hook_before_user_created` (migration `20261015000009`).
 4. Authentication → URL Configuration: Site URL = the Netlify production URL (`http://localhost:3000` until it exists). Redirect URLs: `http://localhost:3000/auth/callback`, `https://<site>.netlify.app/auth/callback` (+ custom domain). No wildcards.
-5. Edge Functions → Secrets: `APP_ALLOWED_ORIGINS` = `http://localhost:3000,https://<site>.netlify.app`; `GEMINI_SLIDE_MODEL` = `gemini-flash-latest`, `GEMINI_SLIDE_FALLBACK_MODEL` = `gemini-flash-lite-latest`, and the key `GEMINI_SLIDE_KEY_PRIMARY` (from https://aistudio.google.com/apikey, billing-enabled).
+5. Edge Functions → Secrets: `APP_ALLOWED_ORIGINS` = `http://localhost:3000,https://<site>.netlify.app`; `GEMINI_SLIDE_MODEL` = `gemini-flash-lite-latest`, `GEMINI_SLIDE_FALLBACK_MODEL` = `gemini-flash-latest`, and the key `GEMINI_SLIDE_KEY_PRIMARY` (from https://aistudio.google.com/apikey, billing-enabled).
 
 ## C. Cloudflare R2 CORS
 Replace the placeholder origin in `infra/r2-cors.json` with the real Netlify origin, then R2 → bucket `mock2pitch-dev` → Settings → CORS policy → paste the JSON (or `npx wrangler r2 bucket cors set mock2pitch-dev --file infra/r2-cors.json`).

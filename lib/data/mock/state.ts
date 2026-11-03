@@ -125,7 +125,7 @@ export function seedState(persona: PersonaId): MockState {
     policies: pol, acceptedPolicyIds: [], decks: [], slides: [], sessions: [], results: [], reports: [], ratings: [], usageEvents: [], uploads: {}, clips: {}, seededImages: {},
     students: stu, adminRatings: adminRatings(stu), sessionsPerDay: [...[18, 24, 22, 31, 28, 35, 41, 38, 46, 52, 49, 58, 61, 66]],
     aiSlots: aiSlots(), aiPerDay: structuredClone(AI_PER_DAY_SEED),
-    aiModels: { slide_reading: "gemini-flash-latest", speech_to_text: "parakeet-tdt-0.6b-v2", report_generation: "nvidia/nemotron-3-ultra-550b-a55b" },
+    aiModels: { slide_reading: "gemini-flash-lite-latest", speech_to_text: "parakeet-tdt-0.6b-v2", report_generation: "nvidia/nemotron-3-ultra-550b-a55b" },
     fail: null, nextSignIn: "new_student",
   };
   const onboarded = (p: ProfileRow): ProfileRow => ({ ...p, college: "RV Institute of Technology", year: "3rd year", branch: "CSE", profile_completed_at: hoursAgo(24 * 20) });

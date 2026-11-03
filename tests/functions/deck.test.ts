@@ -262,6 +262,35 @@ describe("deck-process", () => {
     expect(await deckRow(deckId)).toMatchObject({ status: "ready", error_code: null });
     expect((await env.db.admin.query("select count(*)::int n from public.slides where deck_id=$1", [deckId])).rows[0].n).toBe(2);
   });
+  it("primary Gemini model overloaded (503 / timeouts on every key) -> the fallback model reads the deck; no key is locked out", async () => {
+    const original = env.deps.env; env.ai.chatCalls.length = 0;
+    await env.db.admin.query("update public.ai_key_slots set cooldown_until=null");
+    env.deps.env = { ...original, GEMINI_SLIDE_MODEL: "overloaded-model", GEMINI_SLIDE_FALLBACK_MODEL: "slide-model" };
+    const orig = env.ai.fetchFn;
+    env.ai.fetchFn = async (url, init) => (JSON.parse(String((init as RequestInit)?.body ?? "{}")).model === "overloaded-model" ? new Response("{}", { status: 503 }) : orig(url, init));
+    env.deps.fetchFn = env.ai.fetchFn;
+    const { u, deckId } = await readyForProcessing("p4d@example.test", 2);
+    await env.call(deckProcess, { deck_id: deckId }, { token: u.token }); await env.settle();
+    env.deps.env = original; env.ai.fetchFn = orig; env.deps.fetchFn = orig;
+    expect(await deckRow(deckId)).toMatchObject({ status: "ready", error_code: null });
+    expect((await env.db.admin.query("select count(*)::int n from public.ai_key_slots where purpose='slide_reading' and cooldown_until is not null")).rows[0].n).toBe(0);
+    expect((await env.db.admin.query("select count(*)::int n from public.slides where deck_id=$1", [deckId])).rows[0].n).toBe(2);
+  });
+  it("primary Gemini model overloaded and NO fallback -> failed/ai_unavailable, keys not locked out, Try again works when it recovers", async () => {
+    const original = env.deps.env;
+    env.deps.env = { ...original, GEMINI_SLIDE_MODEL: "overloaded-model", GEMINI_SLIDE_FALLBACK_MODEL: undefined };
+    const orig = env.ai.fetchFn;
+    env.ai.fetchFn = async (url, init) => (JSON.parse(String((init as RequestInit)?.body ?? "{}")).model === "overloaded-model" ? new Response("{}", { status: 503 }) : orig(url, init));
+    env.deps.fetchFn = env.ai.fetchFn;
+    const { u, deckId } = await readyForProcessing("p4e@example.test", 2);
+    await env.call(deckProcess, { deck_id: deckId }, { token: u.token }); await env.settle();
+    expect(await deckRow(deckId)).toMatchObject({ status: "failed", error_code: "ai_unavailable" });
+    expect((await env.db.admin.query("select count(*)::int n from public.ai_key_slots where purpose='slide_reading' and cooldown_until is not null")).rows[0].n).toBe(0);
+    env.deps.env = original; env.ai.fetchFn = orig; env.deps.fetchFn = orig;
+    const retry = await env.call(deckProcess, { deck_id: deckId }, { token: u.token });
+    expect(retry.status).toBe(202); await env.settle();
+    expect(await deckRow(deckId)).toMatchObject({ status: "ready" });
+  });
   it("429 on the primary key falls back to fallback_1 transparently (same model)", async () => {
     env.ai.chatCalls.length = 0; env.ai.chatStatus = { "slide-k0": 429 };
     await env.db.admin.query("update public.ai_key_slots set cooldown_until=null");
