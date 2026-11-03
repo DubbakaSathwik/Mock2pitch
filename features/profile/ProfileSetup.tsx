@@ -26,13 +26,23 @@ export function ProfileSetup() {
   const session = useAuthSession();
   const profile = useMyProfile();
   const update = useUpdateProfile();
-  const [f, setF] = useState<{ college: string; year: string; branch: string }>({ college: "", year: COLLEGE_YEARS[0], branch: BRANCHES[0] });
+  const [f, setF] = useState<{ full_name: string; college: string; year: string; branch: string }>({ full_name: "", college: "", year: COLLEGE_YEARS[0], branch: BRANCHES[0] });
+  const [touchedName, setTouchedName] = useState(false);
   const [err, setErr] = useState("");
+  const [nameErr, setNameErr] = useState("");
   useEffect(() => { if (profile.data?.profile_completed_at) router.replace(next); }, [profile.data, next, router]);
-  const name = session.data?.fullName ?? session.data?.email ?? "You";
+  // The name starts as the one from the Google account; the student can change it. (The photo always comes from Google.)
+  const googleName = profile.data?.full_name ?? session.data?.fullName ?? "";
+  useEffect(() => { if (!touchedName && googleName) setF((x) => ({ ...x, full_name: googleName })); }, [googleName, touchedName]);
+  const name = f.full_name.trim() || googleName || session.data?.email || "You";
   const save = () => {
     const r = profileSchema.safeParse(f);
-    if (!r.success) { setErr(r.error.issues.find((i) => i.path[0] === "college")?.message ?? "Check your details"); return; }
+    if (!r.success) {
+      setNameErr(r.error.issues.find((i) => i.path[0] === "full_name")?.message ?? "");
+      setErr(r.error.issues.find((i) => i.path[0] === "college")?.message ?? "");
+      if (!r.error.issues.some((i) => i.path[0] === "full_name" || i.path[0] === "college")) setErr("Check your details");
+      return;
+    }
     update.mutate(r.data, { onSuccess: () => router.replace(next) });
   };
   const failure = update.error ? toAppError(update.error) : null;
@@ -44,9 +54,10 @@ export function ProfileSetup() {
         <P style={{ marginBottom: 22 }}>This helps us tailor examples. Only you and the product owner can see it.</P>
         <div className={styles.id}>
           <Avatar name={name} src={session.data?.avatarUrl} size={52} />
-          <div><div className={styles.name}>{name}</div><Muted>{session.data?.email} · from Google</Muted></div>
+          <div><div className={styles.name}>{name}</div><Muted>{session.data?.email} · name and photo from Google</Muted></div>
         </div>
         <form className={styles.form} noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
+          <Input label="Your name" value={f.full_name} error={nameErr} autoComplete="name" maxLength={80} onChange={(e) => { setTouchedName(true); setF({ ...f, full_name: e.target.value }); setNameErr(""); }} />
           <Input label="College" placeholder="e.g. RV Institute of Technology" value={f.college} error={err} autoComplete="organization" onChange={(e) => { setF({ ...f, college: e.target.value }); setErr(""); }} />
           <div className={styles.two}>
             <Select label="Year" options={COLLEGE_YEARS} value={f.year} onChange={(e) => setF({ ...f, year: e.target.value })} />

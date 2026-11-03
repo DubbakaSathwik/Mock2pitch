@@ -4,12 +4,14 @@ import { seed } from "./helpers";
 test("8. settings: edit profile, view Terms read-only, delete account with typed confirmation", async ({ page }) => {
   await seed(page, "returning_student");
   await page.goto("/settings");
+  await page.getByLabel("Your name").fill("Ananya R. Rao");
   await page.getByLabel("College").fill("NIT Calicut");
   await page.getByLabel("Year").selectOption("4th year");
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Profile saved")).toBeVisible();
   await page.reload();
   await expect(page.getByLabel("College")).toHaveValue("NIT Calicut");
+  await expect(page.getByLabel("Your name")).toHaveValue("Ananya R. Rao");
 
   // limits tiles
   await expect(page.getByText("2 of 5 used today")).toBeVisible();

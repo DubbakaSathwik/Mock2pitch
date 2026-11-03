@@ -34,18 +34,23 @@ export function Settings() {
   const update = useUpdateProfile();
   const signOut = useSignOut();
   const del = useDeleteAccount();
-  const [f, setF] = useState({ college: "", year: "", branch: "" });
+  const [f, setF] = useState({ full_name: "", college: "", year: "", branch: "" });
   const [err, setErr] = useState("");
+  const [nameErr, setNameErr] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [typed, setTyped] = useState("");
-  useEffect(() => { if (profile.data) setF({ college: profile.data.college ?? "", year: profile.data.year ?? COLLEGE_YEARS[0], branch: profile.data.branch ?? BRANCHES[0] }); }, [profile.data]);
+  useEffect(() => { if (profile.data) setF({ full_name: profile.data.full_name ?? "", college: profile.data.college ?? "", year: profile.data.year ?? COLLEGE_YEARS[0], branch: profile.data.branch ?? BRANCHES[0] }); }, [profile.data]);
   const blocked = !!profile.data?.is_blocked;
   const p = profile.data;
   const used = stats.data?.sessions_used_today ?? 0;
 
   const save = () => {
     const r = profileSchema.safeParse(f);
-    if (!r.success) { setErr(r.error.issues[0]?.message ?? "Check your details"); return; }
+    if (!r.success) {
+      setNameErr(r.error.issues.find((i) => i.path[0] === "full_name")?.message ?? "");
+      setErr(r.error.issues.find((i) => i.path[0] !== "full_name")?.message ?? "");
+      return;
+    }
     update.mutate(r.data, { onSuccess: () => toast("Profile saved"), onError: (e) => toast(toAppError(e).code === "blocked" ? "Your account is paused." : "We couldn't save that. Try again.", "danger") });
   };
   const closeDelete = () => { setConfirm(false); setTyped(""); del.reset(); };
@@ -59,6 +64,7 @@ export function Settings() {
       <Card>
         <div className={styles.who}><Avatar name={p?.full_name ?? p?.email ?? "You"} src={p?.avatar_url} size={56} /><div><div className={styles.name}>{p?.full_name ?? p?.email}</div><Muted>{p?.email}</Muted></div></div>
         <form className={styles.form} noValidate onSubmit={(e) => { e.preventDefault(); save(); }}>
+          <Input label="Your name" value={f.full_name} error={nameErr} disabled={blocked} autoComplete="name" maxLength={80} onChange={(e) => { setF({ ...f, full_name: e.target.value }); setNameErr(""); }} />
           <Input label="College" value={f.college} error={err} disabled={blocked} onChange={(e) => { setF({ ...f, college: e.target.value }); setErr(""); }} />
           <div className={styles.two}>
             <Select label="Year" options={COLLEGE_YEARS} value={f.year} disabled={blocked} onChange={(e) => setF({ ...f, year: e.target.value })} />
