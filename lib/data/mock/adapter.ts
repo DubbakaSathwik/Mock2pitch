@@ -6,7 +6,7 @@ import { suggestedSeconds } from "@shared/scoring.ts";
 import { AppError, toAppError } from "../errors";
 import { istDateString, nextIstMidnight } from "@/lib/format";
 import type {
-  AdminAiKeys, AdminAiUsage, AdminOverview, AdminPolicyVersion, AdminRatings, AdminStudent, AdminStudentDetail, AuthSession, DashboardStats, DataPort, DeckAttempt,
+  ActiveDeck, AdminAiKeys, AdminAiUsage, AdminOverview, AdminPolicyVersion, AdminRatings, AdminStudent, AdminStudentDetail, AuthSession, DashboardStats, DataPort, DeckAttempt,
   DeckDetail, DeckEvent, DeckRow, DeckSummary, ProcessResult, RatingRow, ReportDetail, ReportListItem, SessionEvent, SessionRow, SessionsPerDay, SignedUpload,
   UploadComplete, UploadInit, Unsubscribe,
 } from "../types";
@@ -292,6 +292,21 @@ export class MockBackend {
         if (kinds.includes("deck_pdf")) { const url = this.blobs.objectUrl(`pdf/${deckId}`); if (url) files.push({ kind: "deck_pdf", slide_index: null, url }); }
         return { deck_id: deckId, expires_at: iso(new Date(this.now().getTime() + GET_EXPIRES_S * 1000)), files };
       }),
+      getActive: () => this.call((): ActiveDeck | null => {
+        const u = this.me();
+        const d = [...this.state.decks].reverse().find((x) => x.owner_id === u.id && (x.status === "awaiting_images" || x.status === "processing"));
+        return d ? { deck_id: d.id, title: d.title, status: d.status as ActiveDeck["status"], page_count: d.page_count, processed_slides: d.processed_slides } : null;
+      }),
+      cancel: (deckId) => this.call((): void => {
+        const d = this.deckOf(deckId);
+        if (d.status === "failed" && d.error_code === "cancelled") return;
+        if (!["awaiting_upload", "awaiting_images", "processing"].includes(d.status)) throw new AppError("invalid_state");
+        this.setDeck(d, { status: "failed", error_code: "cancelled", processing_stage: null });
+        this.state.slides = this.state.slides.filter((x) => x.deck_id !== deckId);
+        this.blobs.delete(`pdf/${deckId}`);
+        for (let k = 0; k < (d.page_count ?? 0); k++) this.blobs.delete(`slide/${deckId}/${k}`);
+        this.touch();
+      }),
       getStatus: (deckId) => this.call((): DeckEvent => { const d = this.deckOf(deckId); return { id: d.id, status: d.status, processing_stage: d.processing_stage, processed_slides: d.processed_slides, error_code: d.error_code, page_count: d.page_count }; }),
     },
     upload: {
@@ -300,7 +315,8 @@ export class MockBackend {
         if (!/\.pdf$/i.test(input.filename) || input.content_type !== "application/pdf" || input.size_bytes <= 0) throw new AppError("not_pdf");
         if (input.size_bytes > MAX_PDF_BYTES) throw new AppError("too_large");
         const u = this.state.user;
-        if (this.state.decks.some((d) => d.owner_id === u.id && d.status === "processing")) throw new AppError("deck_in_progress", "Finish your current deck first");
+        // same rule as the database (decks_one_active_per_owner): a deck waiting for its details or being read blocks a new upload
+        if (this.state.decks.some((d) => d.owner_id === u.id && (d.status === "processing" || d.status === "awaiting_images"))) throw new AppError("deck_in_progress", "Finish your current deck first");
         this.state.decks = this.state.decks.filter((d) => !(d.owner_id === u.id && d.status === "awaiting_upload"));
         const t = iso(this.now()); const id = uuid();
         this.state.decks.push({ id, owner_id: u.id, title: titleFromFilename(input.filename), original_filename: input.filename, page_count: null, status: "awaiting_upload", processing_stage: null, processed_slides: 0, error_code: null, pinned_at: null, created_at: t, updated_at: t, audience: null, audience_other: null, goal: null, abstract: null, target_minutes: null });
@@ -336,7 +352,8 @@ export class MockBackend {
         const deck = this.deckOf(deckId);
         if (deck.status === "ready") return { deck_id: deckId, status: "ready" };
         if (deck.status === "processing") return { deck_id: deckId, status: "processing" };
-        if (!(deck.status === "awaiting_images" || (deck.status === "failed" && deck.page_count))) throw new AppError("invalid_state");
+        // a failed deck is retryable only for the failures the real function allows (not cancelled / timed out)
+        if (!(deck.status === "awaiting_images" || (deck.status === "failed" && deck.page_count && ["ai_unavailable", "processing_failed", "misconfigured"].includes(deck.error_code ?? "")))) throw new AppError("invalid_state");
         const missing: number[] = [];
         for (let i = 0; i < deck.page_count!; i++) {
           const b = this.blobs.get(`slide/${deckId}/${i}`);

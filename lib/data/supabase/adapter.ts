@@ -4,7 +4,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { Supa } from "@/lib/supabase/browser";
 import { AppError } from "../errors";
 import type {
-  AdminAiKeys, AdminAiUsage, AdminOverview, AdminPolicyVersion, AdminRatings, AdminStudent, AdminStudentDetail, AuthSession, DashboardStats, DataPort, DeckAttempt, DeckDetail,
+  ActiveDeck, AdminAiKeys, AdminAiUsage, AdminOverview, AdminPolicyVersion, AdminRatings, AdminStudent, AdminStudentDetail, AuthSession, DashboardStats, DataPort, DeckAttempt, DeckDetail,
   DeckEvent, DeckRow, DeckSummary, PolicyVersionRow, ProfileRow, RatingRow, ReportDetail, ReportListItem, SessionEvent, SessionRow, SessionsPerDay, SlideRow, Unsubscribe,
 } from "../types";
 import { fromAuth, fromPostgrest } from "./errors";
@@ -151,6 +151,12 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
       attempts: async (deckId): Promise<DeckAttempt[]> => arr(S.deckAttempt, "my_deck_detail")(await t.rpc<unknown[]>("my_deck_detail", { p_deck_id: deckId })) as unknown as DeckAttempt[],
       setPinned: async (deckId, pinned) => { await t.rpc("set_deck_pinned", { p_deck_id: deckId, p_pinned: pinned }); },
       getAssetUrls: async (deckId, kinds) => parse(S.assetUrls, await t.fn("asset-urls", { deck_id: deckId, kinds }), "asset-urls") as never,
+      getActive: async (): Promise<ActiveDeck | null> => {
+        const rows = await t.db(() => supa.from("decks").select("id,title,status,page_count,processed_slides").in("status", ["awaiting_images", "processing"]).order("created_at", { ascending: false }).limit(1));
+        const r = one(rows) as { id: string; title: string; status: string; page_count: number | null; processed_slides: number } | undefined;
+        return r ? { deck_id: r.id, title: r.title, status: r.status as ActiveDeck["status"], page_count: r.page_count == null ? null : Number(r.page_count), processed_slides: Number(r.processed_slides ?? 0) } : null;
+      },
+      cancel: async (deckId) => { await t.fn("deck-cancel", { deck_id: deckId }); },
       getStatus: async (deckId): Promise<DeckEvent> => deckEvent(await t.db(() => supa.from("decks").select(DECK_EVENT_COLS).eq("id", deckId).single()) as Record<string, unknown>),
     },
 

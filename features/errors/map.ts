@@ -28,7 +28,7 @@ export const ERROR_UI: Record<ErrorCode, (d: D) => ErrorUi> = {
   size_mismatch: () => inline("Upload failed", "The file didn't arrive in full. Check your connection and try again.", true),
   upload_missing: () => inline("Upload failed", "We didn't receive the file. Check your connection and try again.", true),
   upload_failed: () => inline("Upload failed", "The upload was interrupted. Check your connection and try again.", true),
-  deck_in_progress: () => inline("Finish your current deck first", "Another deck is still being read. Wait for it to finish, then start a new one."),
+  deck_in_progress: () => inline("Finish your current deck first", "You have a deck that isn't finished yet. Continue it, or cancel it to start a new one."),
   images_missing: () => inline("Some slide images didn't upload", "We'll prepare and upload them again.", true),
   not_jpeg: () => inline("A slide image couldn't be read", "We'll prepare and upload it again.", true),
   image_too_large: () => inline("A slide image was too large", "We'll prepare and upload it again.", true),

@@ -10,6 +10,7 @@ export const qk = {
   recentReports: (n: number) => ["dashboard", "recent-reports", n] as const,
   decks: ["decks"] as const,
   deck: (id: string) => ["decks", id] as const,
+  activeDeck: ["decks", "active"] as const,
   deckAttempts: (id: string) => ["decks", id, "attempts"] as const,
   slideImages: (id: string) => ["decks", id, "slide-images"] as const,
   report: (id: string) => ["reports", id] as const,

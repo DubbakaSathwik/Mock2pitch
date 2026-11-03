@@ -28,6 +28,8 @@ export type DeckSummary = {
   deck_id: string; title: string; page_count: number; pinned: boolean; pinned_at: string | null; created_at: string;
   attempts_count: number; latest_score: number | null; latest_attempt_at: string | null;
 };
+/** The deck the student has not finished (blocks a new upload): waiting for its details, or being read. */
+export type ActiveDeck = { deck_id: string; title: string; status: "awaiting_images" | "processing"; page_count: number | null; processed_slides: number };
 /** `my_deck_detail(p_deck_id)` row. */
 export type DeckAttempt = {
   report_id: string; session_id: string; attempt_number: number; created_at: string; overall_score: number; coverage_score: number;
@@ -117,6 +119,10 @@ export interface DecksPort {
   getAssetUrls(deckId: string, kinds: AssetKind[]): Promise<AssetUrls>;
   /** Current row (direct read) — used to hydrate before/while subscribed to realtime. */
   getStatus(deckId: string): Promise<DeckEvent>;
+  /** The unfinished deck (waiting for details / being read), or null. */
+  getActive(): Promise<ActiveDeck | null>;
+  /** Stops that deck so a new one can be uploaded (its files and slides are discarded; the daily session is not given back). */
+  cancel(deckId: string): Promise<void>;
 }
 export interface UploadPort {
   init(input: { filename: string; size_bytes: number; content_type: string }): Promise<UploadInit>;

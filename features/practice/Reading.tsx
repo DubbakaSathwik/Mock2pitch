@@ -49,7 +49,7 @@ export function Reading() {
 
   const failed = deck?.status === "failed";
   // A deck the sweeper timed out (upload_timeout) can never be processed again ("deck-process" refuses it), so Try again would only loop: offer a fresh upload.
-  const unfinished = deck && (deck.status === "awaiting_upload" || deck.status === "awaiting_images" || (failed && (!deck.page_count || deck.error_code === "upload_timeout")));
+  const unfinished = deck && (deck.status === "awaiting_upload" || deck.status === "awaiting_images" || (failed && (!deck.page_count || deck.error_code === "upload_timeout" || deck.error_code === "cancelled")));
   const processed = deck?.processed_slides ?? 0;
   const stage = deck?.processing_stage ?? "Waiting for slide images";
   const ui = failed && deck?.error_code ? errorUi(deck.error_code as never) : null;

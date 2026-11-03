@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createEnv, encryptedPdf, jpeg, makePdf, ORIGIN, put, SECRET, uploadDeck, type Env_ } from "./harness";
 import { deckUploadInit } from "@shared/handlers/deck-upload-init.ts";
 import { deckUploadComplete } from "@shared/handlers/deck-upload-complete.ts";
-import { deckProcess } from "@shared/handlers/deck-process.ts";
+import { deckProcess, runDeckProcessing } from "@shared/handlers/deck-process.ts";
+import { deckCancel } from "@shared/handlers/deck-cancel.ts";
 import { assetUrls } from "@shared/handlers/asset-urls.ts";
 import { keys } from "@shared/r2.ts";
 
@@ -449,3 +450,49 @@ describe("asset-urls", () => {
   });
 });
 export { SECRET };
+
+describe("deck-cancel (stop the unfinished deck so a new one can be uploaded)", () => {
+  it("cancels a deck waiting for its details: files discarded, no session refunded, a new upload is accepted", async () => {
+    const { u, deckId } = await readyForProcessing("dc1@example.test", 3);
+    expect(await used(u.id)).toBe(1);
+    // while it is unfinished a second upload is refused
+    const blocked = await env.call(deckUploadInit, { filename: "b.pdf", size_bytes: 100, content_type: "application/pdf" }, { token: u.token });
+    expect([blocked.status, blocked.json.error.code]).toEqual([409, "deck_in_progress"]);
+    const r = await env.call(deckCancel, { deck_id: deckId }, { token: u.token });
+    expect([r.status, r.json.data]).toEqual([200, { deck_id: deckId, status: "cancelled" }]);
+    expect(await deckRow(deckId)).toMatchObject({ status: "failed", error_code: "cancelled" });
+    expect(await env.r2.head(keys.slideImage(u.id, deckId, 0))).toBeNull();
+    expect(await env.r2.head(keys.deckPdf(u.id, deckId))).toBeNull();
+    expect((await env.db.admin.query("select count(*)::int n from public.files where deck_id=$1 and status <> 'deleted'", [deckId])).rows[0].n).toBe(0);
+    expect(await used(u.id)).toBe(1); // not refunded
+    const again = await env.call(deckUploadInit, { filename: "b.pdf", size_bytes: 100, content_type: "application/pdf" }, { token: u.token });
+    expect(again.status).toBe(200);
+  });
+  it("is idempotent, owner-only and refuses decks that are not unfinished", async () => {
+    const { u, deckId } = await readyForProcessing("dc2@example.test", 2);
+    expect((await env.call(deckCancel, { deck_id: deckId }, { token: u.token })).status).toBe(200);
+    expect((await env.call(deckCancel, { deck_id: deckId }, { token: u.token })).status).toBe(200);
+    const other = await env.user("dc2b@example.test");
+    const b = await readyForProcessing("dc2c@example.test", 2);
+    expect((await env.call(deckCancel, { deck_id: b.deckId }, { token: other.token })).status).toBe(404);
+    expect((await env.call(deckCancel, { deck_id: b.deckId })).status).toBe(401);
+    await env.call(deckProcess, { deck_id: b.deckId }, { token: b.u.token }); await env.settle(); // now ready
+    const ready = await env.call(deckCancel, { deck_id: b.deckId }, { token: b.u.token });
+    expect([ready.status, ready.json.error.code]).toEqual([409, "invalid_state"]);
+    expect((await deckRow(b.deckId)).status).toBe("ready");
+  });
+  it("a deck cancelled while it is being read stays cancelled: late results are not written and the status is not overwritten", async () => {
+    const { u, deckId, pages } = await readyForProcessing("dc3@example.test", 3);
+    await env.db.admin.query("update public.decks set status='processing' where id=$1", [deckId]);
+    await env.db.admin.query("insert into public.slides(deck_id,slide_index,title,key_points,time_weight) values ($1,0,'early','{a}',5)", [deckId]);
+    expect((await env.call(deckCancel, { deck_id: deckId }, { token: u.token })).status).toBe(200);
+    expect((await env.db.admin.query("select count(*)::int n from public.slides where deck_id=$1", [deckId])).rows[0].n).toBe(0);
+    // the background worker that was already running now finishes or fails: neither may change anything
+    await runDeckProcessing(env.deps, deckId, u.id, pages).catch(() => {});
+    expect(await deckRow(deckId)).toMatchObject({ status: "failed", error_code: "cancelled" });
+    expect((await env.db.admin.query("select count(*)::int n from public.slides where deck_id=$1", [deckId])).rows[0].n).toBe(0);
+    // and it cannot be restarted
+    const retry = await env.call(deckProcess, { deck_id: deckId }, { token: u.token });
+    expect([retry.status, retry.json.error.code]).toEqual([409, "invalid_state"]);
+  });
+});
