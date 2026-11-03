@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { control, fixture, seed, submitDetails } from "./helpers";
+import { control, fixture, seed } from "./helpers";
 
 test("15. an unfinished deck blocks a new upload: go back to it, or cancel it and upload the new one", async ({ page }) => {
   test.setTimeout(180_000);
