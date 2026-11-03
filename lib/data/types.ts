@@ -50,7 +50,7 @@ export type ClipDeclaration = { slide_index: number; size_bytes: number };
 export type SubmitInit = { session_id: string; clips: { slide_index: number; upload: SignedUpload }[] };
 export type AnalyseResult = { session_id: string; status: "transcribing" | "completed"; report_id?: string };
 
-export type ReportSlideInfo = { slide_index: number; title: string | null; key_points: string[] };
+export type ReportSlideInfo = { slide_index: number; title: string | null; key_points: string[]; suggested_script: string | null };
 export type ReportFiller = { word: string; count: number };
 export type ReportDetail = {
   report: ReportRow;

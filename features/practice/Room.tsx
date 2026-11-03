@@ -61,6 +61,7 @@ export function Room() {
   const [recording, setRecording] = useState(false);
   const [, tick] = useState(0);
   const [notes, setNotes] = useState(false);
+  const [notesTab, setNotesTab] = useState<"points" | "script">("points");
   const [leave, setLeave] = useState(false);
   const [micErr, setMicErr] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
@@ -80,7 +81,8 @@ export function Room() {
   const i = cur ?? 0;
   curRef.current = i;
 
-  useEffect(() => { try { setNotes(localStorage.getItem("m2p.room.notes") === "1"); } catch { /* ignore */ } }, []);
+  useEffect(() => { try { setNotes(localStorage.getItem("m2p.room.notes") === "1"); setNotesTab(localStorage.getItem("m2p.room.notesTab") === "script" ? "script" : "points"); } catch { /* ignore */ } }, []);
+  const pickNotesTab = (t: "points" | "script") => { setNotesTab(t); try { localStorage.setItem("m2p.room.notesTab", t); } catch { /* ignore */ } };
   const toggleNotes = () => { const v = !notes; setNotes(v); try { localStorage.setItem("m2p.room.notes", v ? "1" : "0"); } catch { /* ignore */ } };
 
   // microphone: reuse the one granted at mic check, or open it again (e.g. after a refresh)
@@ -164,7 +166,7 @@ export function Room() {
   );
   const stage = (
     <div className={styles.stage}>
-      <SlideView src={images.urls.get(i)} alt={`Slide ${i + 1}: ${slide?.title ?? ""}`} onRefetch={images.refetch} />
+      <div className={styles.slideBox}><SlideView src={images.urls.get(i)} alt={`Slide ${i + 1}: ${slide?.title ?? ""}`} onRefetch={images.refetch} style={{ width: "min(100cqw, calc(100cqh * 16 / 9))" }} /></div>
       <div className={styles.status}>
         <div className={styles.statusL}>
           {recording ? <Badge tone="danger" dot>Recording slide {i + 1}</Badge> : playback.playing === i ? <Badge tone="info" dot>Playing back slide {i + 1}</Badge> : <Badge tone={here === "over" ? "warning" : here === "done" ? "success" : "neutral"}>{STAT[here].label}</Badge>}
@@ -185,10 +187,31 @@ export function Room() {
       ); })}
     </div>
   );
+  const script = (slide?.suggested_script ?? "").trim();
   const notesP = (
-    <div className={styles.notes}>
+    <div className={`${styles.notes} ${notes ? styles.notesOpen : ""}`}>
       <button type="button" className={styles.notesBtn} aria-expanded={notes} onClick={toggleNotes}><span className={styles.notesTitle}><Icon name="notebook-pen" size={16} />My notes</span><Icon name={notes ? "chevron-up" : "chevron-down"} size={16} /></button>
-      {notes && slide && <div className={styles.notesBody}><Overline color="var(--icy-blue)" style={{ marginBottom: 6 }}>Cover on this slide</Overline>{slide.key_points.map((k, x) => <div key={x} className={styles.note}><Icon name="circle-check" size={15} color="var(--icy-blue)" style={{ marginTop: 3 }} />{k}</div>)}</div>}
+      {notes && (
+        <>
+          <div className={styles.noteTabs} role="tablist" aria-label="Notes">
+            <button type="button" role="tab" id="notes-tab-points" aria-selected={notesTab === "points"} aria-controls="notes-panel" className={`${styles.noteTab} ${notesTab === "points" ? styles.noteTabOn : ""}`} onClick={() => pickNotesTab("points")}>Key points</button>
+            <button type="button" role="tab" id="notes-tab-script" aria-selected={notesTab === "script"} aria-controls="notes-panel" className={`${styles.noteTab} ${notesTab === "script" ? styles.noteTabOn : ""}`} onClick={() => pickNotesTab("script")}>Script</button>
+          </div>
+          <div id="notes-panel" role="tabpanel" aria-labelledby={`notes-tab-${notesTab}`} tabIndex={0} className={styles.notesBody} data-testid="notes-panel">
+            {!slide ? null : notesTab === "points" ? (
+              <>
+                <Overline color="var(--icy-blue)" style={{ marginBottom: 6 }}>Cover on this slide</Overline>
+                {slide.key_points.map((k, x) => <div key={x} className={styles.note}><Icon name="circle-check" size={15} color="var(--icy-blue)" style={{ marginTop: 3 }} />{k}</div>)}
+              </>
+            ) : (
+              <>
+                <Overline color="var(--icy-blue)" style={{ marginBottom: 6 }}>Suggested script</Overline>
+                {script ? script.split(/\n+/).map((para, x) => <p key={x} className={styles.scriptP}>{para}</p>) : <p className={styles.scriptP}>There is no suggested script for this slide.</p>}
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
   const tiles = (small: boolean) => <>{JURY.map((a, k) => <Person key={k} k={k} label={a.name} role={a.role} small={small} />)}<SelfTile name={name} avatarUrl={auth.data?.avatarUrl} speaking={recording} level={level} small={small} /></>;

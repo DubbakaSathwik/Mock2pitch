@@ -14,7 +14,8 @@ import { ErrorNotice, Notice } from "@/components/app/Notice";
 import { FlowShell, Head } from "@/components/app/shells";
 import { Muted, P } from "@/components/app/Typography";
 import { useDeck } from "@/features/decks/queries";
-import { useBeforeUnload, useClipPlayback } from "@/features/recording/hooks";
+import { useBeforeUnload } from "@/features/recording/hooks";
+import { ClipPlayer } from "@/components/app/ClipPlayer";
 import { recordingStore, useRecordingStore } from "@/features/recording/store";
 import { useSessionStatusRedirect } from "@/features/sessions/queries";
 import { mmss } from "@/lib/format";
@@ -32,7 +33,6 @@ export function Review() {
   const deck = useDeck(session.data?.deck_id);
   const clipsList = useRecordingStore(() => recordingStore.list(sessionId));
   const clips = useMemo(() => new Map(clipsList), [clipsList]);
-  const playback = useClipPlayback();
   const submit = useSubmitFlow(sessionId);
   const [warn, setWarn] = useState(false);
   useBeforeUnload(clips.size > 0);
@@ -67,9 +67,9 @@ export function Review() {
                     </div>
                     {!compact && (c ? <Badge tone={o ? "warning" : "success"}>{mmss(c.durationMs / 1000)} / {mmss(g)}</Badge> : <Badge tone="warning">Not recorded</Badge>)}
                     <div className={styles.btns}>
-                      {c && <IconButton icon={playback.playing === i ? "square" : "play"} label={playback.playing === i ? `Stop playback of slide ${i + 1}` : `Play back slide ${i + 1}`} variant="secondary" size={44} onClick={() => (playback.playing === i ? playback.stop() : playback.play(i, c.url))} disabled={submit.busy} />}
                       <IconButton icon={c ? "rotate-ccw" : "mic"} label={c ? `Re-record slide ${i + 1}` : `Record slide ${i + 1}`} variant="secondary" size={44} onClick={() => reRecord(i)} disabled={submit.busy} />
                     </div>
+                    {c && <div className={styles.player}><ClipPlayer blob={c.blob} url={c.url} durationMs={c.durationMs} playLabel={`Play back slide ${i + 1}`} pauseLabel={`Pause playback of slide ${i + 1}`} seekLabel={`Seek slide ${i + 1} recording`} disabled={submit.busy} /></div>}
                   </li>
                 );
               })}

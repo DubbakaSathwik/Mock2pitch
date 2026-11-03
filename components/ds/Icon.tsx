@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import {
   ArrowRight, Ban, ChartLine, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, CircleCheck, CircleDot, CirclePlus, CircleX, Cpu,
   FileText, Gauge, Heart, History, House, Info, Layers, LayoutDashboard, ListChecks, Lock, LogOut, MessageCircle, MessageSquareText,
-  MessageSquareWarning, Mic, MicOff, Moon, NotebookPen, Phone, Play, Plus, Presentation, RotateCcw, Search, ShieldCheck, Sparkles, Square,
+  MessageSquareWarning, Mic, MicOff, Moon, NotebookPen, Pause, Phone, Play, Plus, Presentation, RotateCcw, Search, ShieldCheck, Sparkles, Square,
   Star, Target, Timer, Trash2, TrendingUp, TriangleAlert, Upload, User, Users, Volume2, VolumeX, X,
 } from "lucide-react";
 
@@ -13,7 +13,7 @@ const ICONS = {
   "circle-x": CircleX, cpu: Cpu, "file-text": FileText, gauge: Gauge, heart: Heart, history: History, house: House, info: Info, layers: Layers,
   "layout-dashboard": LayoutDashboard, "list-checks": ListChecks, lock: Lock, "log-out": LogOut, "message-circle": MessageCircle,
   "message-square-text": MessageSquareText, "message-square-warning": MessageSquareWarning, mic: Mic, "mic-off": MicOff, moon: Moon,
-  "notebook-pen": NotebookPen, phone: Phone, play: Play, plus: Plus, presentation: Presentation, "rotate-ccw": RotateCcw, search: Search,
+  "notebook-pen": NotebookPen, pause: Pause, phone: Phone, play: Play, plus: Plus, presentation: Presentation, "rotate-ccw": RotateCcw, search: Search,
   "shield-check": ShieldCheck, sparkles: Sparkles, square: Square, star: Star, target: Target, timer: Timer, "trash-2": Trash2,
   "trending-up": TrendingUp, "triangle-alert": TriangleAlert, upload: Upload, user: User, users: Users, "volume-2": Volume2, "volume-x": VolumeX, x: X,
 } as const;

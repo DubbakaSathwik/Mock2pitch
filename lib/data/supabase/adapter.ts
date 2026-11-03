@@ -182,7 +182,7 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
         const report = parse(S.reportRow, await t.db(() => supa.from("reports").select("*").eq("id", reportId).single()), "reports");
         const [results, slides, deck, session, rating] = await Promise.all([
           t.db(() => supa.from("session_slide_results").select("*").eq("session_id", report.session_id).order("slide_index")),
-          t.db(() => supa.from("slides").select("slide_index,title,key_points").eq("deck_id", report.deck_id).order("slide_index")),
+          t.db(() => supa.from("slides").select("slide_index,title,key_points,suggested_script").eq("deck_id", report.deck_id).order("slide_index")),
           t.db(() => supa.from("decks").select("title").eq("id", report.deck_id).maybeSingle()),
           t.db(() => supa.from("practice_sessions").select("suggested_seconds").eq("id", report.session_id).maybeSingle()),
           t.db(() => supa.from("report_ratings").select("stars,comment").eq("report_id", reportId).maybeSingle()),
@@ -190,7 +190,7 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
         return {
           report: report as unknown as ReportDetail["report"],
           results: arr(S.resultRow, "session_slide_results")(results) as unknown as ReportDetail["results"],
-          slides: (slides ?? []).map((s: { slide_index: unknown; title: string | null; key_points: string[] }) => ({ slide_index: Number(s.slide_index), title: s.title, key_points: s.key_points })),
+          slides: (slides ?? []).map((s: { slide_index: unknown; title: string | null; key_points: string[]; suggested_script?: string | null }) => ({ slide_index: Number(s.slide_index), title: s.title, key_points: s.key_points, suggested_script: s.suggested_script ?? null })),
           deck_title: deck?.title ?? "Deck", deck_id: report.deck_id,
           target_seconds: ((session?.suggested_seconds as number[] | undefined) ?? []).reduce((a, b) => a + Number(b), 0),
           rating: rating ? { stars: Number(rating.stars), comment: rating.comment } : null,

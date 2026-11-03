@@ -440,7 +440,7 @@ export class MockBackend {
         const rating = this.state.ratings.find((x) => x.report_id === reportId);
         return {
           report: r, deck_title: deck?.title ?? "Deck", deck_id: r.deck_id, target_seconds: (session?.suggested_seconds ?? []).reduce((a, b) => a + b, 0),
-          slides: slides.map((s) => ({ slide_index: s.slide_index, title: s.title, key_points: s.key_points })),
+          slides: slides.map((s) => ({ slide_index: s.slide_index, title: s.title, key_points: s.key_points, suggested_script: s.suggested_script })),
           results: this.state.results.filter((x) => x.session_id === r.session_id).sort((a, b) => a.slide_index - b.slide_index),
           rating: rating ? { stars: rating.stars, comment: rating.comment } : null,
         };
