@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Badge } from "@/components/ds/Badge";
 import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
@@ -19,13 +19,14 @@ import { formatDate, mmss, plural } from "@/lib/format";
 import { scoreColor } from "@/lib/score";
 import type { DeckAttempt } from "@/lib/data/types";
 import styles from "./DeckDetail.module.css";
+import { useGo } from "@/lib/use-go";
 
 const SUBS: [string, keyof DeckAttempt][] = [["Timing", "timing_score"], ["Filler words", "filler_score"], ["Slide coverage", "coverage_score"], ["Clarity", "clarity_score"]];
 
 /** S16 Deck detail: trend, first vs latest sub-scores, attempts. */
 export function DeckDetail() {
   const { deckId } = useParams<{ deckId: string }>();
-  const router = useRouter();
+  const nav = useGo();
   const deck = useDeck(deckId);
   const attempts = useDeckAttempts(deckId);
   const start = useStartPractice();
@@ -35,7 +36,7 @@ export function DeckDetail() {
   const first = rows[0], latest = rows.at(-1);
   const n = rows.length;
   return (
-    <StudentShell active="history">
+    <StudentShell active="history" back={{ href: "/history", label: "Back to history" }}>
       <Link href="/history" className={styles.back}><Icon name="chevron-left" size={16} />History</Link>
       {deck.isPending ? <Skeleton h={36} w={320} />
         : ui?.kind === "inline" ? <ErrorNotice title={ui.title} body={ui.body} onRetry={() => { void deck.refetch(); void attempts.refetch(); }} />
@@ -43,7 +44,7 @@ export function DeckDetail() {
           <>
             <Head title={deck.data.deck.title}
               sub={`${deck.data.deck.page_count ?? 0} slides${deck.data.total_target_seconds ? ` · ${mmss(deck.data.total_target_seconds)} target` : ""} · ${plural(n, "attempt")}`}
-              right={<Button iconLeft="rotate-ccw" disabled={start.blocked} onClick={() => router.push(start.limitReached ? "/limit" : `/practice/${deckId}/time`)}>Practice again</Button>} />
+              right={<Button iconLeft="rotate-ccw" disabled={start.blocked} loading={nav.pending} onClick={() => nav.go(start.limitReached ? "/limit" : `/practice/${deckId}/time`)}>Practice again</Button>} />
             <div className={styles.grid}>
               <Card>
                 <H l={3} style={{ marginBottom: 8 }}>Score trend</H>

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ds/Badge";
 import { Button } from "@/components/ds/Button";
@@ -14,6 +15,8 @@ import { SlideView } from "@/components/app/SlideView";
 import { Tile } from "@/components/app/Tile";
 import { H, Muted, Overline, P } from "@/components/app/Typography";
 import { scoreColor } from "@/lib/score";
+import { useAuthSession } from "@/features/auth/queries";
+import { useGo } from "@/lib/use-go";
 import styles from "./Landing.module.css";
 
 const SUBS: [string, number][] = [["Timing", 82], ["Filler words", 58], ["Slide coverage", 78], ["Clarity", 75]];
@@ -59,6 +62,11 @@ function RoomPreview() {
 
 export function Landing() {
   const router = useRouter();
+  const { go, pending } = useGo();
+  const session = useAuthSession();
+  // Warm the sign-in route up front: its first click used to compile/load with no visible reaction, which looked like a dead button.
+  useEffect(() => { router.prefetch("/sign-in"); }, [router]);
+  const home = session.data ? "/dashboard" : "/";
   const steps: [IconName, string, string][] = [
     ["upload", "Upload slides", "A PDF of up to 10 slides. We read each slide and suggest key points and a script for it."],
     ["mic", "Practice out loud", "Set your time, then present slide by slide to a quiet room of jury members. Audio only."],
@@ -66,14 +74,14 @@ export function Landing() {
   ];
   return (
     <div className={styles.page}>
-      <header className={styles.header}><Logo /><Button variant="secondary" size="sm" onClick={() => router.push("/sign-in")}>Sign in</Button></header>
+      <header className={styles.header}><Logo href={home} /><Button variant="secondary" size="sm" loading={pending} onClick={() => go(session.data ? "/dashboard" : "/sign-in")}>Sign in</Button></header>
       <main id="main">
         <section className={styles.hero}>
           <div>
             <Overline>Practice • Improve • Pitch</Overline>
             <h1 className={styles.h1}>Rehearse your pitch in private. Walk in ready.</h1>
             <P style={{ fontSize: 18, maxWidth: 520 }}>Upload your slides, present out loud to a calm virtual jury, and get honest, encouraging feedback before the real one.</P>
-            <div className={styles.cta}><GoogleButton onClick={() => router.push("/sign-in")} /><Muted>Free to start · Audio only, no camera · English</Muted></div>
+            <div className={styles.cta}><GoogleButton pending={pending} onClick={() => go(session.data ? "/dashboard" : "/sign-in")} /><Muted>Free to start · Audio only, no camera · English</Muted></div>
           </div>
           <div className={styles.heroArt}>
             <RoomPreview />

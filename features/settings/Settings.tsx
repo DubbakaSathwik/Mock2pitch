@@ -53,7 +53,7 @@ export function Settings() {
   const delErr = del.error ? toAppError(del.error) : null;
 
   return (
-    <StudentShell active="settings" maxW={860}>
+    <StudentShell active="settings" maxW={860} back={{ href: "/dashboard", label: "Back to dashboard" }}>
       <Head title="Profile and settings" />
       {blocked && <div style={{ marginBottom: 16 }}><Notice tone="info" title="Your account is paused">You can still read your reports. Editing your profile and deleting your account are unavailable until the owner restores access.</Notice></div>}
       <Card>
@@ -64,7 +64,7 @@ export function Settings() {
             <Select label="Year" options={COLLEGE_YEARS} value={f.year} disabled={blocked} onChange={(e) => setF({ ...f, year: e.target.value })} />
             <Select label="Branch" options={BRANCHES} value={f.branch} disabled={blocked} onChange={(e) => setF({ ...f, branch: e.target.value })} />
           </div>
-          <div><Button type="submit" disabled={blocked || update.isPending}>{update.isPending ? "Saving…" : "Save changes"}</Button></div>
+          <div><Button type="submit" disabled={blocked} loading={update.isPending}>{update.isPending ? "Saving…" : "Save changes"}</Button></div>
         </form>
       </Card>
       <Card style={{ marginTop: 20 }}>
@@ -80,14 +80,14 @@ export function Settings() {
           <Link key={l} href={href} className={styles.link}>{l}<Icon name="chevron-right" size={18} /></Link>
         ))}
       </Card>
-      <Button variant="secondary" iconLeft="log-out" style={{ marginTop: 20 }} disabled={signOut.isPending} onClick={() => signOut.mutate(undefined, { onSuccess: () => router.replace("/") })}>Sign out</Button>
+      <Button variant="secondary" iconLeft="log-out" style={{ marginTop: 20 }} loading={signOut.isPending} onClick={() => signOut.mutate(undefined, { onSuccess: () => router.replace("/") })}>Sign out</Button>
       <Card variant="default" className={styles.danger} aria-label="Danger zone">
         <H l={3} style={{ color: "var(--danger-text)", marginBottom: 6 }}>Danger zone</H>
         <P style={{ fontSize: 15, marginBottom: 14 }}>Deleting your account removes your profile, decks, slide images, reports and ratings permanently. This can&apos;t be undone.</P>
         <Button variant="record" iconLeft="trash-2" disabled={blocked} onClick={() => setConfirm(true)}>Delete account</Button>
       </Card>
       <Dialog open={confirm} title="Delete your account?" onClose={closeDelete} width={compact ? 360 : 480}
-        actions={<><Button variant="secondary" onClick={closeDelete}>Cancel</Button><Button variant="record" disabled={typed !== "DELETE" || del.isPending} onClick={doDelete}>{del.isPending ? "Deleting…" : "Delete account"}</Button></>}>
+        actions={<><Button variant="secondary" onClick={closeDelete}>Cancel</Button><Button variant="record" disabled={typed !== "DELETE"} loading={del.isPending} onClick={doDelete}>{del.isPending ? "Deleting…" : "Delete account"}</Button></>}>
         <P>All your decks, slide images, reports and ratings will be removed permanently. This can&apos;t be undone.</P>
         <div style={{ marginTop: 14 }}><Input label="Type DELETE to confirm" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" autoCapitalize="characters" spellCheck={false} /></div>
         {delErr && <div style={{ marginTop: 12 }}><Notice tone="danger" title="We couldn't delete your account">{delErr.code === "blocked" ? "Your account is paused." : "Please try again."}</Notice></div>}

@@ -21,6 +21,7 @@ import { toAppError } from "@/lib/data/errors";
 import { mmss } from "@/lib/format";
 import { validateMinutes } from "./minutes";
 import styles from "./TimeStep.module.css";
+import { useGo } from "@/lib/use-go";
 
 const PRESETS = [3, 5, 7, 10];
 
@@ -29,6 +30,7 @@ export function TimeStep() {
   const { deckId } = useParams<{ deckId: string }>();
   const compact = useCompact();
   const router = useRouter();
+  const nav = useGo();
   const deck = useDeck(deckId);
   const attempts = useDeckAttempts(deckId);
   const start = useStartSession();
@@ -46,9 +48,9 @@ export function TimeStep() {
   const sUi = sErr ? errorUi(sErr.code, sErr.details) : null;
   useEffect(() => { if (sUi?.kind === "route") router.push(sUi.to); }, [sUi, router]);
   const load = deck.error ? errorUi(toAppError(deck.error).code) : null;
-  const go = () => start.mutate({ deckId, minutes: n }, { onSuccess: (s) => router.push(`/session/${s.id}/mic`) });
+  const go = () => start.mutate({ deckId, minutes: n }, { onSuccess: (s) => nav.go(`/session/${s.id}/mic`) });
   return (
-    <FlowShell step="time">
+    <FlowShell step="time" back={{ href: `/practice/${deckId}/prepare`, label: "Back to prepare" }}>
       <Head title="Set your time" sub="Choose one total duration. We'll split it across your slides." />
       {deck.isPending ? <Skeleton h={160} r={16} /> : load?.kind === "inline" ? <ErrorNotice title={load.title} body={load.body} onRetry={() => deck.refetch()} /> : (
         <>
@@ -75,7 +77,7 @@ export function TimeStep() {
           <div className={styles.note}><Icon name="timer" size={18} color="var(--bright-marine)" /><Muted>The timer turns red if you run over. It never stops you, and recording is never cut off.</Muted></div>
           {sUi?.kind === "inline" && <div style={{ marginBottom: 16 }}><ErrorNotice title={sUi.title} body={sUi.body} onRetry={sUi.retry ? go : undefined} /></div>}
           <div className={styles.cta}>
-            <Button fullWidth={compact} size="lg" disabled={!!err || start.isPending || slides.length === 0} onClick={go}>{start.isPending ? "Starting…" : "Continue to mic check"}</Button>
+            <Button fullWidth={compact} size="lg" disabled={!!err || slides.length === 0} loading={start.isPending || nav.pending} onClick={go}>{start.isPending || nav.pending ? "Starting…" : "Continue to mic check"}</Button>
             {isRetake && <Muted className={styles.cost}>This retake uses 1 of your 5 sessions today.</Muted>}
           </div>
         </>

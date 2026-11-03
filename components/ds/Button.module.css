@@ -14,3 +14,9 @@
 .inverse{--bg:var(--icy-blue);--hover:#C4ECFC;--press:#8FD5F3;--fg:var(--prussian-blue);--bd:transparent}
 /* Touch targets >= 44 px on mobile (handoff §6). */
 @container app (max-width:759.98px){.sm{min-height:44px}}
+
+/* Loading: keep the label, show a spinner, and look "busy" rather than "disabled". */
+.btn.loading:disabled{background:var(--bg);color:var(--fg);border-color:var(--bd);cursor:progress;opacity:.8}
+.spin{width:1em;height:1em;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:btn-spin .7s linear infinite;flex-shrink:0}
+@keyframes btn-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}}

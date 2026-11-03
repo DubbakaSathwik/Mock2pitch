@@ -20,12 +20,14 @@ import { useSessionStatusRedirect } from "@/features/sessions/queries";
 import { mmss } from "@/lib/format";
 import { useSubmitFlow } from "./useSubmitFlow";
 import styles from "./Review.module.css";
+import { useGo } from "@/lib/use-go";
 
 /** S12 Review and submit. */
 export function Review() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const compact = useCompact();
   const router = useRouter();
+  const nav = useGo();
   const session = useSessionStatusRedirect(sessionId, "pre-submit");
   const deck = useDeck(session.data?.deck_id);
   const clipsList = useRecordingStore(() => recordingStore.list(sessionId));
@@ -44,7 +46,7 @@ export function Review() {
   const f = submit.failure;
   const audioBad = f?.code === "audio_invalid" || f?.code === "clip_missing";
   return (
-    <FlowShell step="mic">
+    <FlowShell step="mic" back={{ href: `/session/${sessionId}/room`, label: "Back to practice room" }}>
       <Head title="Review and submit" sub="Play back or re-record any slide before you submit." />
       {session.isPending || deck.isPending ? <Skeleton h={300} r={16} /> : (
         <>
@@ -81,8 +83,8 @@ export function Review() {
             </div>
           )}
           <div className={styles.actions}>
-            <Button size="lg" variant="secondary" disabled={submit.busy} onClick={() => router.push(`/session/${sessionId}/room`)}>Back to practice room</Button>
-            <Button size="lg" iconLeft="sparkles" disabled={done === 0 || submit.busy} onClick={() => (miss ? setWarn(true) : run())}>{submit.busy ? "Submitting…" : "Submit for feedback"}</Button>
+            <Button size="lg" variant="secondary" disabled={submit.busy} loading={nav.pending} onClick={() => nav.go(`/session/${sessionId}/room`)}>Back to practice room</Button>
+            <Button size="lg" iconLeft="sparkles" disabled={done === 0} loading={submit.busy} onClick={() => (miss ? setWarn(true) : run())}>{submit.busy ? "Submitting…" : "Submit for feedback"}</Button>
           </div>
         </>
       )}

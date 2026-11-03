@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Badge } from "@/components/ds/Badge";
 import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
@@ -26,6 +26,7 @@ import { formatDate, mmss } from "@/lib/format";
 import { SCORE_WORD, scoreBand, scoreColor } from "@/lib/score";
 import { useRateReport, useReport } from "./queries";
 import styles from "./Report.module.css";
+import { useGo } from "@/lib/use-go";
 
 type Card5 = { key: string; label: string; icon: IconName; value: string; info?: boolean; sub: string; delta?: number | null; color?: string; band?: string };
 
@@ -129,7 +130,7 @@ function RateCard({ d }: { d: ReportDetail }) {
       <div style={{ marginBottom: 14 }}><StarRating value={stars} onChange={setStars} label="Rate this report" /></div>
       <Input label="Comment (optional)" placeholder="Add a comment (optional)" value={comment} maxLength={500} onChange={(e) => setComment(e.target.value)} hint={`${comment.length}/500`} />
       {ui?.kind === "inline" && <div style={{ marginTop: 12 }}><ErrorNotice title={ui.title} body={ui.body} /></div>}
-      <Button style={{ marginTop: 14 }} disabled={!stars || rate.isPending} onClick={() => rate.mutate({ stars, comment: comment.trim() || undefined }, { onSuccess: () => { setSent(true); toast("Rating sent"); } })}>{rate.isPending ? "Sending…" : "Send rating"}</Button>
+      <Button style={{ marginTop: 14 }} disabled={!stars} loading={rate.isPending} onClick={() => rate.mutate({ stars, comment: comment.trim() || undefined }, { onSuccess: () => { setSent(true); toast("Rating sent"); } })}>{rate.isPending ? "Sending…" : "Send rating"}</Button>
     </Card>
   );
 }
@@ -138,7 +139,6 @@ function RateCard({ d }: { d: ReportDetail }) {
 export function Report() {
   const { reportId } = useParams<{ reportId: string }>();
   const compact = useCompact();
-  const router = useRouter();
   const q = useReport(reportId);
   const attempts = useDeckAttempts(q.data?.deck_id);
   const start = useStartPractice();
@@ -146,9 +146,10 @@ export function Report() {
   const d = q.data;
   const f = attempts.data?.[0];
   const first = f && d && d.report.attempt_number > 1 ? { timing: f.timing_score, filler: f.filler_score, coverage: f.coverage_score, clarity: f.clarity_score } : null;
-  const retake = () => router.push(start.limitReached ? "/limit" : `/practice/${d?.deck_id}/time`);
+  const nav = useGo();
+  const retake = () => nav.go(start.limitReached ? "/limit" : `/practice/${d?.deck_id}/time`);
   return (
-    <StudentShell active="history" maxW={1000}>
+    <StudentShell active="history" maxW={1000} back={{ href: "/history", label: "Back to history" }}>
       {q.isPending ? <><Skeleton h={28} w={200} style={{ marginBottom: 16 }} /><Skeleton h={220} r={24} /></>
         : ui?.kind === "inline" ? <ErrorNotice title={ui.title} body={ui.body} onRetry={() => q.refetch()} />
         : d && (
@@ -190,10 +191,10 @@ export function Report() {
             <RateCard key={d.report.id} d={d} />
             <div className={styles.actions}>
               <div>
-                <Button size="lg" iconLeft="rotate-ccw" fullWidth={compact} disabled={start.blocked} onClick={retake}>Retake this presentation</Button>
+                <Button size="lg" iconLeft="rotate-ccw" fullWidth={compact} disabled={start.blocked} loading={nav.pending} onClick={retake}>Retake this presentation</Button>
                 <Muted style={{ marginTop: 6 }}>A retake uses 1 of your 5 sessions today.</Muted>
               </div>
-              <Button size="lg" variant="secondary" fullWidth={compact} onClick={() => router.push("/dashboard")}>Back to dashboard</Button>
+              <Button size="lg" variant="secondary" fullWidth={compact} onClick={() => nav.go("/dashboard")}>Back to dashboard</Button>
             </div>
           </>
         )}

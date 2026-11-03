@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
 import { Icon } from "@/components/ds/Icon";
@@ -21,18 +20,19 @@ import { scoreColor } from "@/lib/score";
 import { useDashboardStats, useRecentReports } from "./queries";
 import { useStartPractice } from "./useStartPractice";
 import styles from "./Dashboard.module.css";
+import { useGo } from "@/lib/use-go";
 
 
 export function Dashboard() {
   const compact = useCompact();
-  const router = useRouter();
   const profile = useMyProfile();
   const stats = useDashboardStats();
   const decks = useDecks();
   const recent = useRecentReports(8);
   const start = useStartPractice();
   const first = (profile.data?.full_name ?? "").split(" ")[0] || "there";
-  const go = () => router.push(start.href);
+  const nav = useGo();
+  const go = () => nav.go(start.href);
   const err = stats.error ?? decks.error;
   const ui = err ? errorUi(toAppError(err).code, toAppError(err).details) : null;
 
@@ -46,8 +46,8 @@ export function Dashboard() {
 
   return (
     <StudentShell active="dashboard">
-      <Head title={`Hi ${first}, ready to rehearse?`} sub="Take a breath. Nobody is watching but you." right={!compact && <Button size="lg" iconLeft="plus" onClick={go}>Start a new practice</Button>} />
-      {compact && <Button fullWidth size="lg" iconLeft="plus" onClick={go} style={{ marginBottom: 16 }}>Start a new practice</Button>}
+      <Head title={`Hi ${first}, ready to rehearse?`} sub="Take a breath. Nobody is watching but you." right={!compact && <Button size="lg" iconLeft="plus" loading={nav.pending} onClick={go}>Start a new practice</Button>} />
+      {compact && <Button fullWidth size="lg" iconLeft="plus" loading={nav.pending} onClick={go} style={{ marginBottom: 16 }}>Start a new practice</Button>}
       {ui?.kind === "inline" && <div style={{ marginBottom: 16 }}><ErrorNotice title={ui.title} body={ui.body} onRetry={() => { void stats.refetch(); void decks.refetch(); }} /></div>}
       <div className={styles.grid}>
         <div className={styles.col}>
@@ -57,7 +57,7 @@ export function Dashboard() {
                 <div className={styles.tileRow}><Tile icon="presentation" size={56} /></div>
                 <H l={2}>Your first practice starts here</H>
                 <P style={{ margin: "8px auto 20px", maxWidth: 420 }}>Upload up to 10 slides. We&apos;ll suggest key points and a script, then you present slide by slide.</P>
-                <Button onClick={go}>Upload slides</Button>
+                <Button loading={nav.pending} onClick={go}>Upload slides</Button>
               </Card>
             ) : (
               <Card padding={0} aria-label="Recent decks">
@@ -91,7 +91,7 @@ export function Dashboard() {
                 <div className={styles.tileRow}><Tile icon="mic" size={48} /></div>
                 <div className={styles.readyTitle}>Ready for your first practice</div>
                 <Muted style={{ margin: "6px 0 14px" }}>Your average score, best score and practice time will show here.</Muted>
-                <Button size="sm" onClick={go}>Start now</Button>
+                <Button size="sm" loading={nav.pending} onClick={go}>Start now</Button>
               </div>
             ) : s && (
               <div className={styles.tiles}>

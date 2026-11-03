@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { Badge } from "@/components/ds/Badge";
 import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
@@ -17,6 +17,7 @@ import { MicError, MicSession, type MicErrorKind } from "@/features/recording/re
 import { recordingStore, useRecordingStore } from "@/features/recording/store";
 import { useSessionStatusRedirect } from "@/features/sessions/queries";
 import styles from "./MicCheck.module.css";
+import { useGo } from "@/lib/use-go";
 
 type State = "idle" | "requesting" | "granted" | MicErrorKind;
 
@@ -26,8 +27,8 @@ const CHECKLIST: [IconName, string][] = [["volume-x", "Find a quiet room"], ["me
 export function MicCheck() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const compact = useCompact();
-  const router = useRouter();
-  useSessionStatusRedirect(sessionId, "pre-submit");
+  const nav = useGo();
+  const session = useSessionStatusRedirect(sessionId, "pre-submit");
   const mic = useRecordingStore(() => recordingStore.getMic());
   const [state, setState] = useState<State>(() => (recordingStore.getMic()?.active ? "granted" : "idle"));
   const [caps, setCaps] = useState<Capabilities | null>(null);
@@ -42,7 +43,7 @@ export function MicCheck() {
   };
 
   return (
-    <FlowShell step="mic">
+    <FlowShell step="mic" back={session.data?.deck_id ? { href: `/practice/${session.data.deck_id}/time`, label: "Back to set time" } : undefined}>
       <Head title="Mic check" sub="Like a meeting green room. Test your microphone before you enter." />
       {caps && !caps.chromium && <div style={{ marginBottom: 16 }}><Notice tone="info">Use Chrome for the best results. Other browsers can record, but we test most on Chrome.</Notice></div>}
       <div className={styles.grid}>
@@ -86,7 +87,7 @@ export function MicCheck() {
           <ul className={styles.list}>{CHECKLIST.map(([ic, t]) => <li key={t}><Tile icon={ic} size={32} />{t}</li>)}</ul>
         </Card>
       </div>
-      <Button fullWidth={compact} size="lg" disabled={state !== "granted"} className={styles.enter} onClick={() => router.push(`/session/${sessionId}/room`)}>Enter practice room</Button>
+      <Button fullWidth={compact} size="lg" disabled={state !== "granted"} loading={nav.pending} className={styles.enter} onClick={() => nav.go(`/session/${sessionId}/room`)}>Enter practice room</Button>
     </FlowShell>
   );
 }

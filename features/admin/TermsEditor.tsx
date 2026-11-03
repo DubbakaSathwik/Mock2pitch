@@ -102,7 +102,7 @@ export function TermsEditor() {
         </div>
       )}
       <Dialog open={open} title="Publish a new version?" onClose={() => setOpen(false)} width={480}
-        actions={<><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={publish.isPending} onClick={doPublish}>{publish.isPending ? "Publishing…" : "Publish"}</Button></>}>
+        actions={<><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button loading={publish.isPending} onClick={doPublish}>{publish.isPending ? "Publishing…" : "Publish"}</Button></>}>
         <P>Every student will need to accept the new Terms and Privacy Policy before they can continue. It never interrupts a practice session in progress.</P>
         <div className={styles.fields}>
           <Input label="Version label" value={label} error={labelErr} onChange={(e) => { setLabel(e.target.value); setLabelErr(""); }} hint={live ? `Current version: ${live.version_label}` : undefined} />

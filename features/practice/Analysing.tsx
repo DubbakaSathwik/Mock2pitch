@@ -71,7 +71,7 @@ export function Analysing() {
             <div className={styles.btns}>
               {code === "audio_invalid" ? <Link href={`/session/${sessionId}/review`}><Button variant="inverse">Back to review</Button></Link>
                 : code === "max_attempts" ? <Link href="/dashboard"><Button variant="inverse">Back to dashboard</Button></Link>
-                : <Button variant="inverse" disabled={busy || waitS > 0} onClick={() => void retry()}>{busy ? "Trying again…" : waitS > 0 ? `Try again in ${waitS} s` : "Try again"}</Button>}
+                : <Button variant="inverse" disabled={waitS > 0} loading={busy} onClick={() => void retry()}>{busy ? "Trying again…" : waitS > 0 ? `Try again in ${waitS} s` : "Try again"}</Button>}
             </div>
           </div>
         ) : (

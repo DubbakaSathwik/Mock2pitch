@@ -29,7 +29,7 @@ export function SignIn({ owner }: { owner?: boolean }) {
   return (
     <Center>
       <Card padding={36} className={styles.card}>
-        <div className={styles.logo}><Logo /></div>
+        <div className={styles.logo}><Logo href="/" /></div>
         {owner && <div className={styles.badge}><Badge tone="violet">Owner admin</Badge></div>}
         <H l={1} className={styles.title}>{owner ? "Owner sign in" : "Welcome back"}</H>
         <P style={{ margin: owner ? "10px 0 26px" : "10px 0 28px" }}>{owner ? "Only the owner's Google account can open the admin area." : "Sign in to practise your next presentation."}</P>

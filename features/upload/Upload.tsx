@@ -35,7 +35,7 @@ export function Upload() {
   const pick = (f: File | undefined | null) => { if (f) void flow.start(f); };
   const d = describe(flow.phase);
   return (
-    <FlowShell step="upload">
+    <FlowShell step="upload" back={{ href: "/dashboard", label: "Back to dashboard" }}>
       <Head title="Upload your slides" sub={`PDF only, up to ${MAX_SLIDES} slides and ${MB} MB. We read each slide to suggest key points. Your slide design is never rated.`} />
       {flow.busy ? (
         <Card padding={compact ? 28 : 48} className={styles.progress} aria-live="polite" aria-busy="true" data-testid="upload-progress">

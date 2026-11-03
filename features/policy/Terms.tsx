@@ -90,7 +90,7 @@ export function AcceptTerms() {
         {policy.isError ? <PolicyError onRetry={() => policy.refetch()} /> : loading || !policy.data ? <PolicyLoading compact={compact} /> : <PolicyBox tab={tab} terms={policy.data.terms_body} privacy={policy.data.privacy_body} compact={compact} />}
         <div className={styles.agree}><Checkbox checked={ok} onChange={setOk} label="I have read and agree to the Terms and the Privacy Policy" /></div>
         {err && <div role="alert" className={styles.error} style={{ marginBottom: 12 }}><Icon name="triangle-alert" size={20} color="var(--danger-500)" /><div><b>We couldn&apos;t save that.</b><Muted>{err.code === "not_latest_policy" ? "A newer version was just published. Reload to read it." : err.message}</Muted></div></div>}
-        <Button fullWidth disabled={!ok || !policy.data || accept.isPending} onClick={submit}>{accept.isPending ? "Saving…" : "Continue"}</Button>
+        <Button fullWidth disabled={!ok || !policy.data} loading={accept.isPending} onClick={submit}>{accept.isPending ? "Saving…" : "Continue"}</Button>
       </Card>
     </Center>
   );

@@ -1,0 +1,4 @@
+.bar{position:fixed;top:0;left:0;right:0;height:3px;z-index:1000;pointer-events:none;opacity:0;transform-origin:left;transform:scaleX(0);background:linear-gradient(90deg,var(--bright-marine,#2F5BF0),var(--pitch-violet,#7c3aed));transition:opacity .2s}
+.on{opacity:1;animation:np 10s cubic-bezier(.1,.6,.2,1) forwards}
+@keyframes np{0%{transform:scaleX(.02)}20%{transform:scaleX(.45)}60%{transform:scaleX(.8)}100%{transform:scaleX(.95)}}
+@media (prefers-reduced-motion:reduce){.on{animation:none;transform:scaleX(1);opacity:.7}}

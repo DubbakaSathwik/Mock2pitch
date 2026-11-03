@@ -23,9 +23,9 @@ export function Notice({ tone = "danger", title, children, action }: { tone?: To
 }
 
 /** A mapped backend error (features/errors/map.ts) as a Notice, with an optional Try again button. */
-export function ErrorNotice({ title, body, onRetry, retryLabel = "Try again", retryDisabled = false }: { title: string; body: string; onRetry?: () => void; retryLabel?: string; retryDisabled?: boolean }) {
+export function ErrorNotice({ title, body, onRetry, retryLabel = "Try again", retryDisabled = false, retryLoading = false }: { title: string; body: string; onRetry?: () => void; retryLabel?: string; retryDisabled?: boolean; retryLoading?: boolean }) {
   return (
-    <Notice tone="danger" title={title} action={onRetry ? <Button size="sm" variant="secondary" disabled={retryDisabled} onClick={onRetry}>{retryLabel}</Button> : undefined}>
+    <Notice tone="danger" title={title} action={onRetry ? <Button size="sm" variant="secondary" disabled={retryDisabled} loading={retryLoading} onClick={onRetry}>{retryLabel}</Button> : undefined}>
       <Muted as="span" style={{ color: "var(--ink-700)" }}>{body}</Muted>
     </Notice>
   );

@@ -21,7 +21,7 @@ export function Paused() {
         <div className={styles.tile}><Tile icon="ban" size={64} /></div>
         <H l={1}>Your account is paused</H>
         <P style={{ margin: "12px 0 24px" }}>The Mock2Pitch owner has paused your access. Your reports are still saved.</P>
-        <div className={styles.actions}><Button variant="secondary" iconLeft="log-out" disabled={signOut.isPending} onClick={() => signOut.mutate(undefined, { onSuccess: () => router.replace("/") })}>Sign out</Button></div>
+        <div className={styles.actions}><Button variant="secondary" iconLeft="log-out" loading={signOut.isPending} onClick={() => signOut.mutate(undefined, { onSuccess: () => router.replace("/") })}>Sign out</Button></div>
       </div>
     </StudentShell>
   );

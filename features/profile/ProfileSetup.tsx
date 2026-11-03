@@ -53,7 +53,7 @@ export function ProfileSetup() {
             <Select label="Branch" options={BRANCHES} value={f.branch} onChange={(e) => setF({ ...f, branch: e.target.value })} />
           </div>
           {failure && <div role="alert" className={styles.fail}><Icon name="triangle-alert" size={18} color="var(--danger-500)" />{failure.code === "blocked" ? "Your account is paused." : "We couldn't save your details. Try again."}</div>}
-          <Button type="submit" fullWidth style={{ marginTop: 8 }} disabled={update.isPending}>{update.isPending ? "Saving…" : "Save and continue"}</Button>
+          <Button type="submit" fullWidth style={{ marginTop: 8 }} loading={update.isPending}>{update.isPending ? "Saving…" : "Save and continue"}</Button>
         </form>
       </Card>
     </Center>
