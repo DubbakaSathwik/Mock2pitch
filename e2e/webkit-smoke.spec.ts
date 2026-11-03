@@ -1,6 +1,6 @@
 // @smoke — runs in the WebKit project (Safari engine): onboarding, upload (pdf.js legacy build), prepare. No microphone in WebKit CI.
 import { expect, test } from "@playwright/test";
-import { fixture, seed } from "./helpers";
+import { fixture, seed, submitDetails } from "./helpers";
 
 test("@smoke landing → sign in → terms → profile → dashboard → upload a PDF → prepare", async ({ page }) => {
   test.setTimeout(180_000);
@@ -24,6 +24,7 @@ test("@smoke landing → sign in → terms → profile → dashboard → upload 
   await page.getByRole("button", { name: "Upload slides" }).first().click();
   await expect(page).toHaveURL(/\/practice\/new/);
   await page.getByTestId("file-input").setInputFiles(fixture("deck-3.pdf"));
+  await submitDetails(page);
   await expect(page).toHaveURL(/\/prepare/, { timeout: 90_000 });
   await expect(page.getByTestId("slide-view").first()).toBeVisible();
   const loaded = await page.getByTestId("slide-view").first().locator("img").evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0);

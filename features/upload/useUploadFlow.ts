@@ -29,7 +29,7 @@ async function pool<T>(items: T[], n: number, fn: (x: T) => Promise<void>) {
 
 /**
  * Orchestrates S6: client checks → init → PUT pdf → complete (consumes the daily session) → render pages with pdf.js →
- * PUT images → process → S7. Route-type errors (limit, blocked, policy…) navigate; everything else becomes an inline failure
+ * PUT images → Details step (S6b), which starts the reading → S7. Route-type errors (limit, blocked, policy…) navigate; everything else becomes an inline failure
  * rendered under the dropzone with a retry that reuses the chosen file.
  */
 export function useUploadFlow() {
@@ -97,16 +97,11 @@ export function useUploadFlow() {
         });
       };
       await send(blobs.map((_, i) => i));
+      // All images are stored. The AI does not start yet: the Details step asks who the talk is for, its goal and the time limit first,
+      // then starts the reading with those answers (see features/practice/Details.tsx).
       setPhase({ kind: "starting" });
-      try { await data.upload.process(deckId); }
-      catch (e) {
-        const err = toAppError(e);
-        if (err.code !== "images_missing") throw err;
-        await send((err.details.missing as number[]) ?? []); // re-upload only the slides the server did not get
-        await data.upload.process(deckId);
-      }
       resumeDeck.current = null;
-      router.push(`/practice/${deckId}/reading`);
+      router.push(`/practice/${deckId}/details`);
     } catch (e) { fail(e); }
     finally { busy.current = false; if (doc) void closePdf(doc); }
   }, [fail, qc, router]);

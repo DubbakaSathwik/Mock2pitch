@@ -29,7 +29,7 @@ export const AUDIO_PUT_EXPIRES_S = 10 * 60;
 export const GET_EXPIRES_S = 10 * 60;
 
 // AI timeouts (ms) and concurrency
-export const TIMEOUT_SLIDE_MS = 45_000;
+export const TIMEOUT_SLIDE_MS = 30_000; // a healthy Gemini Flash answer takes a few seconds; anything slower is overload, so move on to the next key / model
 export const TIMEOUT_ASR_MS = 60_000;
 export const TIMEOUT_REPORT_MS = 90_000;
 export const SLIDE_CONCURRENCY = 3;
@@ -50,6 +50,17 @@ export const TIMING_ZERO_AT = 0.5;
 export const FILLER_PENALTY_PER_MIN = 15;
 export const FILLER_MIN_MINUTES = 0.5;
 export const FILLER_REGEX_SOURCE = "\\b(um|uh|like|basically|you know|actually)\\b";
+
+// Presentation details form (audience / goal / summary / time), see migration 20261104000011.
+export const AUDIENCES = ["student", "teachers", "jury", "others"] as const;
+export type Audience = (typeof AUDIENCES)[number];
+export const AUDIENCE_LABELS: Record<Audience, string> = { student: "Students", teachers: "Teachers", jury: "Jury", others: "Others" };
+export const MAX_AUDIENCE_OTHER_CHARS = 80;
+export const MAX_GOAL_CHARS = 300;
+export const MAX_ABSTRACT_WORDS = 50;
+export const MAX_ABSTRACT_CHARS = 600;
+/** Spoken English pace used to size scripts: about 130 words a minute. */
+export const WORDS_PER_SECOND = 130 / 60;
 
 export const MAX_ANALYSIS_ATTEMPTS = 3;
 export const STUCK_JOB_MS = 5 * 60 * 1000;

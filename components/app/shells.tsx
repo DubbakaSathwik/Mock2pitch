@@ -9,6 +9,7 @@ import { ProgressBar } from "@/components/ds/ProgressBar";
 import { Badge } from "@/components/ds/Badge";
 import { Avatar } from "./Avatar";
 import { useCompact } from "./Compact";
+import { BackLink } from "./BackLink";
 import { Logo } from "./Logo";
 import { H, Muted, P } from "./Typography";
 import { useAuthSession, useSignOut } from "@/features/auth/queries";
@@ -20,7 +21,8 @@ import styles from "./shells.module.css";
 export type StudentNav = "dashboard" | "upload" | "history" | "settings";
 
 /** Student shell: 248 px sidebar on desktop; 56 px top bar + bottom tab bar on mobile (handoff §5/§6). */
-export function StudentShell({ active, maxW = 1200, children }: { active: StudentNav; maxW?: number; children: ReactNode }) {
+export function StudentShell({ active, maxW = 1200, back, children }: { active: StudentNav; maxW?: number; back?: { href: string; label?: string }; children: ReactNode }) {
+  const backLink = back ? <BackLink href={back.href} label={back.label} /> : null;
   const compact = useCompact();
   const start = useStartPractice();
   const stats = useDashboardStats();
@@ -36,8 +38,8 @@ export function StudentShell({ active, maxW = 1200, children }: { active: Studen
   if (compact) {
     return (
       <div className={styles.mRoot}>
-        <header className={styles.mTop}><Logo size={18} /><Link href="/settings" className={styles.avatarLink}><Avatar name={name} src={profile.data?.avatar_url} size={32} /><span className="sr-only">Profile and settings</span></Link></header>
-        <main id="main" className={styles.mMain}>{children}</main>
+        <header className={styles.mTop}><Logo size={18} href="/dashboard" /><Link href="/settings" className={styles.avatarLink}><Avatar name={name} src={profile.data?.avatar_url} size={32} /><span className="sr-only">Profile and settings</span></Link></header>
+        <main id="main" className={styles.mMain}>{backLink}{children}</main>
         <nav className={styles.mTabs} aria-label="Main">
           {items.map((it) => (
             <Link key={it.key} href={it.href} aria-current={active === it.key ? "page" : undefined} className={`${styles.mTab} ${active === it.key ? styles.mTabOn : ""}`}><Icon name={it.icon} size={22} />{it.label}</Link>
@@ -49,7 +51,7 @@ export function StudentShell({ active, maxW = 1200, children }: { active: Studen
   return (
     <div className={styles.root}>
       <aside className={styles.aside}>
-        <div className={styles.logo}><Logo /></div>
+        <div className={styles.logo}><Logo href="/dashboard" /></div>
         <nav aria-label="Main" className={styles.nav}>
           {items.map((it) => (
             <Link key={it.key} href={it.href} aria-current={active === it.key ? "page" : undefined} className={`${styles.navItem} ${active === it.key ? styles.navOn : ""}`}><Icon name={it.icon} size={20} />{it.label}</Link>
@@ -68,22 +70,22 @@ export function StudentShell({ active, maxW = 1200, children }: { active: Studen
           </div>
         </div>
       </aside>
-      <main id="main" className={styles.main}><div style={{ maxWidth: maxW, margin: "0 auto" }}>{children}</div></main>
+      <main id="main" className={styles.main}><div style={{ maxWidth: maxW, margin: "0 auto" }}>{backLink}{children}</div></main>
     </div>
   );
 }
 
-const STEPS = [["upload", "Upload"], ["prep", "Prepare"], ["time", "Time"], ["mic", "Mic check"]] as const;
+const STEPS = [["upload", "Upload"], ["details", "Details"], ["prep", "Prepare"], ["time", "Time"], ["mic", "Mic check"]] as const;
 export type FlowStep = (typeof STEPS)[number][0];
 
-/** Flow shell (Upload → Prepare → Time → Mic check): top bar with a 4-step stepper and an exit button. */
-export function FlowShell({ step, wide, children }: { step: FlowStep; wide?: boolean; children: ReactNode }) {
+/** Flow shell (Upload → Details → Prepare → Time → Mic check): top bar with a 5-step stepper and an exit button. */
+export function FlowShell({ step, wide, back, children }: { step: FlowStep; wide?: boolean; back?: { href: string; label?: string }; children: ReactNode }) {
   const compact = useCompact();
   const idx = STEPS.findIndex((s) => s[0] === step);
   return (
     <div className={styles.flow}>
       <header className={styles.flowBar}>
-        <Logo size={compact ? 16 : 22} />
+        <Logo size={compact ? 16 : 22} href="/dashboard" />
         <ol className={styles.stepper} aria-label="Progress">
           {STEPS.map(([k, l], i) => (
             <li key={k} aria-current={i === idx ? "step" : undefined} className={`${styles.step} ${i <= idx ? styles.stepOn : ""} ${i === idx ? styles.stepCur : ""}`}>
@@ -94,7 +96,7 @@ export function FlowShell({ step, wide, children }: { step: FlowStep; wide?: boo
         </ol>
         <Link href="/dashboard" aria-label="Exit to dashboard" title="Exit to dashboard" className={styles.exit}><Icon name="x" size={19} /></Link>
       </header>
-      <main id="main" className={styles.flowMain}><div style={{ maxWidth: wide ? 1280 : 760, margin: "0 auto" }}>{children}</div></main>
+      <main id="main" className={styles.flowMain}><div style={{ maxWidth: wide ? 1280 : 760, margin: "0 auto" }}>{back && <BackLink href={back.href} label={back.label} />}{children}</div></main>
     </div>
   );
 }
@@ -113,7 +115,7 @@ export function AdminShell({ active, children }: { active: string; children: Rea
   if (compact) {
     return (
       <div className={styles.mRoot}>
-        <header className={`${styles.mTop} ${styles.aTop}`}><Logo dark size={17} /><Badge tone="violet">Owner admin</Badge></header>
+        <header className={`${styles.mTop} ${styles.aTop}`}><Logo dark size={17} href="/admin" /><Badge tone="violet">Owner admin</Badge></header>
         <main id="main" className={styles.mMain}>{children}</main>
         <nav className={`${styles.mTabs} ${styles.aTabs}`} aria-label="Admin">
           {ADMIN_NAV.map((it) => <Link key={it.href} href={it.href} aria-current={active === it.href ? "page" : undefined} className={`${styles.mTab} ${styles.aTab} ${active === it.href ? styles.aTabOn : ""}`}><Icon name={it.icon} size={20} />{it.label}</Link>)}
@@ -124,7 +126,7 @@ export function AdminShell({ active, children }: { active: string; children: Rea
   return (
     <div className={styles.root}>
       <aside className={`${styles.aside} ${styles.asideDark}`}>
-        <div className={styles.logo} style={{ paddingBottom: 6 }}><Logo dark /></div>
+        <div className={styles.logo} style={{ paddingBottom: 6 }}><Logo dark href="/admin" /></div>
         <div style={{ padding: "0 8px 20px" }}><Badge tone="violet">Owner admin</Badge></div>
         <nav aria-label="Admin" className={styles.nav}>
           {ADMIN_NAV.map((it) => <Link key={it.href} href={it.href} aria-current={active === it.href ? "page" : undefined} className={`${styles.navItem} ${styles.navDark} ${active === it.href ? styles.navDarkOn : ""}`}><Icon name={it.icon} size={20} />{it.label}</Link>)}

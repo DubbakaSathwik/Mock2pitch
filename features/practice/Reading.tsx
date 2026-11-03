@@ -58,13 +58,13 @@ export function Reading() {
   const retryLabel = retrying ? "Trying again…" : waitS > 0 ? `Try again in ${waitS} s` : "Try again";
   const retryUi = retryErr ? errorUi(retryErr.code, retryErr.details) : null;
   return (
-    <FlowShell step="upload">
+    <FlowShell step="details" back={{ href: "/practice/new", label: "Back to upload" }}>
       <div className={styles.wrap} style={{ paddingTop: compact ? 8 : 40 }}>
         <div className={styles.badge}><AIBadge>AI is reading your slides</AIBadge></div>
         <H l={1}><span aria-live="polite">{failed || unfinished ? "We couldn't finish reading" : `${stage}…`}</span></H>
         <P style={{ margin: "8px 0 24px" }}>{failed || unfinished ? "Nothing extra was used up." : "This takes a few seconds."}</P>
         {error && <div className={styles.msg}><ErrorNotice title="We lost the connection" body="Check your connection. We'll keep trying." /></div>}
-        {failed && !unfinished && ui?.kind === "inline" && <div className={styles.msg}><ErrorNotice title={ui.title} body={ui.body} onRetry={ui.retry ? () => void retry() : undefined} retryLabel={retryLabel} retryDisabled={retrying || waitS > 0} /></div>}
+        {failed && !unfinished && ui?.kind === "inline" && <div className={styles.msg}><ErrorNotice title={ui.title} body={ui.body} onRetry={ui.retry ? () => void retry() : undefined} retryLabel={retryLabel} retryDisabled={waitS > 0} retryLoading={retrying} /></div>}
         {failed && !unfinished && ui?.kind !== "inline" && <div className={styles.msg}><ErrorNotice title="Something went wrong" body="Please try again." onRetry={() => void retry()} /></div>}
         {retryUi?.kind === "inline" && <div className={styles.msg}><Notice tone="danger" title={retryUi.title}>{retryUi.body}</Notice></div>}
         {unfinished && (

@@ -58,8 +58,8 @@ Paste this block (fill the blanks; the first group is non-secret and already cor
 ```
 R2_BUCKET=mock2pitch-dev
 APP_ALLOWED_ORIGINS=http://localhost:3000
-GEMINI_SLIDE_MODEL=gemini-flash-latest
-GEMINI_SLIDE_FALLBACK_MODEL=gemini-flash-lite-latest
+GEMINI_SLIDE_MODEL=gemini-flash-lite-latest
+GEMINI_SLIDE_FALLBACK_MODEL=gemini-flash-latest
 GEMINI_KEY_RPM_SOFT_LIMIT=30
 NVIDIA_REPORT_MODEL=nvidia/nemotron-3-ultra-550b-a55b
 NVIDIA_ASR_MODEL_LABEL=parakeet-tdt-0.6b-v2

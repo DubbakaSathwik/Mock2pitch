@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { Suspense, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { makeQueryClient } from "@/lib/query";
 import { ToastProvider, useToast } from "@/components/ds/Toast";
 import { CompactProvider } from "@/components/app/Compact";
+import { NavProgress } from "@/components/app/NavProgress";
 import { consumeFlash } from "@/lib/flash";
 
 // Dev-only: the dead branch (and the import) is removed from production bundles because NODE_ENV is inlined at build time.
@@ -27,6 +28,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={client}>
       <CompactProvider>
         <ToastProvider>
+          <Suspense fallback={null}><NavProgress /></Suspense>
           {children}
           <FlashToast />
           {MockPanel && <MockPanel />}

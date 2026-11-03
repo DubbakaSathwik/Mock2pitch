@@ -158,3 +158,37 @@ describe("service functions", () => {
     expect(r).toMatchObject({ used_credits: 2, requests_last_60s: 2, credit_limit: 1000, cooldown_until: null });
   });
 });
+
+describe("deck details columns (audience / goal / abstract / target_minutes)", () => {
+  const deckSql = (cols: string, vals: string) => `insert into public.decks(owner_id,title,original_filename,status${cols}) values ($1,'t','t.pdf','awaiting_images'${vals})`;
+  it("all optional: a deck without details is valid; fixed audiences carry no free text; 'others' needs it", async () => {
+    const u = await readyStudent(db, "dd1@example.test");
+    await db.admin.query(deckSql("", ""), [u]);
+    await db.admin.query("update public.decks set status='failed' where owner_id=$1", [u]); // keep the one-active-deck index free
+    await db.admin.query(deckSql(",audience,target_minutes", ",'jury',7"), [u]);
+    await db.admin.query("update public.decks set status='failed' where owner_id=$1", [u]);
+    await db.admin.query(deckSql(",audience,audience_other", ",'others','Rotary club'"), [u]);
+    await db.admin.query("update public.decks set status='failed' where owner_id=$1", [u]);
+    await expect(db.admin.query(deckSql(",audience", ",'others'"), [u])).rejects.toThrow(/decks_audience_other_matches/);
+    await expect(db.admin.query(deckSql(",audience,audience_other", ",'student','x'"), [u])).rejects.toThrow(/decks_audience_other_matches/);
+    await expect(db.admin.query(deckSql(",audience_other", ",'x'"), [u])).rejects.toThrow(/decks_audience_other_matches/);
+  });
+  it("limits: known audiences, minutes 1-20, goal <= 300, abstract <= 600, other <= 80 chars", async () => {
+    const u = await readyStudent(db, "dd2@example.test");
+    await expect(db.admin.query(deckSql(",audience", ",'boss'"), [u])).rejects.toThrow(/check constraint/);
+    await expect(db.admin.query(deckSql(",target_minutes", ",0"), [u])).rejects.toThrow(/check constraint/);
+    await expect(db.admin.query(deckSql(",target_minutes", ",21"), [u])).rejects.toThrow(/check constraint/);
+    await expect(db.admin.query(deckSql(",goal", `,'${"g".repeat(301)}'`), [u])).rejects.toThrow(/check constraint/);
+    await expect(db.admin.query(deckSql(",abstract", `,'${"a".repeat(601)}'`), [u])).rejects.toThrow(/check constraint/);
+    await expect(db.admin.query(deckSql(",audience,audience_other", `,'others','${"o".repeat(81)}'`), [u])).rejects.toThrow(/check constraint/);
+    await expect(db.admin.query(deckSql(",goal", ",''"), [u])).rejects.toThrow(/check constraint/);
+  });
+  it("students can read their details but cannot write them (only the Edge Function can)", async () => {
+    const u = await readyStudent(db, "dd3@example.test");
+    const id = (await db.admin.query(deckSql(",audience,target_minutes,goal", ",'teachers',9,'Teach'") + " returning id", [u])).rows[0].id;
+    const row = (await db.q(u, "select audience, target_minutes, goal from public.decks where id=$1", [id]))[0];
+    expect(row).toEqual({ audience: "teachers", target_minutes: 9, goal: "Teach" });
+    await expect(db.q(u, "update public.decks set audience='jury' where id=$1", [id])).rejects.toThrow(/permission denied/);
+    await expect(db.q(u, "update public.decks set target_minutes=1 where id=$1", [id])).rejects.toThrow(/permission denied/);
+  });
+});

@@ -1,6 +1,6 @@
 // Types of the data port. Row types come from the generated database types; composed shapes mirror docs/phase-1/api-contracts.md.
 import type { Database } from "@/types/database";
-import type { Purpose, Slot } from "@shared/constants.ts";
+import type { Audience, Purpose, Slot } from "@shared/constants.ts";
 
 type T = Database["public"]["Tables"];
 export type ProfileRow = T["profiles"]["Row"];
@@ -40,6 +40,8 @@ export type SignedUpload = { url: string; method: "PUT"; headers: Record<string,
 export type UploadInit = { deck_id: string; upload: SignedUpload };
 export type SlideImageRules = { max_width: number; min_width: number; jpeg_quality: number; min_jpeg_quality: number; max_bytes: number; content_type: "image/jpeg" };
 export type UploadComplete = { deck_id: string; page_count: number; images: { slide_index: number; upload: SignedUpload }[]; rules: SlideImageRules };
+/** Answers from the Details step, sent with the first deck-process call (see supabase/functions/_shared/schemas.ts deckDetailsIn). */
+export type DeckDetails = { audience: Audience; audience_other?: string; goal?: string; abstract?: string; total_minutes: number };
 export type ProcessResult = { deck_id: string; status: "processing" | "ready" };
 export type AssetKind = "slide_image" | "deck_pdf";
 export type AssetUrls = { deck_id: string; expires_at: string; files: { kind: AssetKind; slide_index: number | null; url: string }[] };
@@ -119,7 +121,8 @@ export interface DecksPort {
 export interface UploadPort {
   init(input: { filename: string; size_bytes: number; content_type: string }): Promise<UploadInit>;
   complete(deckId: string): Promise<UploadComplete>;
-  process(deckId: string): Promise<ProcessResult>;
+  /** Starts reading the slides. `details` (audience, goal, summary, time) accompany the FIRST start; a retry after a failure sends none and the stored ones are reused. */
+  process(deckId: string, details?: DeckDetails): Promise<ProcessResult>;
 }
 export interface SessionsPort {
   start(deckId: string, totalMinutes: number): Promise<SessionRow>;

@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { control, fixture, micGate, seed } from "./helpers";
+import { control, fixture, micGate, seed, submitDetails } from "./helpers";
 
 test("3. retake: report → retake (cost note) → report with delta; history, pin and deck detail", async ({ page }) => {
   test.setTimeout(240_000);
@@ -9,6 +9,7 @@ test("3. retake: report → retake (cost note) → report with delta; history, p
   // upload a second deck so pin ordering is visible
   await page.goto("/practice/new");
   await page.getByTestId("file-input").setInputFiles(fixture("deck-3.pdf"));
+  await submitDetails(page);
   await expect(page).toHaveURL(/\/prepare/, { timeout: 60_000 });
 
   // History: new deck first, ParkSense second → pin ParkSense → it moves first, toasts both ways

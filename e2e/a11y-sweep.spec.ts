@@ -3,7 +3,7 @@
 import path from "node:path";
 import type { Browser, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
-import { axeCheck, fixture, noHScroll, type Persona } from "./helpers";
+import { axeCheck, fixture, noHScroll, submitDetails, type Persona } from "./helpers";
 
 const VIEWPORTS = [{ name: "desktop", width: 1280, height: 800 }, { name: "mobile", width: 390, height: 844 }];
 type Finding = { screen: string; viewport: string; bad: unknown[] };
@@ -75,6 +75,9 @@ for (const vp of VIEWPORTS) {
       await page.getByTestId("file-input").setInputFiles(fixture("deck-11.pdf"));
       await check(page, found, "S6 upload (error)", v, () => expect(page.getByTestId("upload-error")).toBeVisible());
       await page.getByTestId("file-input").setInputFiles(fixture("deck-3.pdf"));
+      await page.waitForURL(/\/details/, { timeout: 60_000 });
+      await check(page, found, "S6b details", v, () => expect(page.getByRole("heading", { level: 1, name: "About your presentation" })).toBeVisible());
+      await submitDetails(page);
       await page.waitForURL(/\/reading|\/prepare/, { timeout: 60_000 });
       if (/reading/.test(page.url())) await check(page, found, "S7 reading", v, () => expect(page.getByRole("heading", { level: 1 })).toBeVisible());
       await page.waitForURL(/\/prepare/, { timeout: 60_000 });

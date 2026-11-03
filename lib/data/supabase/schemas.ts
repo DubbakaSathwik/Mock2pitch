@@ -17,6 +17,9 @@ export const policyRow = z.object({ id: z.string(), version_label: z.string(), t
 export const deckRow = z.object({
   id: z.string(), owner_id: z.string(), title: z.string(), original_filename: z.string(), page_count: nnum, status: z.string(), processing_stage: z.string().nullable(),
   processed_slides: num, error_code: z.string().nullable(), pinned_at: z.string().nullable(), created_at: iso, updated_at: iso,
+  // Details step answers (null for decks created before it)
+  audience: z.string().nullable().optional(), audience_other: z.string().nullable().optional(), goal: z.string().nullable().optional(),
+  abstract: z.string().nullable().optional(), target_minutes: z.number().nullable().optional(),
 }).passthrough();
 export const slideRow = z.object({
   id: z.string(), deck_id: z.string(), slide_index: num, title: z.string().nullable(), extracted_text: z.string().nullable(), key_points: strArr, suggested_script: z.string().nullable(),

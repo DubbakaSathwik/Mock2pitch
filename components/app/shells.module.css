@@ -51,7 +51,15 @@
   .dot{width:22px;height:22px}
   .flowMain{padding:16px}
   .stepper{gap:4px}
+  .step{gap:0}
   .center{padding:20px}
   .head{flex-direction:column;align-items:stretch}
   .headTitle{font-size:26px}
+}
+
+/* Five steps (Upload, Details, Prepare, Time, Mic check) plus the logo and the exit button must fit 320 px wide. */
+@container app (max-width:359.98px){
+  .flowBar{padding:0 4px 0 8px;gap:4px}
+  .dot{width:20px;height:20px;font-size:11px}
+  .stepper{gap:2px}
 }

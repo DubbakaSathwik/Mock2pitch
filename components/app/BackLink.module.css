@@ -1,0 +1,2 @@
+.back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 8px 0 2px;margin:0 0 8px -2px;color:var(--imperial-blue);font-family:var(--font-display);font-size:15px;text-decoration:none;border-radius:var(--radius-pill)}
+.back:hover{color:var(--bright-marine);text-decoration:none;background:var(--ink-100)}

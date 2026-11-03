@@ -157,7 +157,7 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
     upload: {
       init: async (input) => parse(S.uploadInit, await t.fn("deck-upload-init", input), "deck-upload-init") as never,
       complete: async (deckId) => parse(S.uploadComplete, await t.fn("deck-upload-complete", { deck_id: deckId }), "deck-upload-complete") as never,
-      process: async (deckId) => parse(S.processResult, await t.fn("deck-process", { deck_id: deckId }), "deck-process") as never,
+      process: async (deckId, details) => parse(S.processResult, await t.fn("deck-process", details ? { deck_id: deckId, details } : { deck_id: deckId }), "deck-process") as never,
     },
 
     sessions: {

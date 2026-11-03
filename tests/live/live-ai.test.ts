@@ -4,12 +4,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { routeCall, type RouterStore, type SlotState, type UsageEntry } from "@shared/nvidia/router.ts";
 import { chatText, chatTransport, parseJsonLoose } from "@shared/nvidia/chat.ts";
-import { readSlide } from "@shared/ai/slide.ts";
+import { readSlides } from "@shared/ai/deck.ts";
 import { generateReport } from "@shared/ai/report.ts";
 import { recognizePcm } from "@shared/riva/client.ts";
 import { grpcAsr } from "@shared/ai/asr-grpc.ts";
 import { transcribePcm } from "@shared/ai/asr.ts";
-import { slideReadingOut } from "@shared/schemas.ts";
 import type { Deps } from "@shared/deps.ts";
 
 const live = process.env.RUN_LIVE_AI_TESTS === "1";
@@ -35,13 +34,15 @@ const deps = () => ({
 }) as unknown as Deps;
 
 describe.skipIf(!live)("live Gemini + NVIDIA", () => {
-  it("slide_reading: a real slide image becomes a valid structured slide", async () => {
+  it("slide_reading: real slide images become a valid structured reading for the audience, with time shared across the deck", async () => {
     const store = new MemStore();
-    const out = await readSlide(deps(), store, fx("slide-1.jpg"), { userId: "u", deckId: "d" });
-    expect(slideReadingOut.safeParse(out).success).toBe(true);
-    expect(out.key_points.length).toBeGreaterThanOrEqual(1);
-    expect(store.logs[0]).toMatchObject({ purpose: "slide_reading", outcome: "success", slotId: "primary" });
-  }, 120_000);
+    const images = ["slide-1.jpg", "slide-2.jpg", "slide-3.jpg"].map((f, index) => ({ index, jpeg: fx(f) }));
+    const out = await readSlides(deps(), store, images, { audience: "jury", goal: "Win the hackathon", abstract: "A parking-sensor startup.", total_minutes: 3 }, 3, { userId: "u", deckId: "d" });
+    expect([...out.keys()]).toEqual([0, 1, 2]);
+    for (const r of out.values()) { expect(r.key_points.length).toBeGreaterThanOrEqual(1); expect(r.weight).toBeGreaterThanOrEqual(1); }
+    expect(store.logs.filter((l) => l.outcome === "success").length).toBeGreaterThanOrEqual(1);
+    expect(store.logs[0]).toMatchObject({ purpose: "slide_reading", slotId: "primary" });
+  }, 180_000);
 
   it("report_generation: returns schema-valid JSON for realistic input", async () => {
     const store = new MemStore();

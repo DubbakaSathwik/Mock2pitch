@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 export const fixture = (name: string) => path.resolve("tests/fixtures", name);
@@ -50,4 +50,16 @@ export async function axeCheck(page: Page, label: string) {
 /** No horizontal scroll at the given width. */
 export async function noHScroll(page: Page) {
   return page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
+}
+
+/** The Details step (after the upload): who the talk is for, optional goal and summary, and the time. Then "Read my slides". */
+export async function submitDetails(page: Page, o: { audience?: "student" | "teachers" | "jury" | "others"; other?: string; goal?: string; abstract?: string; minutes?: number } = {}) {
+  await expect(page).toHaveURL(/\/practice\/[^/]+\/details/, { timeout: 60_000 });
+  await expect(page.getByRole("heading", { level: 1, name: "About your presentation" })).toBeVisible();
+  await page.getByLabel("Who are you presenting to?").selectOption(o.audience ?? "student");
+  if (o.other !== undefined) await page.getByLabel("Describe your audience").fill(o.other);
+  if (o.goal !== undefined) await page.getByLabel(/Goal of your presentation/).fill(o.goal);
+  if (o.abstract !== undefined) await page.getByLabel(/Short summary of your presentation/).fill(o.abstract);
+  if (o.minutes !== undefined) await page.getByLabel("Total time (minutes)").fill(String(o.minutes));
+  await page.getByRole("button", { name: "Read my slides" }).click();
 }

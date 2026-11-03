@@ -1,6 +1,6 @@
 // Zod schemas: Edge Function inputs (strict: unknown fields rejected) and AI outputs.
 import { z } from "zod";
-import { MAX_CLIP_BYTES, MAX_PDF_BYTES, MAX_SLIDES } from "./constants.ts";
+import { AUDIENCES, MAX_ABSTRACT_CHARS, MAX_ABSTRACT_WORDS, MAX_AUDIENCE_OTHER_CHARS, MAX_CLIP_BYTES, MAX_GOAL_CHARS, MAX_PDF_BYTES, MAX_SLIDES, MAX_TOTAL_MINUTES, MIN_TOTAL_MINUTES } from "./constants.ts";
 
 const uuid = z.string().uuid();
 const slideIndex = z.number().int().min(0).max(MAX_SLIDES - 1);
@@ -12,6 +12,24 @@ export const deckUploadInitIn = z.object({
 }).strict();
 
 export const deckIdIn = z.object({ deck_id: uuid }).strict();
+
+export const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
+/** Optional free text from the student: trimmed, empty -> undefined, length-limited. It is DATA for the prompt, never instructions. */
+const optionalText = (max: number) => z.string().trim().max(max).optional().transform((v) => (v ? v : undefined));
+
+/** Presentation details from the Details step (audience / goal / summary / time). Sent with the first deck-process call. */
+export const deckDetailsIn = z.object({
+  audience: z.enum(AUDIENCES),
+  audience_other: optionalText(MAX_AUDIENCE_OTHER_CHARS),
+  goal: optionalText(MAX_GOAL_CHARS),
+  abstract: optionalText(MAX_ABSTRACT_CHARS).refine((v) => v === undefined || countWords(v) <= MAX_ABSTRACT_WORDS, { message: `at most ${MAX_ABSTRACT_WORDS} words` }),
+  total_minutes: z.number().int().min(MIN_TOTAL_MINUTES).max(MAX_TOTAL_MINUTES),
+}).strict().superRefine((d, ctx) => {
+  if (d.audience === "others" && !d.audience_other) ctx.addIssue({ code: "custom", path: ["audience_other"], message: "describe the audience" });
+}).transform((d) => ({ ...d, audience_other: d.audience === "others" ? d.audience_other : undefined }));
+export type DeckDetailsIn = z.infer<typeof deckDetailsIn>;
+
+export const deckProcessIn = z.object({ deck_id: uuid, details: deckDetailsIn.optional() }).strict();
 
 export const assetUrlsIn = z.object({
   deck_id: uuid,
@@ -40,6 +58,24 @@ export const slideReadingOut = z.object({
   time_weight: z.coerce.number().nullish().transform((n) => Math.min(100, Math.max(1, Math.round(Number.isFinite(n as number) ? (n as number) : 10)))),
 });
 export type SlideReadingOut = z.infer<typeof slideReadingOut>;
+
+/** One slide of a whole-deck (or batch) reading. Smaller models rename fields and drop optional ones, so everything but the key points is lenient. */
+const deckSlideOut = z.preprocess(
+  (o) => (o && typeof o === "object" && (o as Record<string, unknown>).script === undefined && (o as Record<string, unknown>).suggested_script !== undefined
+    ? { ...(o as Record<string, unknown>), script: (o as Record<string, unknown>).suggested_script } : o),
+  z.object({
+    slide_no: z.coerce.number().int().min(1),
+    title: lenientText(120),
+    slide_text: lenientText(4000, false),
+    key_points: slideReadingOut.shape.key_points,
+    script: lenientText(1500),
+    seconds: z.coerce.number().nullish().transform((n) => (n != null && Number.isFinite(n) && n > 0 ? Math.min(1200, Math.round(n)) : null)),
+  }),
+);
+/** `{ "slides": [...] }`; a bare array is accepted too. */
+export const deckReadingOut = z.preprocess((o) => (Array.isArray(o) ? { slides: o } : o), z.object({ slides: z.array(deckSlideOut).min(1) }));
+export type DeckReadingOut = z.infer<typeof deckReadingOut>;
+export type DeckSlideOut = DeckReadingOut["slides"][number];
 
 export const BLANK_SLIDE: SlideReadingOut = {
   title: "", slide_text: "", key_points: ["Introduce this slide"], suggested_script: "", time_weight: 10,

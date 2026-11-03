@@ -90,7 +90,7 @@ function adminRatings(st: StudentSeed[]): MockState["adminRatings"] {
 /** ParkSense with two reports (62 → 74), as in the design. */
 function parksenseHistory(ownerId: string, sessionsToday: number) {
   const created = "2026-10-02T09:30:00Z";
-  const deck: DeckRow = { id: DECK_ID, owner_id: ownerId, title: PARKSENSE_TITLE, original_filename: "ParkSense-pitch.pdf", page_count: 8, status: "ready", processing_stage: null, processed_slides: 8, error_code: null, pinned_at: null, created_at: created, updated_at: created };
+  const deck: DeckRow = { id: DECK_ID, owner_id: ownerId, title: PARKSENSE_TITLE, original_filename: "ParkSense-pitch.pdf", page_count: 8, status: "ready", processing_stage: null, processed_slides: 8, error_code: null, pinned_at: null, created_at: created, updated_at: created, audience: null, audience_other: null, goal: null, abstract: null, target_minutes: null };
   const slides: SlideRow[] = PARKSENSE.map((s, i) => ({ id: `${DECK_ID}-s${i}`, deck_id: DECK_ID, slide_index: i, title: s.title, extracted_text: [s.title, ...s.bullets].join("\n"), key_points: s.keyPoints, suggested_script: s.script, time_weight: s.weight, image_file_id: `seed-${i}`, created_at: created, updated_at: created }));
   const sessions: SessionRow[] = []; const results: ResultRow[] = []; const reports: ReportRow[] = [];
   const sugg = PARKSENSE.map((s) => s.weight); // 5:00 → seconds == weight (weights sum to 300)
@@ -125,7 +125,7 @@ export function seedState(persona: PersonaId): MockState {
     policies: pol, acceptedPolicyIds: [], decks: [], slides: [], sessions: [], results: [], reports: [], ratings: [], usageEvents: [], uploads: {}, clips: {}, seededImages: {},
     students: stu, adminRatings: adminRatings(stu), sessionsPerDay: [...[18, 24, 22, 31, 28, 35, 41, 38, 46, 52, 49, 58, 61, 66]],
     aiSlots: aiSlots(), aiPerDay: structuredClone(AI_PER_DAY_SEED),
-    aiModels: { slide_reading: "gemini-flash-latest", speech_to_text: "parakeet-tdt-0.6b-v2", report_generation: "nvidia/nemotron-3-ultra-550b-a55b" },
+    aiModels: { slide_reading: "gemini-flash-lite-latest", speech_to_text: "parakeet-tdt-0.6b-v2", report_generation: "nvidia/nemotron-3-ultra-550b-a55b" },
     fail: null, nextSignIn: "new_student",
   };
   const onboarded = (p: ProfileRow): ProfileRow => ({ ...p, college: "RV Institute of Technology", year: "3rd year", branch: "CSE", profile_completed_at: hoursAgo(24 * 20) });

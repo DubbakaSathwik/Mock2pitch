@@ -51,7 +51,8 @@ Validates the stored file. On success **consumes one daily session** and returns
 ```
 Idempotent while the deck is `awaiting_images` (re-issues URLs). Failures delete the object and set `decks.status='failed'` with the code in `decks.error_code`; nothing is consumed.
 
-### `deck-process` — `{ deck_id }`
+### `deck-process` — `{ deck_id, details? }`
+`details` (optional, first start only): `{ audience: "student"|"teachers"|"jury"|"others", audience_other?: ≤80 chars (required for others), goal?: ≤300 chars, abstract?: ≤50 words, total_minutes: 1-20 }`. Stored on the deck and reused by retries; invalid details are a 400. See `docs/phase-5/deck-details.md`.
 After all images are uploaded. `202 { deck_id, status: 'processing' }` (work continues in the background); `200 { status: 'ready' }` if already done. Retry after `ai_unavailable` or `misconfigured` (the configured slide model was retired: HTTP 404/410, owner must fix the Gemini secret) by calling again. Watch `decks.status`, `processed_slides`, `processing_stage`.
 
 ### `asset-urls` — `{ deck_id, kinds: ['slide_image','deck_pdf'] }`

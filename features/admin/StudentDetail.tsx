@@ -46,7 +46,7 @@ export function StudentDetail() {
                 <Muted>{d.profile.email}</Muted>
                 <Muted>{[d.profile.college, d.profile.year, d.profile.branch].filter(Boolean).join(" · ")}</Muted>
               </div>
-              <Button variant={d.profile.is_blocked ? "primary" : "secondary"} iconLeft={d.profile.is_blocked ? "check" : "ban"} disabled={block.isPending} onClick={toggle}>{d.profile.is_blocked ? "Unblock" : "Block student"}</Button>
+              <Button variant={d.profile.is_blocked ? "primary" : "secondary"} iconLeft={d.profile.is_blocked ? "check" : "ban"} loading={block.isPending} onClick={toggle}>{d.profile.is_blocked ? "Unblock" : "Block student"}</Button>
             </div>
           </Card>
           <div className={styles.grid} style={{ gridTemplateColumns: compact ? "minmax(0,1fr)" : "minmax(0,1.2fr) minmax(0,1fr)" }}>

@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ds/Badge";
 import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
@@ -20,11 +19,12 @@ import { toAppError } from "@/lib/data/errors";
 import { formatDate, plural } from "@/lib/format";
 import { scoreColor } from "@/lib/score";
 import styles from "./History.module.css";
+import { useGo } from "@/lib/use-go";
 
 /** S15 History: deck cards, pinned decks first. */
 export function History() {
   const compact = useCompact();
-  const router = useRouter();
+  const nav = useGo();
   const { toast } = useToast();
   const decks = useDecks();
   const pin = usePinDeck();
@@ -36,7 +36,7 @@ export function History() {
     });
   const ui = decks.error ? errorUi(toAppError(decks.error).code) : null;
   return (
-    <StudentShell active="history">
+    <StudentShell active="history" back={{ href: "/dashboard", label: "Back to dashboard" }}>
       <Head title="History" sub="Your reports, grouped by deck. Audio is never kept." />
       {decks.isPending ? <Card padding={24}><Skeleton h={48} /></Card>
         : ui?.kind === "inline" ? <ErrorNotice title={ui.title} body={ui.body} onRetry={() => decks.refetch()} />
@@ -45,7 +45,7 @@ export function History() {
             <div className={styles.tileRow}><Tile icon="history" size={56} /></div>
             <H l={2}>No reports yet</H>
             <P style={{ margin: "8px 0 18px" }}>Your reports will show up here after your first practice.</P>
-            <Button disabled={start.blocked} onClick={() => router.push(start.href)}>Start a new practice</Button>
+            <Button disabled={start.blocked} loading={nav.pending} onClick={() => nav.go(start.href)}>Start a new practice</Button>
             {start.blocked && <Muted style={{ marginTop: 10 }}>Your account is paused, so new practice is unavailable.</Muted>}
           </Card>
         ) : (

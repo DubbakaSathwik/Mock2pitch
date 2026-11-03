@@ -17,6 +17,7 @@ import { useDeck, useSlideImages } from "@/features/decks/queries";
 import { errorUi } from "@/features/errors/map";
 import { toAppError } from "@/lib/data/errors";
 import styles from "./Prep.module.css";
+import { useGo } from "@/lib/use-go";
 
 /** S8 Slide prep: study material only (thumb rail, slide, key points, suggested script). ←/→ change slide. */
 export function Prep() {
@@ -42,7 +43,8 @@ export function Prep() {
   const ui = deck.error ? errorUi(toAppError(deck.error).code) : null;
   const s = slides[sel];
   const secs = slides.length ? suggestedSeconds(5, slides.map((x) => x.time_weight))[sel] ?? 0 : 0;
-  const next = () => router.push(`/practice/${deckId}/time`);
+  const nav = useGo();
+  const next = () => nav.go(`/practice/${deckId}/time`);
 
   const kp = s && (
     <Card padding={20} aria-label="Key points">
@@ -64,8 +66,8 @@ export function Prep() {
     </button>
   ));
   return (
-    <FlowShell step="prep" wide>
-      <Head title="Prepare your slides" sub="Study material only. Your slides stay exactly as you uploaded them." right={!compact && <Button iconRight="arrow-right" onClick={next}>Continue to set time</Button>} />
+    <FlowShell step="prep" wide back={{ href: "/practice/new", label: "Upload a different deck" }}>
+      <Head title="Prepare your slides" sub="Study material only. Your slides stay exactly as you uploaded them." right={!compact && <Button iconRight="arrow-right" loading={nav.pending} onClick={next}>Continue to set time</Button>} />
       {deck.isPending ? <Skeleton h={360} r={16} /> : ui?.kind === "inline" ? <ErrorNotice title={ui.title} body={ui.body} onRetry={() => deck.refetch()} />
         : !s ? <Muted>No slides were found for this deck.</Muted>
         : compact ? (
@@ -74,7 +76,7 @@ export function Prep() {
             <div className={styles.hscroll}>{thumbs}</div>
             <Tabs variant="pill" items={[{ value: "kp", label: "Key points" }, { value: "sc", label: "Script" }]} value={tab} onChange={setTab} label="Study notes" />
             {tab === "kp" ? kp : script}
-            <Button fullWidth size="lg" onClick={next}>Continue to set time</Button>
+            <Button fullWidth size="lg" loading={nav.pending} onClick={next}>Continue to set time</Button>
           </div>
         ) : (
           <div className={styles.desktop}>

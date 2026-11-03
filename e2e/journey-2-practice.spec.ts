@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./fixtures";
-import { axeCheck, control, fixture, micGate, seed } from "./helpers";
+import { axeCheck, control, fixture, micGate, seed, submitDetails } from "./helpers";
 
 const mobile = (page: Page) => (page.viewportSize()?.width ?? 1280) < 760;
 
@@ -14,6 +14,9 @@ test("2. first practice: upload → reading → prep → time → mic → room �
   await expect(page.getByRole("heading", { level: 1, name: "Upload your slides" })).toBeVisible();
   await expect(page.getByText("Using PowerPoint? Choose File → Save as PDF, then upload it here.")).toBeVisible();
   await page.getByTestId("file-input").setInputFiles(fixture("deck-3.pdf"));
+  // S6b: the Details step; required fields are audience and time, the rest is optional
+  await expect(page).toHaveURL(/\/practice\/[^/]+\/details/, { timeout: 60_000 });
+  await submitDetails(page, { audience: "jury", goal: "Win the hackathon", abstract: "A parking app for campuses.", minutes: 7 });
   await expect(page).toHaveURL(/\/practice\/[^/]+\/reading/, { timeout: 60_000 });
   await expect(page).toHaveURL(/\/practice\/[^/]+\/prepare/, { timeout: 60_000 });
 
@@ -30,9 +33,10 @@ test("2. first practice: upload → reading → prep → time → mic → room �
   await page.getByRole("button", { name: /^Slide 2/ }).first().click();
   await page.getByRole("button", { name: "Continue to set time" }).click();
 
-  // S9: 0 and 21 are rejected, preset 5, then 1 minute (so the per-slide time is short enough to overrun in the test)
+  // S9: starts from the 7 minutes chosen on the Details step; 0 and 21 are rejected, preset 5, then 1 minute (so the per-slide time is short enough to overrun in the test)
   await expect(page).toHaveURL(/\/time/);
   const input = page.getByLabel("Total duration (minutes)");
+  await expect(input).toHaveValue("7");
   await input.fill("0");
   await expect(page.getByText("Enter at least 1 minute")).toBeVisible();
   await expect(page.getByRole("button", { name: "Continue to mic check" })).toBeDisabled();

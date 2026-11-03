@@ -35,6 +35,9 @@ export type RouteOptions<T> = {
   sleep?: (ms: number) => Promise<void>;
   /** Parse/validate the body. Throw to signal invalid model output (billable, not rotated). */
   validate: (body: unknown) => T;
+  /** Cool a key down after a transient 5xx / network error / timeout (default true). Slide reading turns this off: Gemini 503s are per-MODEL overload, so
+   *  locking the key for 30 s would also block the fallback model that is about to be tried. 429 and auth cool-downs always apply. */
+  cooldownOnTransient?: boolean;
 };
 
 export class InvalidOutputError extends AppError {
@@ -89,7 +92,7 @@ export async function routeCall<T>(o: RouteOptions<T>): Promise<T> {
         const kind = e instanceof TransportError ? e.kind : "network";
         await o.store.log({ ...base, outcome: kind === "timeout" ? "timeout" : "server_error", httpStatus: null, latencyMs: Date.now() - t0 });
         if (isLast && attempt === 0) { await sleep(SAME_KEY_RETRY_DELAY_MS); continue; }
-        await o.store.setCooldown(st.id, new Date(now().getTime() + COOLDOWN_5XX_S * 1000), kind);
+        if (o.cooldownOnTransient !== false) await o.store.setCooldown(st.id, new Date(now().getTime() + COOLDOWN_5XX_S * 1000), kind);
         break;
       }
       const latencyMs = Date.now() - t0;
@@ -125,7 +128,7 @@ export async function routeCall<T>(o: RouteOptions<T>): Promise<T> {
       // 5xx and anything else unexpected
       await o.store.log({ ...base, outcome: "server_error", httpStatus: s, latencyMs });
       if (isLast && attempt === 0) { await sleep(SAME_KEY_RETRY_DELAY_MS); continue; }
-      await o.store.setCooldown(st.id, new Date(now().getTime() + COOLDOWN_5XX_S * 1000), `http_${s}`);
+      if (o.cooldownOnTransient !== false) await o.store.setCooldown(st.id, new Date(now().getTime() + COOLDOWN_5XX_S * 1000), `http_${s}`);
       break;
     }
   }

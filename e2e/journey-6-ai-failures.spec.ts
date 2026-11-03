@@ -1,5 +1,5 @@
 import { expect, test } from "./fixtures";
-import { control, fixture, micGate, seed } from "./helpers";
+import { control, fixture, micGate, seed, submitDetails } from "./helpers";
 
 test("6a. AI busy while reading slides → Try again succeeds", async ({ page }) => {
   await seed(page, "student", { stageMs: 250 });
@@ -7,6 +7,7 @@ test("6a. AI busy while reading slides → Try again succeeds", async ({ page })
   const c = await control(page);
   await c.failNext({ kind: "deck-process", code: "ai_unavailable" });
   await page.getByTestId("file-input").setInputFiles(fixture("deck-3.pdf"));
+  await submitDetails(page);
   await expect(page).toHaveURL(/\/reading/, { timeout: 60_000 });
   await expect(page.getByText("Our AI is busy right now")).toBeVisible({ timeout: 30_000 });
   expect((await c.snapshot()).usageEvents.length).toBe(1); // nothing extra charged

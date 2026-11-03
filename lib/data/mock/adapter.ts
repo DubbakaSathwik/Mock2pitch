@@ -11,7 +11,8 @@ import type {
   UploadComplete, UploadInit, Unsubscribe,
 } from "../types";
 import { BlobStore } from "./blobs";
-import { generateAnalysis, readSlideFromText } from "./content";
+import { generateAnalysis, introFor, readSlideFromText } from "./content";
+import { deckDetailsIn } from "@shared/schemas.ts";
 import { PERSONAS, seedState, uuid, type FailPlan, type MockState, type PersonaId } from "./state";
 import { TERMS_V3 } from "./seed-content";
 
@@ -137,6 +138,7 @@ export class MockBackend {
       }
       if (!this.state.slides.some((s) => s.deck_id === deckId && s.slide_index === i)) {
         const r = readSlideFromText(texts[i] ?? null, i);
+        if (i === 0) r.script = `${introFor(this.state.user.fullName, deck.title, deck.abstract ?? null)} ${r.script}`.slice(0, 1500); // slide 1 opens with the introduction, as the real reader does
         const t = iso(this.now());
         this.state.slides.push({ id: uuid(), deck_id: deckId, slide_index: i, title: r.title, extracted_text: r.extracted_text, key_points: r.key_points, suggested_script: r.script, time_weight: r.weight, image_file_id: `up-${deckId}-${i}`, created_at: t, updated_at: t });
       }
@@ -301,7 +303,7 @@ export class MockBackend {
         if (this.state.decks.some((d) => d.owner_id === u.id && d.status === "processing")) throw new AppError("deck_in_progress", "Finish your current deck first");
         this.state.decks = this.state.decks.filter((d) => !(d.owner_id === u.id && d.status === "awaiting_upload"));
         const t = iso(this.now()); const id = uuid();
-        this.state.decks.push({ id, owner_id: u.id, title: titleFromFilename(input.filename), original_filename: input.filename, page_count: null, status: "awaiting_upload", processing_stage: null, processed_slides: 0, error_code: null, pinned_at: null, created_at: t, updated_at: t });
+        this.state.decks.push({ id, owner_id: u.id, title: titleFromFilename(input.filename), original_filename: input.filename, page_count: null, status: "awaiting_upload", processing_stage: null, processed_slides: 0, error_code: null, pinned_at: null, created_at: t, updated_at: t, audience: null, audience_other: null, goal: null, abstract: null, target_minutes: null });
         this.state.uploads[id] = { filename: input.filename, size: input.size_bytes, pageTexts: null, page_count: null };
         this.blobs.expect(`pdf/${id}`, { type: "application/pdf", size: input.size_bytes });
         this.touch();
@@ -329,7 +331,7 @@ export class MockBackend {
         this.setDeck(deck, { status: "awaiting_images", page_count: opened.pageCount, processing_stage: "Waiting for slide images", error_code: null });
         return { deck_id: deckId, page_count: opened.pageCount, images: issue(opened.pageCount), rules };
       }),
-      process: (deckId) => this.call(async (): Promise<ProcessResult> => {
+      process: (deckId, details) => this.call(async (): Promise<ProcessResult> => {
         this.assertCanPractise({ limit: false });
         const deck = this.deckOf(deckId);
         if (deck.status === "ready") return { deck_id: deckId, status: "ready" };
@@ -343,6 +345,12 @@ export class MockBackend {
           if (b.size > SLIDE_IMAGE_MAX_BYTES) throw new AppError("image_too_large", undefined, { slide_index: i });
         }
         if (missing.length) throw new AppError("images_missing", undefined, { missing });
+        // Details accompany the first start only; a retry reuses what is stored (same rule as the deck-process Edge Function).
+        if (details && deck.status === "awaiting_images") {
+          const d = deckDetailsIn.safeParse(details);
+          if (!d.success) throw new AppError("invalid_state", "Check the details and try again");
+          this.setDeck(deck, { audience: d.data.audience, audience_other: d.data.audience_other ?? null, goal: d.data.goal ?? null, abstract: d.data.abstract ?? null, target_minutes: d.data.total_minutes });
+        }
         this.setDeck(deck, { status: "processing", processing_stage: `Reading slide ${deck.processed_slides + 1} of ${deck.page_count}`, error_code: null });
         void this.runDeck(deckId);
         return { deck_id: deckId, status: "processing" };

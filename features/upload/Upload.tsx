@@ -21,7 +21,7 @@ function describe(p: UploadPhase): { title: string; pct: number; text: string } 
     case "uploading": return { title: "Uploading your PDF", pct: 5 + p.pct * 0.3, text: `Uploading your PDF… ${p.pct}%` };
     case "rendering": return { title: "Preparing your slides", pct: 35 + (p.page / p.total) * 35, text: `Preparing slide ${p.page} of ${p.total}` };
     case "sending-images": return { title: "Uploading slide images", pct: 70 + (p.total ? (p.done / p.total) * 25 : 0), text: `Uploading slide ${Math.min(p.done + 1, p.total)} of ${p.total}` };
-    case "starting": return { title: "Starting the AI reader", pct: 97, text: "Starting…" };
+    case "starting": return { title: "Almost there", pct: 97, text: "Opening the next step…" };
     default: return { title: "", pct: 0, text: "" };
   }
 }
@@ -35,7 +35,7 @@ export function Upload() {
   const pick = (f: File | undefined | null) => { if (f) void flow.start(f); };
   const d = describe(flow.phase);
   return (
-    <FlowShell step="upload">
+    <FlowShell step="upload" back={{ href: "/dashboard", label: "Back to dashboard" }}>
       <Head title="Upload your slides" sub={`PDF only, up to ${MAX_SLIDES} slides and ${MB} MB. We read each slide to suggest key points. Your slide design is never rated.`} />
       {flow.busy ? (
         <Card padding={compact ? 28 : 48} className={styles.progress} aria-live="polite" aria-busy="true" data-testid="upload-progress">
