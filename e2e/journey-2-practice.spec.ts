@@ -97,6 +97,13 @@ test("2. first practice: upload → reading → prep → time → mic → room �
   // S12 → submit
   await expect(page).toHaveURL(/\/review/);
   await expect(page.getByText("Audio is deleted from our servers once your report is generated.")).toBeVisible();
+  // playback works BEFORE submitting too: it must keep playing (a re-render used to stop it at once), and Stop ends it
+  await page.getByRole("button", { name: "Play back slide 1" }).click();
+  await expect(page.getByRole("button", { name: "Stop playback of slide 1" })).toBeVisible();
+  await page.waitForTimeout(800);
+  await expect(page.getByRole("button", { name: "Stop playback of slide 1" })).toBeVisible();
+  await page.getByRole("button", { name: "Stop playback of slide 1" }).click();
+  await expect(page.getByRole("button", { name: "Play back slide 1" })).toBeVisible();
   await page.getByRole("button", { name: "Submit for feedback" }).click();
 
   // S13 → S14
