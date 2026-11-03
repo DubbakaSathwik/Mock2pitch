@@ -1,5 +1,5 @@
 # Pull-request / main CI: typecheck, lint, unit + DB + function tests (real PostgreSQL), mock-mode Playwright (desktop, mobile, a11y, WebKit smoke),
-# production builds (mock review build and supabase build) with the bundle guards. No Supabase/R2/NVIDIA secrets are used here.
+# production builds (mock review build and supabase build) with the bundle guards. No Supabase/R2/NVIDIA/Gemini secrets are used here.
 name: CI
 on:
   pull_request:

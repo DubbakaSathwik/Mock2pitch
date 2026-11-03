@@ -4,7 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const dir = path.resolve(".next/static");
-const names = ["SERVICE_ROLE", "R2_ACCESS", "R2_SECRET", "R2_ACCOUNT", "nvapi-", "NVIDIA_", "INTERNAL_TRANSCRIBE", "INTERNAL_FUNCTION", "grpc.nvcf"];
+const names = ["SERVICE_ROLE", "R2_ACCESS", "R2_SECRET", "R2_ACCOUNT", "nvapi-", "NVIDIA_", "GEMINI_", "generativelanguage.googleapis.com", "INTERNAL_TRANSCRIBE", "INTERNAL_FUNCTION", "grpc.nvcf"];
+const googleKey = /AIza[0-9A-Za-z_-]{35}/; // shape of a Google API key (Gemini)
 const secretEnv = Object.entries(process.env).filter(([k, v]) => /SERVICE_ROLE|SECRET|_KEY|TOKEN|PASSWORD/.test(k) && !k.startsWith("NEXT_PUBLIC_") && v && v.length >= 8).map(([, v]) => v);
 const hits = [];
 (function walk(d) {
@@ -13,6 +14,7 @@ const hits = [];
     if (e.isDirectory()) walk(p);
     else if (/\.(js|css|html|json|map)$/.test(e.name)) {
       const t = fs.readFileSync(p, "utf8");
+      if (googleKey.test(t)) hits.push(`${p}: contains something shaped like a Google API key`);
       for (const n of names) if (t.includes(n)) hits.push(`${p}: contains "${n}"`);
       for (const v of secretEnv) if (t.includes(v)) hits.push(`${p}: contains a secret environment value`);
     }

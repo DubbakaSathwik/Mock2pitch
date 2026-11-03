@@ -1,4 +1,4 @@
-// Runs the real Edge Function handlers against: a real Postgres (RLS + grants), a fake S3 that verifies SigV4, a fake NVIDIA.
+// Runs the real Edge Function handlers against: a real Postgres (RLS + grants), a fake S3 that verifies SigV4, a fake NVIDIA + Gemini.
 import { randomUUID } from "node:crypto";
 import { PDFDocument } from "pdf-lib";
 import { createDb, completeProfile, acceptLatest, type Db } from "../db/harness";
@@ -17,15 +17,15 @@ export const ORIGIN = "http://localhost:3000";
 export const testEnv: Env = {
   SUPABASE_URL: "http://127.0.0.1:54321", SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service", INTERNAL_FUNCTION_SECRET: SECRET,
   APP_ALLOWED_ORIGINS: `${ORIGIN},https://m2p.netlify.app`, R2_ACCOUNT_ID: "acct", R2_ACCESS_KEY_ID: "AKIATEST", R2_SECRET_ACCESS_KEY: "sekrit", R2_BUCKET: "m2p-test",
-  NVIDIA_SLIDE_MODEL: "slide-model", NVIDIA_REPORT_MODEL: "report-model", NVIDIA_ASR_FUNCTION_ID: "fn-asr", NVIDIA_ASR_MODEL_LABEL: "parakeet-test",
+  GEMINI_SLIDE_MODEL: "slide-model", GEMINI_SLIDE_FALLBACK_MODEL: undefined, GEMINI_KEY_RPM_SOFT_LIMIT: 30, NVIDIA_REPORT_MODEL: "report-model", NVIDIA_ASR_FUNCTION_ID: "fn-asr", NVIDIA_ASR_MODEL_LABEL: "parakeet-test",
   NVIDIA_KEY_RPM_SOFT_LIMIT: 35, NVIDIA_KEY_DEFAULT_CREDIT_LIMIT: 1000,
-  NVIDIA_SLIDE_KEY_PRIMARY: "slide-k0", NVIDIA_SLIDE_KEY_FALLBACK_1: "slide-k1", NVIDIA_SLIDE_KEY_FALLBACK_2: "slide-k2",
+  GEMINI_SLIDE_KEY_PRIMARY: "slide-k0", GEMINI_SLIDE_KEY_FALLBACK_1: "slide-k1", GEMINI_SLIDE_KEY_FALLBACK_2: "slide-k2",
   NVIDIA_ASR_KEY_PRIMARY: "asr-k0", NVIDIA_ASR_KEY_FALLBACK_1: "asr-k1", NVIDIA_ASR_KEY_FALLBACK_2: "asr-k2",
   NVIDIA_REPORT_KEY_PRIMARY: "rep-k0", NVIDIA_REPORT_KEY_FALLBACK_1: "rep-k1", NVIDIA_REPORT_KEY_FALLBACK_2: "rep-k2",
   INTERNAL_TRANSCRIBE_URL: undefined, INTERNAL_TRANSCRIBE_SECRET: undefined,
 };
 
-/** Scriptable fake NVIDIA (chat + ASR). Behaviours can be overridden per test. */
+/** Scriptable fake NVIDIA + Gemini (chat + ASR). Behaviours can be overridden per test. */
 export class FakeAi {
   chatCalls: { model: string; key: string; messages: any[] }[] = [];
   asrCalls: { key: string; bytes: number }[] = [];
@@ -39,7 +39,7 @@ export class FakeAi {
   invalidReportOnce = false;
 
   fetchFn: typeof fetch = async (url, init) => {
-    if (String(url).endsWith("/v1/models")) return new Response(JSON.stringify({ data: [{ id: "slide-model" }, { id: "report-model" }] }), { status: 200 });
+    if (String(url).endsWith("/models")) return new Response(JSON.stringify({ data: [{ id: "slide-model" }, { id: "models/slide-fallback" }, { id: "report-model" }] }), { status: 200 });
     if (!init || !(init as RequestInit).body || (init as RequestInit).method === "PUT" || (init as RequestInit).method === "GET" || String(url).includes("r2") || String(url).includes("127.0.0.1")) return fetch(url, init); // storage traffic goes to the fake S3
     const body = JSON.parse(String((init as RequestInit).body));
     const key = String(((init as RequestInit).headers as Record<string, string>).Authorization).replace("Bearer ", "");

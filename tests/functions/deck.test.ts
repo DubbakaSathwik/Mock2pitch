@@ -238,6 +238,30 @@ describe("deck-process", () => {
     expect((await env.db.admin.query("select count(*)::int n from public.slides where deck_id=$1", [deckId])).rows[0].n).toBe(3);
     expect(await used(u.id)).toBe(1);
   });
+  it("retired slide model (HTTP 404) -> failed/misconfigured, not 'AI busy'; no cooldown; Try again works once the model is fixed", async () => {
+    const { u, deckId } = await readyForProcessing("p4b@example.test", 2);
+    for (const k of ["slide-k0", "slide-k1", "slide-k2"]) env.ai.chatStatus[k] = 404;
+    await env.call(deckProcess, { deck_id: deckId }, { token: u.token }); await env.settle();
+    expect(await deckRow(deckId)).toMatchObject({ status: "failed", error_code: "misconfigured" });
+    expect(await used(u.id)).toBe(1);
+    expect((await env.db.admin.query("select count(*)::int n from public.ai_key_slots where purpose='slide_reading' and cooldown_until is not null")).rows[0].n).toBe(0);
+    env.ai.chatStatus = {};
+    const retry = await env.call(deckProcess, { deck_id: deckId }, { token: u.token });
+    expect(retry.status).toBe(202); await env.settle();
+    expect(await deckRow(deckId)).toMatchObject({ status: "ready", error_code: null });
+  });
+  it("GEMINI_SLIDE_FALLBACK_MODEL is used when the primary model is gone (404), and every slide still reads", async () => {
+    const original = env.deps.env; env.ai.chatCalls.length = 0;
+    env.deps.env = { ...original, GEMINI_SLIDE_MODEL: "retired-model", GEMINI_SLIDE_FALLBACK_MODEL: "slide-model" };
+    const orig = env.ai.fetchFn;
+    env.ai.fetchFn = async (url, init) => (JSON.parse(String((init as RequestInit)?.body ?? "{}")).model === "retired-model" ? new Response("{}", { status: 404 }) : orig(url, init));
+    env.deps.fetchFn = env.ai.fetchFn;
+    const { u, deckId } = await readyForProcessing("p4c@example.test", 2);
+    await env.call(deckProcess, { deck_id: deckId }, { token: u.token }); await env.settle();
+    env.deps.env = original; env.ai.fetchFn = orig; env.deps.fetchFn = orig;
+    expect(await deckRow(deckId)).toMatchObject({ status: "ready", error_code: null });
+    expect((await env.db.admin.query("select count(*)::int n from public.slides where deck_id=$1", [deckId])).rows[0].n).toBe(2);
+  });
   it("429 on the primary key falls back to fallback_1 transparently (same model)", async () => {
     env.ai.chatCalls.length = 0; env.ai.chatStatus = { "slide-k0": 429 };
     await env.db.admin.query("update public.ai_key_slots set cooldown_until=null");

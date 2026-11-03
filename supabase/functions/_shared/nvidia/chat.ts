@@ -1,11 +1,15 @@
-// OpenAI-compatible NVIDIA chat transport (slide reading + report generation).
+// OpenAI-compatible chat transport. Report generation talks to NVIDIA; slide reading talks to Google Gemini's OpenAI-compatible endpoint
+// (pass `url: GEMINI_CHAT_URL`). Both accept `Authorization: Bearer <key>` and `image_url` data URLs.
 import { TransportError, type Transport } from "./router.ts";
 
 export const NVIDIA_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+export const GEMINI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+/** The model list lives next to the chat endpoint on both providers. */
+export const modelsUrl = (chatUrl: string) => chatUrl.replace(/\/chat\/completions$/, "/models");
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string | Array<Record<string, unknown>> };
 
-export function chatTransport(model: string, messages: ChatMessage[], opts: { maxTokens?: number; temperature?: number; json?: boolean; url?: string; fetchFn?: typeof fetch } = {}): Transport {
+export function chatTransport(model: string, messages: ChatMessage[], opts: { maxTokens?: number; temperature?: number; json?: boolean; url?: string; fetchFn?: typeof fetch; extraBody?: Record<string, unknown> } = {}): Transport {
   const f = opts.fetchFn ?? fetch;
   return async ({ key, timeoutMs }) => {
     const ctl = new AbortController();
@@ -17,6 +21,7 @@ export function chatTransport(model: string, messages: ChatMessage[], opts: { ma
         body: JSON.stringify({
           model, messages, max_tokens: opts.maxTokens ?? 2048, temperature: opts.temperature ?? 0.2, stream: false,
           ...(opts.json ? { response_format: { type: "json_object" } } : {}),
+          ...(opts.extraBody ?? {}),
         }),
         signal: ctl.signal,
       });

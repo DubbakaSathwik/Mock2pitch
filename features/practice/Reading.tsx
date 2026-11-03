@@ -12,6 +12,7 @@ import { FlowShell } from "@/components/app/shells";
 import { SlideView } from "@/components/app/SlideView";
 import { H, Muted, P } from "@/components/app/Typography";
 import { errorUi } from "@/features/errors/map";
+import { useRetryDelay } from "@/features/errors/useRetryDelay";
 import { useSlideImages } from "@/features/decks/queries";
 import { useWatch } from "@/features/realtime/useWatch";
 import { getData } from "@/lib/data";
@@ -47,10 +48,14 @@ export function Reading() {
   };
 
   const failed = deck?.status === "failed";
-  const unfinished = deck && (deck.status === "awaiting_upload" || deck.status === "awaiting_images" || (failed && !deck.page_count));
+  // A deck the sweeper timed out (upload_timeout) can never be processed again ("deck-process" refuses it), so Try again would only loop: offer a fresh upload.
+  const unfinished = deck && (deck.status === "awaiting_upload" || deck.status === "awaiting_images" || (failed && (!deck.page_count || deck.error_code === "upload_timeout")));
   const processed = deck?.processed_slides ?? 0;
   const stage = deck?.processing_stage ?? "Waiting for slide images";
   const ui = failed && deck?.error_code ? errorUi(deck.error_code as never) : null;
+  // After an "AI busy" failure the key is cooling down on the server: offering Try again at once only fails again, so count down first.
+  const waitS = useRetryDelay(failed && deck?.error_code === "ai_unavailable" ? `${attempt}` : null);
+  const retryLabel = retrying ? "Trying again…" : waitS > 0 ? `Try again in ${waitS} s` : "Try again";
   const retryUi = retryErr ? errorUi(retryErr.code, retryErr.details) : null;
   return (
     <FlowShell step="upload">
@@ -59,7 +64,7 @@ export function Reading() {
         <H l={1}><span aria-live="polite">{failed || unfinished ? "We couldn't finish reading" : `${stage}…`}</span></H>
         <P style={{ margin: "8px 0 24px" }}>{failed || unfinished ? "Nothing extra was used up." : "This takes a few seconds."}</P>
         {error && <div className={styles.msg}><ErrorNotice title="We lost the connection" body="Check your connection. We'll keep trying." /></div>}
-        {failed && !unfinished && ui?.kind === "inline" && <div className={styles.msg}><ErrorNotice title={ui.title} body={ui.body} onRetry={retrying ? undefined : () => void retry()} /></div>}
+        {failed && !unfinished && ui?.kind === "inline" && <div className={styles.msg}><ErrorNotice title={ui.title} body={ui.body} onRetry={ui.retry ? () => void retry() : undefined} retryLabel={retryLabel} retryDisabled={retrying || waitS > 0} /></div>}
         {failed && !unfinished && ui?.kind !== "inline" && <div className={styles.msg}><ErrorNotice title="Something went wrong" body="Please try again." onRetry={() => void retry()} /></div>}
         {retryUi?.kind === "inline" && <div className={styles.msg}><Notice tone="danger" title={retryUi.title}>{retryUi.body}</Notice></div>}
         {unfinished && (

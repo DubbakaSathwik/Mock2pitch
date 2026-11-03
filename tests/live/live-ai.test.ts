@@ -24,9 +24,9 @@ class MemStore implements RouterStore {
 const e = process.env as Record<string, string | undefined>;
 const deps = () => ({
   env: {
-    NVIDIA_SLIDE_MODEL: e.NVIDIA_SLIDE_MODEL ?? "meta/llama-4-maverick-17b-128e-instruct", NVIDIA_REPORT_MODEL: e.NVIDIA_REPORT_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b",
+    GEMINI_SLIDE_MODEL: e.GEMINI_SLIDE_MODEL ?? "gemini-flash-latest", GEMINI_SLIDE_FALLBACK_MODEL: e.GEMINI_SLIDE_FALLBACK_MODEL, GEMINI_KEY_RPM_SOFT_LIMIT: 30, NVIDIA_REPORT_MODEL: e.NVIDIA_REPORT_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b",
     NVIDIA_ASR_MODEL_LABEL: e.NVIDIA_ASR_MODEL_LABEL ?? "parakeet-tdt-0.6b-v2", NVIDIA_ASR_FUNCTION_ID: e.NVIDIA_ASR_FUNCTION_ID, NVIDIA_KEY_RPM_SOFT_LIMIT: 35,
-    NVIDIA_SLIDE_KEY_PRIMARY: e.NVIDIA_SLIDE_KEY_PRIMARY, NVIDIA_SLIDE_KEY_FALLBACK_1: e.NVIDIA_SLIDE_KEY_FALLBACK_1, NVIDIA_SLIDE_KEY_FALLBACK_2: e.NVIDIA_SLIDE_KEY_FALLBACK_2,
+    GEMINI_SLIDE_KEY_PRIMARY: e.GEMINI_SLIDE_KEY_PRIMARY, GEMINI_SLIDE_KEY_FALLBACK_1: e.GEMINI_SLIDE_KEY_FALLBACK_1, GEMINI_SLIDE_KEY_FALLBACK_2: e.GEMINI_SLIDE_KEY_FALLBACK_2,
     NVIDIA_REPORT_KEY_PRIMARY: e.NVIDIA_REPORT_KEY_PRIMARY, NVIDIA_REPORT_KEY_FALLBACK_1: e.NVIDIA_REPORT_KEY_FALLBACK_1, NVIDIA_REPORT_KEY_FALLBACK_2: e.NVIDIA_REPORT_KEY_FALLBACK_2,
     NVIDIA_ASR_KEY_PRIMARY: e.NVIDIA_ASR_KEY_PRIMARY, NVIDIA_ASR_KEY_FALLBACK_1: e.NVIDIA_ASR_KEY_FALLBACK_1, NVIDIA_ASR_KEY_FALLBACK_2: e.NVIDIA_ASR_KEY_FALLBACK_2,
   },
@@ -34,7 +34,7 @@ const deps = () => ({
   asr: grpcAsr({ functionId: e.NVIDIA_ASR_FUNCTION_ID ?? "" }),
 }) as unknown as Deps;
 
-describe.skipIf(!live)("live NVIDIA", () => {
+describe.skipIf(!live)("live Gemini + NVIDIA", () => {
   it("slide_reading: a real slide image becomes a valid structured slide", async () => {
     const store = new MemStore();
     const out = await readSlide(deps(), store, fx("slide-1.jpg"), { userId: "u", deckId: "d" });
@@ -61,8 +61,8 @@ describe.skipIf(!live)("live NVIDIA", () => {
     expect(store.logs[0]).toMatchObject({ purpose: "speech_to_text", outcome: "success" });
   }, 120_000);
 
-  it("raw chat transport reaches the API with each configured key", async () => {
-    for (const k of [e.NVIDIA_SLIDE_KEY_PRIMARY, e.NVIDIA_SLIDE_KEY_FALLBACK_1, e.NVIDIA_SLIDE_KEY_FALLBACK_2].filter(Boolean) as string[]) {
+  it("raw chat transport reaches the NVIDIA API with each configured report key", async () => {
+    for (const k of [e.NVIDIA_REPORT_KEY_PRIMARY, e.NVIDIA_REPORT_KEY_FALLBACK_1, e.NVIDIA_REPORT_KEY_FALLBACK_2].filter(Boolean) as string[]) {
       const model = e.NVIDIA_REPORT_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b";
       const text = await routeCall({
         purpose: "report_generation", model, keys: [{ slot: "primary", key: k }], store: new MemStore(), rpmSoftLimit: 35, timeoutMs: 60_000,

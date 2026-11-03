@@ -448,3 +448,5 @@ verify_jwt = true
 verify_jwt = false   # protected by INTERNAL_FUNCTION_SECRET (operator diagnostics; no user data)
 [functions.maintenance-sweep]
 verify_jwt = false   # protected by INTERNAL_FUNCTION_SECRET
+[functions.health]
+verify_jwt = false   # public liveness/config probe: booleans and timings only, no paid AI calls

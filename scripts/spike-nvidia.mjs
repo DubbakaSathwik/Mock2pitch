@@ -1,7 +1,8 @@
-// Phase 0 / §3 live spike: verifies the NVIDIA models, measures latency, vision input limits, JSON reliability and ASR.
+// Phase 0 / §3 live spike: verifies the NVIDIA models (report generation + speech-to-text), measures latency, JSON reliability and ASR.
+// Slide reading no longer runs on NVIDIA: it uses Google Gemini and is verified by the `gemini` ops-selftest check (see docs/phase-1/ai.md).
 // NEEDS NETWORK ACCESS TO NVIDIA AND KEYS. Usage:
-//   NVIDIA_SLIDE_KEY_PRIMARY=... NVIDIA_REPORT_KEY_PRIMARY=... NVIDIA_ASR_KEY_PRIMARY=... NVIDIA_ASR_FUNCTION_ID=... \
-//   [NVIDIA_SLIDE_MODEL=...] [NVIDIA_REPORT_MODEL=...] npx tsx scripts/spike-nvidia.mjs
+//   NVIDIA_REPORT_KEY_PRIMARY=... NVIDIA_ASR_KEY_PRIMARY=... NVIDIA_ASR_FUNCTION_ID=... \
+//   [NVIDIA_REPORT_MODEL=...] npx tsx scripts/spike-nvidia.mjs
 // Prints a Markdown report to paste into docs/phase-1/spikes.md. Never prints keys.
 import fs from "node:fs";
 import path from "node:path";
@@ -10,9 +11,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const env = process.env;
 const BASE = "https://integrate.api.nvidia.com/v1";
-const slideModel = env.NVIDIA_SLIDE_MODEL ?? "meta/llama-4-maverick-17b-128e-instruct";
 const reportModel = env.NVIDIA_REPORT_MODEL ?? "nvidia/nemotron-3-ultra-550b-a55b";
-const SLIDE_CANDIDATES = [slideModel, "nvidia/nemotron-nano-12b-v2-vl", "meta/llama-3.2-90b-vision-instruct"];
 const REPORT_CANDIDATES = [reportModel, "nvidia/nemotron-3.5-lightning-30b-a3b", "meta/llama-3.3-70b-instruct"];
 
 const pct = (xs, p) => { const s = [...xs].sort((a, b) => a - b); return s[Math.min(s.length - 1, Math.ceil((p / 100) * s.length) - 1)]; };
@@ -40,32 +39,8 @@ async function listModels(key) {
 log("# NVIDIA live spike results\n");
 log(`Run at ${new Date().toISOString()}\n`);
 
-// ---- slide reading ----
-const sk = env.NVIDIA_SLIDE_KEY_PRIMARY;
-if (!sk) log("## slide_reading\nBLOCKED: NVIDIA_SLIDE_KEY_PRIMARY not set.\n");
-else {
-  const models = await listModels(sk);
-  log("## slide_reading");
-  for (const m of SLIDE_CANDIDATES) log(`- ${m}: ${models.ids.has(m) ? "listed" : "NOT in /v1/models"}`);
-  const img = fs.readFileSync(path.join(root, "tests/fixtures/slide-1.jpg"));
-  const sys = fs.readFileSync(path.join(root, "supabase/functions/_shared/prompts/slide-reading.ts"), "utf8").match(/`([\s\S]*?)`/)[1];
-  for (const m of SLIDE_CANDIDATES.filter((m) => models.ids.has(m))) {
-    const lat = []; let valid = 0, last = null;
-    for (let i = 0; i < 5; i++) {
-      const r = await chat(sk, m, [{ role: "system", content: sys }, { role: "user", content: [{ type: "text", text: "Read this slide and return the JSON object described." }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${img.toString("base64")}` } }] }]);
-      last = r; lat.push(r.ms);
-      try { JSON.parse(r.body.choices[0].message.content.replace(/^```json|```$/g, "")); valid++; } catch { /* invalid */ }
-    }
-    log(`- **${m}**: p50 ${pct(lat, 50)} ms, p95 ${pct(lat, 95)} ms, valid JSON ${valid}/5, last status ${last.status}, usage ${JSON.stringify(last.body?.usage ?? null)}`);
-  }
-  // inline payload limit probe: grow a JPEG-like payload until the API refuses it
-  log("- inline image size probe (base64 data URL):");
-  for (const kb of [200, 500, 1000, 2000, 4000]) {
-    const pad = Buffer.concat([img, Buffer.alloc(kb * 1024)]);
-    const r = await chat(sk, slideModel, [{ role: "user", content: [{ type: "text", text: "Reply with the word ok." }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${pad.toString("base64")}` } }] }], { max_tokens: 5 });
-    log(`  - ${kb} KB: HTTP ${r.status}`);
-  }
-}
+// ---- slide reading: moved to Google Gemini (GEMINI_SLIDE_*); check it with the `gemini` ops-selftest ----
+log("## slide_reading\nNot an NVIDIA purpose any more: Gemini via its OpenAI-compatible endpoint. Run the `gemini` ops-selftest check instead.\n");
 
 // ---- report generation ----
 const rk = env.NVIDIA_REPORT_KEY_PRIMARY;

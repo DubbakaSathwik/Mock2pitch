@@ -1,4 +1,4 @@
-// Internal-only operational self-test. Runs REAL checks against the services configured for this deployment (R2, NVIDIA,
+// Internal-only operational self-test. Runs REAL checks against the services configured for this deployment (R2, NVIDIA, Gemini,
 // the database and the full deck/session pipeline with a throw-away synthetic user) and reports pass/fail per step.
 // It never returns secrets, presigned URLs or user data; details are limited to status codes, timings and synthetic content.
 import { z } from "zod";
@@ -8,7 +8,7 @@ import type { Ctx, Deps } from "../deps.ts";
 import { PURPOSES, SLIDE_IMAGE_MAX_BYTES } from "../constants.ts";
 import { keysFor, modelFor } from "../env.ts";
 import { keys } from "../r2.ts";
-import { chatText, parseJsonLoose, NVIDIA_CHAT_URL } from "../nvidia/chat.ts";
+import { chatText, parseJsonLoose, modelsUrl, GEMINI_CHAT_URL, NVIDIA_CHAT_URL } from "../nvidia/chat.ts";
 import { slideReadingOut } from "../schemas.ts";
 import { SLIDE_READING_SYSTEM, SLIDE_READING_USER } from "../prompts/slide-reading.ts";
 import { toBase64 } from "../ai/base64.ts";
@@ -19,7 +19,7 @@ import { deckProcess } from "./deck-process.ts";
 import { sessionAnalyse } from "./session-analyse.ts";
 
 const modelId = z.string().regex(/^[\w./:-]{3,100}$/);
-const bodySchema = z.object({ check: z.enum(["env", "r2", "nvidia", "nvidia_models", "nvidia_report", "nvidia_slide", "nvidia_slide_strategies", "nvidia_asr", "pipeline"]), slide_model: modelId.optional(), report_model: modelId.optional(), asr_timeout_ms: z.number().int().min(5_000).max(120_000).optional() }).strict();
+const bodySchema = z.object({ check: z.enum(["env", "r2", "nvidia", "nvidia_models", "nvidia_report", "nvidia_asr", "gemini", "gemini_models", "gemini_slide", "pipeline"]), slide_model: modelId.optional(), report_model: modelId.optional(), asr_timeout_ms: z.number().int().min(5_000).max(120_000).optional() }).strict();
 type Step = { name: string; ok: boolean; ms: number; detail?: unknown };
 
 const BUDGET_MS = 110_000; // the Edge Function wall-clock limit is ~150 s; stop starting new steps after this
@@ -48,11 +48,12 @@ export const opsSelftest = api(async (ctx) => {
   const body = await readBody(ctx.req, bodySchema);
   const { check } = body;
   // Optional model overrides let an operator try a candidate model without changing the stored secrets.
-  const deps: Deps = { ...ctx.deps, env: { ...ctx.deps.env, ...(body.slide_model ? { NVIDIA_SLIDE_MODEL: body.slide_model } : {}), ...(body.report_model ? { NVIDIA_REPORT_MODEL: body.report_model } : {}) } };
+  const deps: Deps = { ...ctx.deps, env: { ...ctx.deps.env, ...(body.slide_model ? { GEMINI_SLIDE_MODEL: body.slide_model } : {}), ...(body.report_model ? { NVIDIA_REPORT_MODEL: body.report_model } : {}) } };
   const s = new Steps();
   if (check === "env") await envCheck({ ...ctx, deps }, s);
   else if (check === "r2") await r2Check(deps, s);
-  else if (check === "nvidia" || check.startsWith("nvidia_")) await nvidiaCheck(deps, s, check === "nvidia" ? "all" : check.slice(7) as "models" | "report" | "slide" | "slide_strategies" | "asr", body.asr_timeout_ms);
+  else if (check === "nvidia" || check.startsWith("nvidia_")) await nvidiaCheck(deps, s, check === "nvidia" ? "all" : check.slice(7) as "models" | "report" | "asr", body.asr_timeout_ms);
+  else if (check === "gemini" || check.startsWith("gemini_")) await geminiCheck(deps, s, check === "gemini" ? "all" : check.slice(7) as "models" | "slide");
   else await pipelineCheck(deps, s);
   return ok({ check, ok: s.allOk, steps: s.steps });
 });
@@ -66,7 +67,7 @@ async function envCheck(ctx: Ctx, s: Steps) {
     for (const p of PURPOSES) detail[p] = keysFor(env, p).map((k) => k.slot);
     return { ok: PURPOSES.every((p) => (detail[p] ?? []).includes("primary")), detail };
   });
-  await s.run("models (after any override)", async () => ({ ok: true, detail: { slide_reading: env.NVIDIA_SLIDE_MODEL, report_generation: env.NVIDIA_REPORT_MODEL, speech_to_text: env.NVIDIA_ASR_MODEL_LABEL } }));
+  await s.run("models (after any override)", async () => ({ ok: true, detail: { slide_reading: env.GEMINI_SLIDE_MODEL, slide_reading_fallback: env.GEMINI_SLIDE_FALLBACK_MODEL ?? null, report_generation: env.NVIDIA_REPORT_MODEL, speech_to_text: env.NVIDIA_ASR_MODEL_LABEL } }));
   await s.run("database reachable and migrated", async () => {
     const { data, error } = await ctx.deps.admin.from("ai_key_slots").select("id");
     if (error) throw new Error("db_query_failed");
@@ -140,24 +141,19 @@ async function r2Check(deps: Deps, s: Steps) {
   });
 }
 
-// ---------------------------------------------------------------- NVIDIA
-const MODELS_URL = (chatUrl: string) => chatUrl.replace(/\/chat\/completions$/, "/models");
-
-async function nvidiaCheck(deps: Deps, s: Steps, part: "all" | "models" | "report" | "slide" | "slide_strategies" | "asr" = "all", asrTimeoutMs = 45_000) {
+// ---------------------------------------------------------------- NVIDIA (report generation + speech-to-text)
+async function nvidiaCheck(deps: Deps, s: Steps, part: "all" | "models" | "report" | "asr" = "all", asrTimeoutMs = 45_000) {
   const { env } = deps;
   const want = (p: string) => part === "all" || part === p;
   // every upstream call gets its own timeout so a slow model cannot hang the whole check
   const fetchFn: typeof fetch = (input, init) => deps.fetchFn(input, { ...(init ?? {}), signal: AbortSignal.timeout(40_000) });
-  const jpeg = fromB64(SLIDE_JPEG_B64);
 
-  const listed = new Map<string, Set<string>>(); // key -> ids
-  for (const purpose of want("models") ? PURPOSES : []) {
+  for (const purpose of want("models") ? (["report_generation", "speech_to_text"] as const) : []) {
     for (const { slot, key } of keysFor(env, purpose)) {
       await s.run(`${purpose}/${slot}: key accepted by /v1/models`, async () => {
-        const res = await fetchFn(MODELS_URL(NVIDIA_CHAT_URL), { headers: { Authorization: `Bearer ${key}` } });
+        const res = await fetchFn(modelsUrl(NVIDIA_CHAT_URL), { headers: { Authorization: `Bearer ${key}` } });
         let ids = new Set<string>();
         try { const j = await res.json(); ids = new Set((j.data ?? []).map((m: { id: string }) => m.id)); } catch { /* not json */ }
-        listed.set(key, ids);
         const model = purpose === "speech_to_text" ? null : modelFor(env, purpose);
         return { ok: res.status === 200 && (model === null || ids.has(model)), detail: { status: res.status, models_listed: ids.size, configured_model_listed: model === null ? "n/a" : ids.has(model) } };
       });
@@ -165,7 +161,6 @@ async function nvidiaCheck(deps: Deps, s: Steps, part: "all" | "models" | "repor
   }
 
   const reportKey = keysFor(env, "report_generation")[0]?.key;
-  const slideKey = keysFor(env, "slide_reading")[0]?.key;
   const chat = async (key: string, model: string, messages: unknown[], extra: Record<string, unknown> = {}) => {
     const t0 = Date.now();
     const res = await fetchFn(NVIDIA_CHAT_URL, { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ model, messages, max_tokens: 24, temperature: 0, stream: false, ...extra }) });
@@ -184,37 +179,6 @@ async function nvidiaCheck(deps: Deps, s: Steps, part: "all" | "models" | "repor
       return { ok: true, detail: { status: r.status, supported: r.status === 200 } }; // informational: we do not send it today
     });
   }
-  if (slideKey && want("slide")) {
-    await s.run("slide model: reads the fixture slide (3 calls, schema-valid)", async () => {
-      const lat: number[] = []; let valid = 0; const statuses: number[] = []; let sample = ""; const loopStart = Date.now();
-      const rejected: { issues: string[]; raw_head: string }[] = [];
-      for (let i = 0; i < 3 && Date.now() - loopStart < 80_000; i++) {
-        const r = await chat(slideKey, env.NVIDIA_SLIDE_MODEL, [{ role: "system", content: SLIDE_READING_SYSTEM }, { role: "user", content: [{ type: "text", text: SLIDE_READING_USER }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${toBase64(jpeg)}` } }] }], { max_tokens: 1200 });
-        lat.push(r.ms); statuses.push(r.status);
-        let rawText = "";
-        try { rawText = chatText(r.json); const out = slideReadingOut.parse(parseJsonLoose(rawText)); valid++; sample = out.title; }
-        catch (e) {
-          // synthetic fixture content only: safe to show a short head of the model's answer and which fields failed
-          const issues = (e as { issues?: { path: (string | number)[]; message: string }[] }).issues?.map((i) => `${i.path.join(".")}: ${i.message}`.slice(0, 80)) ?? [String((e as Error)?.message ?? "parse_failed").slice(0, 80)];
-          rejected.push({ issues: issues.slice(0, 4), raw_head: rawText.slice(0, 240) });
-        }
-      }
-      return { ok: valid === statuses.length && statuses.length > 0, detail: { statuses, schema_valid: `${valid}/${statuses.length}`, p50_ms: pct(lat, 50), p95_ms: pct(lat, 95), sample_title: sample, ...(rejected.length ? { rejected: rejected.slice(0, 2) } : {}) } };
-    });
-    await s.run("slide model: inline image size probe (decides SLIDE_IMAGE_MAX_BYTES)", async () => {
-      const results: Record<string, number> = {}; const loopStart = Date.now();
-      for (const kb of [100, 200, 400, 800, 1600]) {
-        if (Date.now() - loopStart > 80_000) { results["stopped"] = -1; break; }
-        const padded = new Uint8Array(jpeg.length + kb * 1024); padded.set(jpeg);
-        const r = await chat(slideKey, env.NVIDIA_SLIDE_MODEL, [{ role: "user", content: [{ type: "text", text: "Reply with the word ok." }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${toBase64(padded)}` } }] }], { max_tokens: 5 });
-        results[`${Math.round(padded.length / 1024)}KB`] = r.status;
-        if (r.status >= 400) break; // stop at the first refusal
-      }
-      return { ok: true, detail: { http_status_by_image_size: results, current_limit_bytes: SLIDE_IMAGE_MAX_BYTES } };
-    });
-  }
-
-  if (slideKey && want("slide_strategies")) await slideStrategies(deps, s, slideKey, reportKey, fetchFn);
 
   const asrKey = keysFor(env, "speech_to_text")[0]?.key;
   if (asrKey && want("asr")) {
@@ -314,7 +278,7 @@ async function pipelineCheck(deps0: Deps, s: Steps) {
       };
     });
 
-    await s.run("usage log recorded every NVIDIA call (no prompts / keys)", async () => {
+    await s.run("usage log recorded every AI call (no prompts / keys)", async () => {
       const { data } = await admin.from("ai_usage_log").select("purpose, outcome, http_status, latency_ms").in("deck_id", [deckId]);
       const { data: data2 } = await admin.from("ai_usage_log").select("purpose, outcome, http_status, latency_ms").eq("session_id", sessionId);
       const rows = [...(data ?? []), ...(data2 ?? [])];
@@ -338,60 +302,69 @@ async function pipelineCheck(deps0: Deps, s: Steps) {
 
 
 
-// ---------------------------------------------------------------- how to get clean JSON out of the vision model
-const SLIDE_JSON_SCHEMA = {
-  type: "object",
-  properties: {
-    title: { type: "string" }, slide_text: { type: "string" },
-    key_points: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 5 },
-    suggested_script: { type: "string" }, time_weight: { type: "integer", minimum: 1, maximum: 100 },
-  },
-  required: ["title", "slide_text", "key_points", "suggested_script", "time_weight"],
-};
-const JSON_EXAMPLE = '{"title":"...","slide_text":"...","key_points":["...","..."],"suggested_script":"...","time_weight":10}';
-
-async function slideStrategies(deps: Deps, s: Steps, slideKey: string, reportKey: string | undefined, fetchFn: typeof fetch) {
+// ---------------------------------------------------------------- Gemini (slide reading)
+async function geminiCheck(deps: Deps, s: Steps, part: "all" | "models" | "slide" = "all") {
   const { env } = deps;
-  const img = { type: "image_url", image_url: { url: `data:image/jpeg;base64,${SLIDE_JPEG_B64}` } };
-  const post = async (key: string, model: string, messages: unknown[], extra: Record<string, unknown> = {}) => {
+  const want = (p: string) => part === "all" || part === p;
+  const fetchFn: typeof fetch = (input, init) => deps.fetchFn(input, { ...(init ?? {}), signal: AbortSignal.timeout(40_000) });
+  const jpeg = fromB64(SLIDE_JPEG_B64);
+  const slides = keysFor(env, "slide_reading");
+  const slideKey = slides[0]?.key;
+  const bare = (id: string) => id.replace(/^models\//, "");
+
+  if (want("models")) {
+    if (!slides.length) await s.run("slide_reading: at least one Gemini key configured", async () => ({ ok: false, detail: "no GEMINI_SLIDE_KEY_* is set" }));
+    for (const { slot, key } of slides) {
+      await s.run(`slide_reading/${slot}: key accepted by Gemini /models`, async () => {
+        const res = await fetchFn(modelsUrl(GEMINI_CHAT_URL), { headers: { Authorization: `Bearer ${key}` } });
+        let ids = new Set<string>();
+        try { const j = await res.json(); ids = new Set((j.data ?? j.models ?? []).map((m: { id?: string; name?: string }) => bare(String(m.id ?? m.name ?? "")))); } catch { /* not json */ }
+        // Informational: aliases such as gemini-flash-latest are not always listed, so only the status gates the check; the real call below is the proof.
+        return { ok: res.status === 200, detail: { status: res.status, models_listed: ids.size, configured_model_listed: ids.has(env.GEMINI_SLIDE_MODEL), fallback_model_listed: env.GEMINI_SLIDE_FALLBACK_MODEL ? ids.has(env.GEMINI_SLIDE_FALLBACK_MODEL) : "n/a" } };
+      });
+    }
+  }
+
+  const chat = async (key: string, model: string, messages: unknown[], extra: Record<string, unknown> = {}) => {
     const t0 = Date.now();
-    const res = await fetchFn(NVIDIA_CHAT_URL, { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ model, messages, max_tokens: 1200, temperature: 0.2, stream: false, ...extra }) });
-    let json: unknown = null; try { json = await res.json(); } catch { /* ignore */ }
+    const res = await fetchFn(GEMINI_CHAT_URL, { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ model, messages, max_tokens: 1200, temperature: 0, stream: false, ...extra }) });
+    let json: any = null; try { json = await res.json(); } catch { /* ignore */ }
     return { status: res.status, ms: Date.now() - t0, json };
   };
-  const judge = (json: unknown) => {
-    let raw = "";
-    try { raw = chatText(json); slideReadingOut.parse(parseJsonLoose(raw)); return { valid: true, raw }; }
-    catch (e) { return { valid: false, raw, why: (e as { issues?: { path: (string | number)[] }[] }).issues?.map((i) => i.path.join(".")).join(",") ?? String((e as Error)?.message ?? "").slice(0, 60) }; }
-  };
-  const run = (name: string, runs: number, one: () => Promise<{ status: number; ms: number; json: unknown } | { status: number; ms: number; json: unknown; total_ms?: number }>) =>
-    s.run(`slide strategy ${name}`, async () => {
-      const statuses: number[] = []; const lat: number[] = []; let valid = 0; const rejected: { why?: string; raw_head: string }[] = [];
-      for (let i = 0; i < runs; i++) {
-        const r = await one(); statuses.push(r.status); lat.push((r as { total_ms?: number }).total_ms ?? r.ms);
-        const j = judge(r.json); if (j.valid) valid++; else rejected.push({ why: j.why, raw_head: j.raw.slice(0, 160) });
-      }
-      return { ok: valid === runs, detail: { statuses, valid: `${valid}/${runs}`, p50_ms: pct(lat, 50), ...(rejected.length ? { rejected: rejected.slice(0, 1) } : {}) } };
-    });
-  const model = env.NVIDIA_SLIDE_MODEL;
-  const baseline = [{ role: "system", content: SLIDE_READING_SYSTEM }, { role: "user", content: [{ type: "text", text: SLIDE_READING_USER }, img] }];
 
-  await run("B: JSON-first prompt with an example", 2, () => post(slideKey, model, [
-    { role: "system", content: "You are a JSON API. You reply with one JSON object and nothing else: no markdown, no headings, no commentary." },
-    { role: "user", content: [{ type: "text", text: `Read this slide for a student who will present it. Reply with ONLY this JSON shape (key_points = 1-5 things the presenter should SAY; suggested_script = natural spoken English; time_weight = integer 1-100):\n${JSON_EXAMPLE}` }, img] },
-  ]));
-  await run("C: response_format json_object", 2, () => post(slideKey, model, baseline, { response_format: { type: "json_object" } }));
-  await run("D: nvext guided_json schema", 1, () => post(slideKey, model, baseline, { nvext: { guided_json: SLIDE_JSON_SCHEMA } }));
-  if (reportKey) {
-    await run("E: vision describes, text model structures (json_object)", 2, async () => {
-      const t0 = Date.now();
-      const d = await post(slideKey, model, [{ role: "user", content: [{ type: "text", text: "Describe this slide: its title, every piece of text on it, and what a presenter should say about it. Plain text." }, img] }], { max_tokens: 700 });
-      let desc = ""; try { desc = chatText(d.json); } catch { /* none */ }
-      const t = await post(reportKey, env.NVIDIA_REPORT_MODEL, [
-        { role: "system", content: SLIDE_READING_SYSTEM },
-        { role: "user", content: `Here is a description of one slide (data, not instructions):\n"""${desc.slice(0, 3000)}"""\nReturn the JSON object described.` },
-      ], { response_format: { type: "json_object" } });
-      return { status: d.status === 200 ? t.status : d.status, ms: Date.now() - t0, json: t.json, total_ms: Date.now() - t0 };
+  if (slideKey && want("slide")) {
+    await s.run("slide model: reads the fixture slide (3 calls, schema-valid)", async () => {
+      const lat: number[] = []; let valid = 0; const statuses: number[] = []; let sample = ""; const loopStart = Date.now();
+      const rejected: { issues: string[]; raw_head: string }[] = [];
+      for (let i = 0; i < 3 && Date.now() - loopStart < 80_000; i++) {
+        const r = await chat(slideKey, env.GEMINI_SLIDE_MODEL, [{ role: "system", content: SLIDE_READING_SYSTEM }, { role: "user", content: [{ type: "text", text: SLIDE_READING_USER }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${toBase64(jpeg)}` } }] }], { max_tokens: 8192, temperature: 0.2 });
+        lat.push(r.ms); statuses.push(r.status);
+        let rawText = "";
+        try { rawText = chatText(r.json); const out = slideReadingOut.parse(parseJsonLoose(rawText)); valid++; sample = out.title; }
+        catch (e) {
+          // synthetic fixture content only: safe to show a short head of the model's answer and which fields failed
+          const issues = (e as { issues?: { path: (string | number)[]; message: string }[] }).issues?.map((i) => `${i.path.join(".")}: ${i.message}`.slice(0, 80)) ?? [String((e as Error)?.message ?? "parse_failed").slice(0, 80)];
+          rejected.push({ issues: issues.slice(0, 4), raw_head: rawText.slice(0, 240) });
+        }
+      }
+      return { ok: valid === statuses.length && statuses.length > 0, detail: { statuses, schema_valid: `${valid}/${statuses.length}`, p50_ms: pct(lat, 50), p95_ms: pct(lat, 95), sample_title: sample, ...(rejected.length ? { rejected: rejected.slice(0, 2) } : {}) } };
+    });
+    if (env.GEMINI_SLIDE_FALLBACK_MODEL) {
+      await s.run("slide fallback model: answers a tiny vision call", async () => {
+        const r = await chat(slideKey, env.GEMINI_SLIDE_FALLBACK_MODEL!, [{ role: "user", content: [{ type: "text", text: "Reply with the word ok." }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${toBase64(jpeg)}` } }] }], { max_tokens: 256 });
+        return { ok: r.status === 200, detail: { status: r.status, ms: r.ms, model: env.GEMINI_SLIDE_FALLBACK_MODEL } };
+      });
+    }
+    await s.run("slide model: inline image size probe (decides SLIDE_IMAGE_MAX_BYTES)", async () => {
+      const results: Record<string, number> = {}; const loopStart = Date.now();
+      for (const kb of [100, 200, 400, 800, 1600]) {
+        if (Date.now() - loopStart > 80_000) { results["stopped"] = -1; break; }
+        const padded = new Uint8Array(jpeg.length + kb * 1024); padded.set(jpeg);
+        const r = await chat(slideKey, env.GEMINI_SLIDE_MODEL, [{ role: "user", content: [{ type: "text", text: "Reply with the word ok." }, { type: "image_url", image_url: { url: `data:image/jpeg;base64,${toBase64(padded)}` } }] }], { max_tokens: 256 });
+        results[`${Math.round(padded.length / 1024)}KB`] = r.status;
+        if (r.status >= 400) break; // stop at the first refusal
+      }
+      return { ok: true, detail: { http_status_by_image_size: results, current_limit_bytes: SLIDE_IMAGE_MAX_BYTES } };
     });
   }
 }

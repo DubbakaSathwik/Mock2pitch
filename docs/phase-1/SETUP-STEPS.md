@@ -39,12 +39,12 @@ The backend needs **3 purposes × 3 keys = 9 key slots** (`primary`, `fallback_1
 2. **Create API keys**: open any model page → **Get API Key** (or profile menu → *API Keys*) → *Generate Key*. Name them so you can tell them apart, e.g. `m2p-slide-primary`, `m2p-slide-fb1`, … Each key looks like `nvapi-…` and is shown once.
    - **Important caveat:** keys created under the *same* NVIDIA account normally share that account's credits and rate limits, so extra keys add resilience (rotation if one is revoked/auth-fails) but **not** extra capacity. For genuine overflow capacity the fallbacks must come from a different NVIDIA account. I could not verify NVIDIA's current policy (the site is blocked from my environment) — please check your account's *Usage/Credits* page.
 3. **Speech-to-text function ID**: build.nvidia.com → search **parakeet-tdt-0.6b-v2** (ASR, English) → open it → **Try API** / *Deploy → Python (gRPC)* tab. Find the line `--metadata function-id "<uuid>"` (or `function-id` in the sample code). Copy the UUID → `NVIDIA_ASR_FUNCTION_ID`. The same `nvapi-` key authorises it.
-4. **Confirm the two chat models exist for your key** (I defaulted to `meta/llama-4-maverick-17b-128e-instruct` for slide reading and `nvidia/nemotron-3-ultra-550b-a55b` for the report). On build.nvidia.com search each name; the model page shows the exact id in the sample code (`model="…"`). If a name is missing or marked deprecated, pick the fallback listed in `docs/phase-1/spikes.md` and tell me.
+4. **Confirm the report model exists for your key** (`nvidia/nemotron-3-ultra-550b-a55b`; slide reading is Gemini now, see `ai.md`). On build.nvidia.com search each name; the model page shows the exact id in the sample code (`model="…"`). If a name is missing or marked deprecated, pick the fallback listed in `docs/phase-1/spikes.md` and tell me.
 5. Write down (to give me, or to paste yourself):
 
 | Variable | What |
 |---|---|
-| `NVIDIA_SLIDE_KEY_PRIMARY` / `_FALLBACK_1` / `_FALLBACK_2` | keys for reading slides |
+| `GEMINI_SLIDE_KEY_PRIMARY` / `_FALLBACK_1` / `_FALLBACK_2` | **Google Gemini** keys (aistudio.google.com/apikey) for reading slides: slide reading no longer uses NVIDIA |
 | `NVIDIA_ASR_KEY_PRIMARY` / `_FALLBACK_1` / `_FALLBACK_2` | keys for speech-to-text |
 | `NVIDIA_REPORT_KEY_PRIMARY` / `_FALLBACK_1` / `_FALLBACK_2` | keys for the report |
 | `NVIDIA_ASR_FUNCTION_ID` | the UUID from step 3 |
@@ -58,7 +58,9 @@ Paste this block (fill the blanks; the first group is non-secret and already cor
 ```
 R2_BUCKET=mock2pitch-dev
 APP_ALLOWED_ORIGINS=http://localhost:3000
-NVIDIA_SLIDE_MODEL=meta/llama-3.2-11b-vision-instruct
+GEMINI_SLIDE_MODEL=gemini-flash-latest
+GEMINI_SLIDE_FALLBACK_MODEL=gemini-flash-lite-latest
+GEMINI_KEY_RPM_SOFT_LIMIT=30
 NVIDIA_REPORT_MODEL=nvidia/nemotron-3-ultra-550b-a55b
 NVIDIA_ASR_MODEL_LABEL=parakeet-tdt-0.6b-v2
 NVIDIA_KEY_RPM_SOFT_LIMIT=35
@@ -67,7 +69,7 @@ R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 NVIDIA_ASR_FUNCTION_ID=
-NVIDIA_SLIDE_KEY_PRIMARY=
+GEMINI_SLIDE_KEY_PRIMARY=
 NVIDIA_ASR_KEY_PRIMARY=
 NVIDIA_REPORT_KEY_PRIMARY=
 INTERNAL_FUNCTION_SECRET=

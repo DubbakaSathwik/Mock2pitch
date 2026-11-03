@@ -4,7 +4,7 @@ import { getEnv, keysFor, keyEnvName, modelFor } from "@shared/env.ts";
 const base = {
   SUPABASE_URL: "https://x.supabase.co", SUPABASE_ANON_KEY: "a", SUPABASE_SERVICE_ROLE_KEY: "super-secret-service-key", INTERNAL_FUNCTION_SECRET: "0123456789abcdef",
   APP_ALLOWED_ORIGINS: "http://localhost:3000", R2_ACCOUNT_ID: "1", R2_ACCESS_KEY_ID: "2", R2_SECRET_ACCESS_KEY: "3", R2_BUCKET: "b",
-  NVIDIA_SLIDE_MODEL: "m1", NVIDIA_REPORT_MODEL: "m2", NVIDIA_ASR_FUNCTION_ID: "f",
+  GEMINI_SLIDE_MODEL: "m1", NVIDIA_REPORT_MODEL: "m2", NVIDIA_ASR_FUNCTION_ID: "f",
 };
 afterEach(() => { vi.resetModules(); vi.unstubAllEnvs(); });
 
@@ -18,15 +18,19 @@ describe("Edge Function env (Zod)", () => {
   it("applies defaults, trims optional keys, and builds ordered key pools skipping empty slots", async () => {
     vi.resetModules();
     const m = await import("@shared/env.ts");
-    const env = m.getEnv({ ...base, NVIDIA_SLIDE_KEY_PRIMARY: " k0 ", NVIDIA_SLIDE_KEY_FALLBACK_1: "", NVIDIA_SLIDE_KEY_FALLBACK_2: "k2" });
+    const env = m.getEnv({ ...base, GEMINI_SLIDE_KEY_PRIMARY: " k0 ", GEMINI_SLIDE_KEY_FALLBACK_1: "", GEMINI_SLIDE_KEY_FALLBACK_2: "k2" });
     expect(env.NVIDIA_KEY_RPM_SOFT_LIMIT).toBe(35);
+    expect(env.GEMINI_KEY_RPM_SOFT_LIMIT).toBe(30);
+    expect(env.GEMINI_SLIDE_FALLBACK_MODEL).toBeUndefined();
+    expect(m.modelFor(env, "slide_reading")).toBe("m1");
     expect(m.keysFor(env, "slide_reading")).toEqual([{ slot: "primary", key: "k0" }, { slot: "fallback_2", key: "k2" }]);
     expect(m.keysFor(env, "report_generation")).toEqual([]);
     expect(m.modelFor(env, "speech_to_text")).toBe("parakeet-tdt-0.6b-v2");
     expect(m.allowedOrigins({ ...env, APP_ALLOWED_ORIGINS: "http://a , https://b" })).toEqual(["http://a", "https://b"]);
   });
   it("maps purposes/slots to the documented variable names", () => {
-    expect(keyEnvName("slide_reading", "primary")).toBe("NVIDIA_SLIDE_KEY_PRIMARY");
+    expect(keyEnvName("slide_reading", "primary")).toBe("GEMINI_SLIDE_KEY_PRIMARY");
+    expect(keyEnvName("slide_reading", "fallback_2")).toBe("GEMINI_SLIDE_KEY_FALLBACK_2");
     expect(keyEnvName("speech_to_text", "fallback_1")).toBe("NVIDIA_ASR_KEY_FALLBACK_1");
     expect(keyEnvName("report_generation", "fallback_2")).toBe("NVIDIA_REPORT_KEY_FALLBACK_2");
     void getEnv; void keysFor; void modelFor;

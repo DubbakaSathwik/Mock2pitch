@@ -3,21 +3,22 @@
 ## Purposes, models, keys
 | Purpose | Model env var | Keys (env) | Protocol |
 |---|---|---|---|
-| `slide_reading` | `NVIDIA_SLIDE_MODEL` | `NVIDIA_SLIDE_KEY_PRIMARY / _FALLBACK_1 / _FALLBACK_2` | OpenAI-compatible `chat/completions`, image as base64 data URL |
+| `slide_reading` | `GEMINI_SLIDE_MODEL` (+ optional `GEMINI_SLIDE_FALLBACK_MODEL`) | `GEMINI_SLIDE_KEY_PRIMARY / _FALLBACK_1 / _FALLBACK_2` | **Google Gemini**, OpenAI-compatible `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, image as base64 data URL. NVIDIA no longer serves slide reading (`meta/llama-3.2-11b-vision-instruct` was retired: HTTP 404). |
 | `speech_to_text` | `NVIDIA_ASR_FUNCTION_ID`, label `NVIDIA_ASR_MODEL_LABEL` | `NVIDIA_ASR_KEY_*` | Riva gRPC `Recognize` (offline), sent as a direct HTTP/2 call (grpc-js does not connect in the Edge Runtime) |
 | `report_generation` | `NVIDIA_REPORT_MODEL` | `NVIDIA_REPORT_KEY_*` | OpenAI-compatible `chat/completions` |
 
-One model per purpose, used by all three keys of that purpose (D9). A slot whose env var is empty is skipped. **The models in `.env.example` are defaults to try first; none has been verified live** (see `spikes.md`). Keys never reach the browser, logs, responses or the database; the admin sees only `••••••••<last4>` via `admin-ai-keys`.
+One model per purpose, used by all three keys of that purpose (D9). Slide reading additionally has an optional fallback model that is tried once when the primary answers HTTP 404/410. A slot whose env var is empty is skipped. **The models in `.env.example` are defaults to try first; none has been verified live** (see `spikes.md`). Keys never reach the browser, logs, responses or the database; the admin sees only `••••••••<last4>` via `admin-ai-keys`.
 
 ## Routing (`_shared/nvidia/router.ts`, 13 unit tests)
-Candidates are tried primary → fallback_1 → fallback_2. A slot is skipped if its `cooldown_until` is in the future, it made ≥ `NVIDIA_KEY_RPM_SOFT_LIMIT` (35) requests in the last 60 s, or its used credits ≥ `credit_limit`.
+Candidates are tried primary → fallback_1 → fallback_2. A slot is skipped if its `cooldown_until` is in the future, it made ≥ `NVIDIA_KEY_RPM_SOFT_LIMIT` (35; `GEMINI_KEY_RPM_SOFT_LIMIT`, 30, for slide reading) requests in the last 60 s, or its used credits ≥ `credit_limit`.
 | Result | Action |
 |---|---|
 | 2xx and output valid | return; log `success` |
 | 2xx but output invalid | log `invalid_output` (billable); **do not rotate**; caller retries once |
 | 429 | cooldown = `Retry-After` (default 60 s); log `rate_limited`; next slot immediately |
 | 5xx / network / timeout | cooldown 30 s; log `server_error` / `timeout`; next slot |
-| 401 / 403 | cooldown 10 min, `last_error_code='auth'`; next slot (shown in `admin_ai_usage`) |
+| 401 / 403, or Gemini's HTTP 400 "API key not valid" | cooldown 10 min, `last_error_code='auth'`; next slot (shown in `admin_ai_usage`) |
+| 404 / 410 (model retired or renamed) | log `server_error`; **no cooldown, no rotation**; `model_unavailable`. Slide reading then tries `GEMINI_SLIDE_FALLBACK_MODEL` once; otherwise the deck fails with `error_code='misconfigured'` ("The service isn't set up yet", with Try again once fixed) instead of a misleading "AI is busy" |
 | 400 / 422 | log `bad_request`; **do not rotate**; fail the step |
 | nothing eligible | `AI_BUSY` (HTTP 429, retryable) |
 Timeouts: slide 45 s, ASR 60 s per ≤ 60 s chunk, report 90 s. Measured live: slide ≈ 8 s, ASR ≈ 1.7 s per 6 s clip, report up to ≈ 30 s for the full prompt. Concurrency: 3 slides / 3 clips at once. Every attempt writes one `ai_usage_log` row (purpose, slot, model, outcome, status, latency, tokens or audio ms, user/deck/session ids). **Never** prompt text, transcripts or keys.

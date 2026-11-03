@@ -41,6 +41,18 @@ export class InvalidOutputError extends AppError {
   constructor() { super("invalid_output", 502, "The AI returned an unusable answer."); }
 }
 
+/** The configured model (or endpoint) does not exist any more: HTTP 404/410. Not transient and not key-specific, so no cooldown and no rotation. */
+export class ModelUnavailableError extends AppError {
+  constructor() { super("model_unavailable", 502, "The configured AI model is not available."); }
+}
+
+/** Gemini answers a bad / expired API key with HTTP 400 ("API key not valid"), not 401: treat that like an auth failure, never as a bad image. */
+function isApiKeyRejection(body: unknown): boolean {
+  const first = Array.isArray(body) ? body[0] : body;
+  const msg = (first as { error?: { message?: unknown } } | null)?.error?.message;
+  return typeof msg === "string" && /api key (not valid|expired|is invalid)|invalid api key|api_key_invalid/i.test(msg);
+}
+
 function retryAfterSeconds(h: Record<string, string>): number {
   const v = Object.entries(h).find(([k]) => k.toLowerCase() === "retry-after")?.[1];
   const n = v ? Number(v) : NaN;
@@ -97,10 +109,14 @@ export async function routeCall<T>(o: RouteOptions<T>): Promise<T> {
         await o.store.setCooldown(st.id, new Date(now().getTime() + retryAfterSeconds(res.headers) * 1000), "rate_limited");
         break;
       }
-      if (s === 401 || s === 403) {
+      if (s === 401 || s === 403 || (s === 400 && isApiKeyRejection(res.body))) {
         await o.store.log({ ...base, outcome: "server_error", httpStatus: s, latencyMs });
         await o.store.setCooldown(st.id, new Date(now().getTime() + COOLDOWN_AUTH_S * 1000), "auth");
         break;
+      }
+      if (s === 404 || s === 410) {
+        await o.store.log({ ...base, outcome: "server_error", httpStatus: s, latencyMs });
+        throw new ModelUnavailableError();
       }
       if (s === 400 || s === 422) {
         await o.store.log({ ...base, outcome: "bad_request", httpStatus: s, latencyMs });

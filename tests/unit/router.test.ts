@@ -56,6 +56,33 @@ describe("routeCall", () => {
     expect(store.logs).toHaveLength(3);
   });
 
+  it("404/410 (model retired or renamed) -> model_unavailable at once: no rotation, no cooldown, logged as a server error", async () => {
+    for (const status of [404, 410]) {
+      const s = new FakeStore(); const calls: string[] = [];
+      const t: Transport = async ({ key }) => { calls.push(key); return { status, headers: {}, body: { error: "gone" } }; };
+      await expect(routeCall(base(s, t))).rejects.toMatchObject({ code: "model_unavailable", status: 502 });
+      expect(calls).toEqual(["k0"]);
+      expect(s.cooldowns).toEqual({});
+      expect(s.logs).toHaveLength(1);
+      expect(s.logs[0]).toMatchObject({ outcome: "server_error", httpStatus: status });
+    }
+  });
+
+  it("Gemini's HTTP 400 'API key not valid' is an auth failure: that key is cooled down and the next key is used", async () => {
+    const t = respond({ k0: { status: 400, body: [{ error: { code: 400, message: "API key not valid. Please pass a valid API key.", status: "INVALID_ARGUMENT" } }] }, k1: { status: 200, body: { v: 3 } } });
+    const now = new Date("2026-01-01T00:00:00Z");
+    expect(await routeCall(base(store, t, { now: () => now }))).toBe(3);
+    expect(store.cooldowns["id-primary"]).toMatchObject({ code: "auth" });
+    expect(store.cooldowns["id-primary"]!.until.getTime()).toBe(now.getTime() + 600_000);
+    expect(store.logs.map((l) => l.outcome)).toEqual(["server_error", "success"]);
+  });
+
+  it("an ordinary 400 (bad image) is still a bad_request, even when the body is an object with another message", async () => {
+    const t = respond({ k0: { status: 400, body: { error: { message: "Unable to process input image." } } } });
+    await expect(routeCall(base(store, t))).rejects.toMatchObject({ code: "bad_request" });
+    expect(store.cooldowns).toEqual({});
+  });
+
   it("400 does not rotate keys", async () => {
     const calls: string[] = [];
     const t: Transport = async ({ key }) => { calls.push(key); return { status: 400, headers: {}, body: {} }; };

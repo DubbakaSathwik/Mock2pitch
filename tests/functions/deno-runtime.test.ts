@@ -30,7 +30,7 @@ async function serve(fn: string, env: Record<string, string>) {
 const GOOD_ENV = {
   SUPABASE_URL: "http://127.0.0.1:9", SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service", INTERNAL_FUNCTION_SECRET: "internal-secret-0123456789",
   APP_ALLOWED_ORIGINS: "http://localhost:3000", R2_ACCOUNT_ID: "acct", R2_ACCESS_KEY_ID: "ak", R2_SECRET_ACCESS_KEY: "sk", R2_BUCKET: "b",
-  NVIDIA_SLIDE_MODEL: "m1", NVIDIA_REPORT_MODEL: "m2", NVIDIA_ASR_FUNCTION_ID: "f",
+  GEMINI_SLIDE_MODEL: "m1", NVIDIA_REPORT_MODEL: "m2", NVIDIA_ASR_FUNCTION_ID: "f",
 };
 
 describe("production entrypoints under real Deno", () => {

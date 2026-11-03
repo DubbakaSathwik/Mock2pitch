@@ -55,9 +55,9 @@ describe("admin-ai-keys", () => {
   it("unconfigured slots show configured:false and null mask", async () => {
     const adm = await env.admin_("owner-k2@mock2pitch.test");
     await env.db.admin.query("update public.profiles set role='admin' where id=$1", [adm.id]);
-    const saved = (testEnv as any).NVIDIA_SLIDE_KEY_FALLBACK_2; (testEnv as any).NVIDIA_SLIDE_KEY_FALLBACK_2 = undefined;
+    const saved = (testEnv as any).GEMINI_SLIDE_KEY_FALLBACK_2; (testEnv as any).GEMINI_SLIDE_KEY_FALLBACK_2 = undefined;
     const r = await env.call(adminAiKeys, {}, { token: adm.token });
-    (testEnv as any).NVIDIA_SLIDE_KEY_FALLBACK_2 = saved;
+    (testEnv as any).GEMINI_SLIDE_KEY_FALLBACK_2 = saved;
     expect(r.json.data.purposes[0].slots[2]).toMatchObject({ slot: "fallback_2", configured: false, masked: null });
   });
 });
