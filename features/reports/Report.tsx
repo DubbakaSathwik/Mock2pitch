@@ -6,13 +6,14 @@ import { Badge } from "@/components/ds/Badge";
 import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
 import { Icon, type IconName } from "@/components/ds/Icon";
+import { IconButton } from "@/components/ds/IconButton";
 import { Input } from "@/components/ds/Input";
 import { ScoreRing } from "@/components/ds/ScoreRing";
 import { useToast } from "@/components/ds/Toast";
 import { useCompact } from "@/components/app/Compact";
 import { FillerText } from "@/components/app/FillerText";
 import { Skeleton } from "@/components/app/Loading";
-import { ErrorNotice } from "@/components/app/Notice";
+import { ErrorNotice, Notice } from "@/components/app/Notice";
 import { StudentShell } from "@/components/app/shells";
 import { StarRating, Stars } from "@/components/app/Stars";
 import { Tile } from "@/components/app/Tile";
@@ -24,6 +25,8 @@ import { toAppError } from "@/lib/data/errors";
 import type { ReportDetail } from "@/lib/data/types";
 import { formatDate, mmss } from "@/lib/format";
 import { SCORE_WORD, scoreBand, scoreColor } from "@/lib/score";
+import { useClipPlayback } from "@/features/recording/hooks";
+import { recordingStore, useRecordingStore } from "@/features/recording/store";
 import { useRateReport, useReport } from "./queries";
 import styles from "./Report.module.css";
 import { useGo } from "@/lib/use-go";
@@ -45,9 +48,16 @@ function subCards(d: ReportDetail, first: { timing: number; filler: number; cove
 
 function SlideRows({ d }: { d: ReportDetail }) {
   const compact = useCompact();
+  // The recordings are still in this tab's memory right after submitting (never uploaded back, never stored); they are gone after leaving the report.
+  const sessionId = d.report.session_id;
+  const clips = useRecordingStore(() => new Map(recordingStore.list(sessionId)));
+  const playback = useClipPlayback();
+  useEffect(() => { recordingStore.cancelClear(sessionId); return () => recordingStore.scheduleClear(sessionId); }, [sessionId]);
   const firstRecorded = d.results.findIndex((x) => x.duration_ms > 0);
   const [open, setOpen] = useState(firstRecorded);
   return (
+    <>
+    {clips.size > 0 && <div style={{ marginBottom: 12 }}><Notice tone="info" title="Play back your recordings">They are only on this device and disappear when you leave this report.</Notice></div>}
     <ul className={styles.slides}>
       {d.slides.map((s, i) => {
         const res = d.results.find((x) => x.slide_index === s.slide_index);
@@ -57,6 +67,7 @@ function SlideRows({ d }: { d: ReportDetail }) {
         const missed = res?.key_points_missed ?? [];
         const fn = res?.filler_count ?? 0;
         const panelId = `slide-panel-${i}`;
+        const clip = clips.get(s.slide_index);
         return (
           <li key={i}>
             <Card padding={0}>
@@ -90,6 +101,12 @@ function SlideRows({ d }: { d: ReportDetail }) {
                           {res!.off_topic_quotes!.map((q, k) => <div key={k} className={styles.off}>&ldquo;{q}&rdquo;<div style={{ color: "var(--ink-600)", marginTop: 2 }}>This didn&apos;t support a key point. Consider cutting it.</div></div>)}
                         </div>
                       )}
+                      {clip && (
+                        <div className={styles.playRow} data-testid={`playback-${i}`}>
+                          <IconButton icon={playback.playing === i ? "square" : "play"} label={playback.playing === i ? `Stop your recording of slide ${i + 1}` : `Play your recording of slide ${i + 1}`} variant="secondary" size={44} onClick={() => (playback.playing === i ? playback.stop() : playback.play(i, clip.url))} />
+                          <span>Your recording · {mmss(clip.durationMs / 1000)}</span>
+                        </div>
+                      )}
                       <div><Overline style={{ marginBottom: 8 }}>Transcript</Overline><div className={styles.transcript}><FillerText text={res?.transcript ?? ""} /></div></div>
                     </>
                   )}
@@ -100,6 +117,7 @@ function SlideRows({ d }: { d: ReportDetail }) {
         );
       })}
     </ul>
+    </>
   );
 }
 

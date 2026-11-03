@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Badge } from "@/components/ds/Badge";
 import { Button } from "@/components/ds/Button";
@@ -36,7 +36,8 @@ export function Review() {
   const submit = useSubmitFlow(sessionId);
   const [warn, setWarn] = useState(false);
   useBeforeUnload(clips.size > 0);
-  useEffect(() => () => { playback.stop(); }, [playback]);
+  // (No cleanup effect here: useClipPlayback already pauses on unmount. An effect keyed on the `playback` object re-ran after EVERY render
+  // and called stop(), so a click on play was undone by the re-render it caused: playback never started.)
 
   const slides = deck.data?.slides ?? [];
   const sugg = session.data?.suggested_seconds ?? [];
@@ -66,7 +67,7 @@ export function Review() {
                     </div>
                     {!compact && (c ? <Badge tone={o ? "warning" : "success"}>{mmss(c.durationMs / 1000)} / {mmss(g)}</Badge> : <Badge tone="warning">Not recorded</Badge>)}
                     <div className={styles.btns}>
-                      {c && <IconButton icon={playback.playing === i ? "volume-2" : "play"} label={`Play back slide ${i + 1}`} variant="secondary" size={44} onClick={() => (playback.playing === i ? playback.stop() : playback.play(i, c.url))} disabled={submit.busy} />}
+                      {c && <IconButton icon={playback.playing === i ? "square" : "play"} label={playback.playing === i ? `Stop playback of slide ${i + 1}` : `Play back slide ${i + 1}`} variant="secondary" size={44} onClick={() => (playback.playing === i ? playback.stop() : playback.play(i, c.url))} disabled={submit.busy} />}
                       <IconButton icon={c ? "rotate-ccw" : "mic"} label={c ? `Re-record slide ${i + 1}` : `Record slide ${i + 1}`} variant="secondary" size={44} onClick={() => reRecord(i)} disabled={submit.busy} />
                     </div>
                   </li>
@@ -74,7 +75,7 @@ export function Review() {
               })}
             </ol>
           </Card>
-          <div className={styles.delete}><Icon name="trash-2" size={18} color="var(--bright-marine)" /><Muted>Audio is deleted once your report is generated. Your report keeps scores and transcripts only.</Muted></div>
+          <div className={styles.delete}><Icon name="trash-2" size={18} color="var(--bright-marine)" /><Muted>Audio is deleted from our servers once your report is generated. You can still play it back on your report until you leave it. Your report keeps scores and transcripts only.</Muted></div>
           {submit.phase === "preparing" && <div className={styles.prep} role="status"><ProgressBar value={submit.prep.done} max={Math.max(1, submit.prep.total)} label="Preparing your recordings…" valueLabel={`${submit.prep.done} of ${submit.prep.total}`} /></div>}
           {f && f.ui && (
             <div className={styles.fail} data-testid="submit-error">

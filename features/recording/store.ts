@@ -1,6 +1,7 @@
 "use client";
-// In-memory recording store shared by Mic check → Practice room → Review. Nothing is persisted (no IndexedDB / localStorage):
-// a refresh loses the clips, which is why the room and review warn before leaving.
+// In-memory recording store shared by Mic check → Practice room → Review → the report page (for playback). Nothing is persisted (no
+// IndexedDB / localStorage): a refresh loses the clips, which is why the room and review warn before leaving. The report page clears
+// them when the student leaves it, so recordings never outlive that screen.
 import { useSyncExternalStore } from "react";
 import type { Clip, MicSession } from "./recorder";
 
@@ -10,6 +11,7 @@ const clips = new Map<string, Map<number, StoredClip>>();
 let mic: MicSession | null = null;
 let version = 0;
 const listeners = new Set<() => void>();
+const pendingClears = new Map<string, ReturnType<typeof setTimeout>>();
 const bump = () => { version++; listeners.forEach((l) => l()); };
 
 export const recordingStore = {
@@ -36,6 +38,15 @@ export const recordingStore = {
     clips.delete(sessionId);
     bump();
   },
+  /**
+   * Drop a session's clips shortly after the screen showing them goes away. Delayed (and cancellable) so React StrictMode's mount →
+   * unmount → mount in development, or a quick back-and-forth, does not throw the recordings away.
+   */
+  scheduleClear(sessionId: string, delayMs = 400) {
+    recordingStore.cancelClear(sessionId);
+    pendingClears.set(sessionId, setTimeout(() => { pendingClears.delete(sessionId); recordingStore.clearSession(sessionId); }, delayMs));
+  },
+  cancelClear(sessionId: string) { const t = pendingClears.get(sessionId); if (t) { clearTimeout(t); pendingClears.delete(sessionId); } },
   hasClips(): boolean { for (const m of clips.values()) if (m.size) return true; return false; },
   getMic: () => mic,
   setMic(m: MicSession | null) { if (mic && mic !== m) mic.close(); mic = m; bump(); },
