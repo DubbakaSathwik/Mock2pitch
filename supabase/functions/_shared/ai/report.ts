@@ -13,17 +13,28 @@ export type ReportInputSlide = {
 
 /** One report call, with exactly one repair retry when the model's output is invalid. */
 export async function generateReport(deps: Deps, store: RouterStore, slides: ReportInputSlide[], ctx: { userId: string; sessionId: string }): Promise<ReportOut> {
-  const model = modelFor(deps.env, "report_generation");
+  const primary = modelFor(deps.env, "report_generation");
+  const fallback = deps.env.NVIDIA_REPORT_FALLBACK_MODEL;
   const base: ChatMessage[] = [
     { role: "system", content: REPORT_SYSTEM },
     { role: "user", content: JSON.stringify({ slides }) },
   ];
-  const attempt = (messages: ChatMessage[]) => routeCall({
+  const call = (model: string, messages: ChatMessage[]) => routeCall({
     purpose: "report_generation", model, keys: keysFor(deps.env, "report_generation"), store,
     transport: chatTransport(model, messages, { maxTokens: 3072, fetchFn: deps.fetchFn }),
-    timeoutMs: TIMEOUT_REPORT_MS, rpmSoftLimit: deps.env.NVIDIA_KEY_RPM_SOFT_LIMIT, ctx,
+    // Overload is per model: a slow or busy primary must not lock the key out for the fallback model that is about to be tried.
+    timeoutMs: TIMEOUT_REPORT_MS, rpmSoftLimit: deps.env.NVIDIA_KEY_RPM_SOFT_LIMIT, ctx, cooldownOnTransient: !fallback,
     validate: (body) => reportOut.parse(parseJsonLoose(chatText(body))),
   });
+  // Primary model first; on "gone" (404/410) or "overloaded on every key" the optional fallback model gets the same request.
+  const attempt = async (messages: ChatMessage[]) => {
+    try { return await call(primary, messages); }
+    catch (e) {
+      const code = (e as { code?: string }).code;
+      if ((code === "model_unavailable" || code === "AI_BUSY") && fallback && fallback !== primary) return await call(fallback, messages);
+      throw e;
+    }
+  };
   try {
     return await attempt(base);
   } catch (e) {

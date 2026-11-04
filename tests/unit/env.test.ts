@@ -22,6 +22,7 @@ describe("Edge Function env (Zod)", () => {
     expect(env.NVIDIA_KEY_RPM_SOFT_LIMIT).toBe(35);
     expect(env.GEMINI_KEY_RPM_SOFT_LIMIT).toBe(30);
     expect(env.GEMINI_SLIDE_FALLBACK_MODEL).toBeUndefined();
+    expect(env.NVIDIA_REPORT_FALLBACK_MODEL).toBeUndefined();
     expect(m.modelFor(env, "slide_reading")).toBe("m1");
     expect(m.keysFor(env, "slide_reading")).toEqual([{ slot: "primary", key: "k0" }, { slot: "fallback_2", key: "k2" }]);
     expect(m.keysFor(env, "report_generation")).toEqual([]);

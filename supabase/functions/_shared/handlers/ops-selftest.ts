@@ -67,7 +67,7 @@ async function envCheck(ctx: Ctx, s: Steps) {
     for (const p of PURPOSES) detail[p] = keysFor(env, p).map((k) => k.slot);
     return { ok: PURPOSES.every((p) => (detail[p] ?? []).includes("primary")), detail };
   });
-  await s.run("models (after any override)", async () => ({ ok: true, detail: { slide_reading: env.GEMINI_SLIDE_MODEL, slide_reading_fallback: env.GEMINI_SLIDE_FALLBACK_MODEL ?? null, report_generation: env.NVIDIA_REPORT_MODEL, speech_to_text: env.NVIDIA_ASR_MODEL_LABEL } }));
+  await s.run("models (after any override)", async () => ({ ok: true, detail: { slide_reading: env.GEMINI_SLIDE_MODEL, slide_reading_fallback: env.GEMINI_SLIDE_FALLBACK_MODEL ?? null, report_generation: env.NVIDIA_REPORT_MODEL, report_generation_fallback: env.NVIDIA_REPORT_FALLBACK_MODEL ?? null, speech_to_text: env.NVIDIA_ASR_MODEL_LABEL } }));
   await s.run("database reachable and migrated", async () => {
     const { data, error } = await ctx.deps.admin.from("ai_key_slots").select("id");
     if (error) throw new Error("db_query_failed");
