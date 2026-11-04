@@ -21,7 +21,7 @@ export async function generateReport(deps: Deps, store: RouterStore, slides: Rep
   ];
   const call = (model: string, messages: ChatMessage[]) => routeCall({
     purpose: "report_generation", model, keys: keysFor(deps.env, "report_generation"), store,
-    transport: chatTransport(model, messages, { maxTokens: 3072, fetchFn: deps.fetchFn }),
+    transport: chatTransport(model, messages, { maxTokens: 6144, fetchFn: deps.fetchFn }),
     // Overload is per model: a slow or busy primary must not lock the key out for the fallback model that is about to be tried.
     timeoutMs: TIMEOUT_REPORT_MS, rpmSoftLimit: deps.env.NVIDIA_KEY_RPM_SOFT_LIMIT, ctx, cooldownOnTransient: !fallback,
     validate: (body) => reportOut.parse(parseJsonLoose(chatText(body))),
@@ -39,6 +39,11 @@ export async function generateReport(deps: Deps, store: RouterStore, slides: Rep
     return await attempt(base);
   } catch (e) {
     if ((e as { code?: string }).code !== "invalid_output") throw e;
-    return await attempt([...base, { role: "user", content: "Your previous reply was not valid JSON for the required schema. Reply again with ONLY the JSON object, exactly matching the schema." }]);
+    // Unusable or cut-off answer: a different model is more likely to fix it than the same one asked again.
+    if (fallback && fallback !== primary) {
+      try { return await call(fallback, base); }
+      catch (e2) { if ((e2 as { code?: string }).code !== "invalid_output") throw e2; }
+    }
+    return await attempt([...base, { role: "user", content: "Your previous reply was not valid JSON for the required schema. Reply again with ONLY the JSON object, exactly matching the schema. Do not think out loud; keep it short." }]);
   }
 }

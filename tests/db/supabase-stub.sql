@@ -1,8 +1,9 @@
 -- Minimal stand-in for the parts of a Supabase project our migrations rely on (plain-Postgres test harness).
+-- Roles are cluster-wide and test files create databases in parallel, so "check then create" can race: swallow the duplicate.
 do $$ begin
-  if not exists (select from pg_roles where rolname = 'anon') then create role anon nologin noinherit; end if;
-  if not exists (select from pg_roles where rolname = 'authenticated') then create role authenticated nologin noinherit; end if;
-  if not exists (select from pg_roles where rolname = 'service_role') then create role service_role nologin noinherit bypassrls; end if;
+  begin create role anon nologin noinherit; exception when duplicate_object or unique_violation then null; end;
+  begin create role authenticated nologin noinherit; exception when duplicate_object or unique_violation then null; end;
+  begin create role service_role nologin noinherit bypassrls; exception when duplicate_object or unique_violation then null; end;
 end $$;
 create schema if not exists extensions;
 create schema if not exists auth;
