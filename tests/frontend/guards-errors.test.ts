@@ -67,6 +67,15 @@ describe("admin + sign-in guards", () => {
     for (const bad of ["https://evil.example", "//evil.example", "/\\evil", "javascript:alert(1)", "", null, undefined, "/sign-in?next=/x", "/auth/callback", "/admin/sign-in"]) expect(safeNext(bad as string)).toBe("/dashboard");
     expect(safeNext(null, "/x")).toBe("/x");
   });
+  it("safeNext rejects control-character bypasses that the URL parser would turn into a cross-origin redirect", () => {
+    // new URL("/\t/evil.example", origin) resolves to https://evil.example/ because the parser strips tab / CR / LF.
+    for (const bad of ["/\t/evil.example", "/\n/evil.example", "/\r/evil.example", "/\t\t/evil.example", "/\u0000/evil.example", "/ok\\evil.example"]) {
+      expect(safeNext(bad)).toBe("/dashboard");
+      expect(new URL(safeNext(bad), "https://app.example").origin).toBe("https://app.example");
+    }
+    expect(safeNext("/history?x=1#y")).toBe("/history?x=1#y");
+    expect(safeNext("/practice/abc/details")).toBe("/practice/abc/details");
+  });
 });
 
 describe("error code → UI mapping (every backend code)", () => {

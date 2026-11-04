@@ -5,6 +5,11 @@
 
 [build.environment]
   NODE_VERSION = "22"
+  # Netlify secrets scanning stays ON (it fails the build if a secret value appears in the build output). These three values are PUBLIC BY
+  # DESIGN: they are inlined into the browser bundle, and the Supabase anon/publishable key is protected by RLS, not by secrecy. Omitting just
+  # these exact keys stops a false-positive build failure without weakening the scan for anything else (e.g. a SUPABASE_SERVICE_ROLE_KEY set
+  # here by mistake still fails the build). next.config.mjs additionally refuses to build if a secret is placed in any NEXT_PUBLIC_ variable.
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_APP_URL"
 
 # Production: the real backend.
 [context.production.environment]
