@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { BRANCHES, COLLEGE_YEARS, DAILY_SESSION_LIMIT, MAX_SLIDES, MAX_TOTAL_MINUTES } from "@shared/constants.ts";
 import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
@@ -23,11 +22,12 @@ import { profileSchema } from "@/features/profile/schema";
 import { toAppError } from "@/lib/data/errors";
 import { setFlash } from "@/lib/flash";
 import styles from "./Settings.module.css";
+import { useGo } from "@/lib/use-go";
 
 /** S17 Settings: profile, limits, Terms/Privacy (view-only), sign out and the Danger zone (delete account). */
 export function Settings() {
   const compact = useCompact();
-  const router = useRouter();
+  const nav = useGo();
   const { toast } = useToast();
   const profile = useMyProfile();
   const stats = useDashboardStats();
@@ -54,7 +54,7 @@ export function Settings() {
     update.mutate(r.data, { onSuccess: () => toast("Profile saved"), onError: (e) => toast(toAppError(e).code === "blocked" ? "Your account is paused." : "We couldn't save that. Try again.", "danger") });
   };
   const closeDelete = () => { setConfirm(false); setTyped(""); del.reset(); };
-  const doDelete = () => del.mutate(undefined, { onSuccess: () => { setFlash("Your account was deleted"); router.replace("/"); } });
+  const doDelete = () => del.mutate(undefined, { onSuccess: () => { setFlash("Your account was deleted"); nav.go("/", { replace: true }); } });
   const delErr = del.error ? toAppError(del.error) : null;
 
   return (
@@ -86,14 +86,14 @@ export function Settings() {
           <Link key={l} href={href} className={styles.link}>{l}<Icon name="chevron-right" size={18} /></Link>
         ))}
       </Card>
-      <Button variant="secondary" iconLeft="log-out" style={{ marginTop: 20 }} loading={signOut.isPending} onClick={() => signOut.mutate(undefined, { onSuccess: () => router.replace("/") })}>Sign out</Button>
+      <Button variant="secondary" iconLeft="log-out" style={{ marginTop: 20 }} loading={signOut.isPending || nav.pending} onClick={() => signOut.mutate(undefined, { onSuccess: () => nav.go("/", { replace: true }) })}>Sign out</Button>
       <Card variant="default" className={styles.danger} aria-label="Danger zone">
         <H l={3} style={{ color: "var(--danger-text)", marginBottom: 6 }}>Danger zone</H>
         <P style={{ fontSize: 15, marginBottom: 14 }}>Deleting your account removes your profile, decks, slide images, reports and ratings permanently. This can&apos;t be undone.</P>
         <Button variant="record" iconLeft="trash-2" disabled={blocked} onClick={() => setConfirm(true)}>Delete account</Button>
       </Card>
       <Dialog open={confirm} title="Delete your account?" onClose={closeDelete} width={compact ? 360 : 480}
-        actions={<><Button variant="secondary" onClick={closeDelete}>Cancel</Button><Button variant="record" disabled={typed !== "DELETE"} loading={del.isPending} onClick={doDelete}>{del.isPending ? "Deleting…" : "Delete account"}</Button></>}>
+        actions={<><Button variant="secondary" onClick={closeDelete}>Cancel</Button><Button variant="record" disabled={typed !== "DELETE"} loading={del.isPending || nav.pending} onClick={doDelete}>{del.isPending ? "Deleting…" : "Delete account"}</Button></>}>
         <P>All your decks, slide images, reports and ratings will be removed permanently. This can&apos;t be undone.</P>
         <div style={{ marginTop: 14 }}><Input label="Type DELETE to confirm" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" autoCapitalize="characters" spellCheck={false} /></div>
         {delErr && <div style={{ marginTop: 12 }}><Notice tone="danger" title="We couldn't delete your account">{delErr.code === "blocked" ? "Your account is paused." : "Please try again."}</Notice></div>}

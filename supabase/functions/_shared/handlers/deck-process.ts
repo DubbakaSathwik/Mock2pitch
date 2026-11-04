@@ -76,7 +76,8 @@ async function failDeckProcessing(deps: Deps, deckId: string, e: unknown) {
   const c = (e as { code?: string })?.code;
   const code = c === "AI_BUSY" ? "ai_unavailable" : c === "model_unavailable" ? "misconfigured" : "processing_failed";
   logEvent("deck_processing_failed", { deck_id: deckId, code });
-  await deps.admin.from("decks").update({ status: "failed", error_code: code, processing_stage: null }).eq("id", deckId);
+  // only while the deck is still being processed: a deck the student cancelled meanwhile stays "cancelled"
+  await deps.admin.from("decks").update({ status: "failed", error_code: code, processing_stage: null }).eq("id", deckId).eq("status", "processing");
 }
 
 /**
@@ -100,6 +101,9 @@ export async function runDeckProcessing(deps: Deps, deckId: string, owner: strin
       images.push({ index: i, jpeg: await deps.r2.get(f.object_key) });
     }
     const read = await readSlides(deps, store, images, details, n, { userId: owner, deckId });
+    // The student may have cancelled the deck while the AI was reading: then nothing is written.
+    const { data: cur } = await deps.admin.from("decks").select("status").eq("id", deckId).maybeSingle();
+    if (cur?.status !== "processing") return;
     const rows = todo.map((i) => {
       const r = read.get(i);
       if (!r) throw new Error("slide_missing");
@@ -108,5 +112,5 @@ export async function runDeckProcessing(deps: Deps, deckId: string, owner: strin
     const { error } = await deps.admin.from("slides").upsert(rows, { onConflict: "deck_id,slide_index" });
     if (error) throw new Error("slide_write_failed");
   }
-  await deps.admin.from("decks").update({ status: "ready", processed_slides: n, processing_stage: null, error_code: null }).eq("id", deckId);
+  await deps.admin.from("decks").update({ status: "ready", processed_slides: n, processing_stage: null, error_code: null }).eq("id", deckId).eq("status", "processing");
 }

@@ -10,3 +10,5 @@
 .fail{margin-bottom:16px}
 .actions{display:flex;gap:12px;flex-direction:row}
 @container app (max-width:759.98px){.row{grid-template-columns:minmax(0,1fr) auto;padding:14px 16px}.actions{flex-direction:column}}
+.player{grid-column:2 / -1;min-width:0;padding-left:0}
+@container app (max-width:759.98px){.player{grid-column:1 / -1}}

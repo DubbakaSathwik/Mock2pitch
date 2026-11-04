@@ -6,7 +6,7 @@ import { Badge } from "@/components/ds/Badge";
 import { Button } from "@/components/ds/Button";
 import { Card } from "@/components/ds/Card";
 import { Icon, type IconName } from "@/components/ds/Icon";
-import { IconButton } from "@/components/ds/IconButton";
+import { ClipPlayer } from "@/components/app/ClipPlayer";
 import { Input } from "@/components/ds/Input";
 import { ScoreRing } from "@/components/ds/ScoreRing";
 import { useToast } from "@/components/ds/Toast";
@@ -25,7 +25,6 @@ import { toAppError } from "@/lib/data/errors";
 import type { ReportDetail } from "@/lib/data/types";
 import { formatDate, mmss } from "@/lib/format";
 import { SCORE_WORD, scoreBand, scoreColor } from "@/lib/score";
-import { useClipPlayback } from "@/features/recording/hooks";
 import { recordingStore, useRecordingStore } from "@/features/recording/store";
 import { useRateReport, useReport } from "./queries";
 import styles from "./Report.module.css";
@@ -51,7 +50,6 @@ function SlideRows({ d }: { d: ReportDetail }) {
   // The recordings are still in this tab's memory right after submitting (never uploaded back, never stored); they are gone after leaving the report.
   const sessionId = d.report.session_id;
   const clips = useRecordingStore(() => new Map(recordingStore.list(sessionId)));
-  const playback = useClipPlayback();
   useEffect(() => { recordingStore.cancelClear(sessionId); return () => recordingStore.scheduleClear(sessionId); }, [sessionId]);
   const firstRecorded = d.results.findIndex((x) => x.duration_ms > 0);
   const [open, setOpen] = useState(firstRecorded);
@@ -103,11 +101,18 @@ function SlideRows({ d }: { d: ReportDetail }) {
                       )}
                       {clip && (
                         <div className={styles.playRow} data-testid={`playback-${i}`}>
-                          <IconButton icon={playback.playing === i ? "square" : "play"} label={playback.playing === i ? `Stop your recording of slide ${i + 1}` : `Play your recording of slide ${i + 1}`} variant="secondary" size={44} onClick={() => (playback.playing === i ? playback.stop() : playback.play(i, clip.url))} />
-                          <span>Your recording · {mmss(clip.durationMs / 1000)}</span>
+                          <Overline>Your recording</Overline>
+                          <ClipPlayer blob={clip.blob} url={clip.url} durationMs={clip.durationMs} playLabel={`Play your recording of slide ${i + 1}`} pauseLabel={`Pause your recording of slide ${i + 1}`} seekLabel={`Seek your recording of slide ${i + 1}`} />
                         </div>
                       )}
                       <div><Overline style={{ marginBottom: 8 }}>Transcript</Overline><div className={styles.transcript}><FillerText text={res?.transcript ?? ""} /></div></div>
+                      <div data-testid={`script-${i}`}>
+                        <Overline style={{ marginBottom: 8 }}>Suggested script</Overline>
+                        <div className={styles.script} tabIndex={0} role="region" aria-label={`Suggested script for slide ${i + 1}`}>
+                          {s.suggested_script?.trim() ? s.suggested_script.trim().split(/\n+/).map((para, x) => <p key={x}>{para}</p>) : <p>There was no suggested script for this slide.</p>}
+                        </div>
+                        <Muted style={{ marginTop: 6, fontSize: 13 }}>Compare it with what you said above. Your own words are fine as long as they cover the key points.</Muted>
+                      </div>
                     </>
                   )}
                 </div>

@@ -432,6 +432,8 @@ enabled = true
 verify_jwt = true
 [functions.deck-upload-complete]
 verify_jwt = true
+[functions.deck-cancel]
+verify_jwt = true
 [functions.deck-process]
 verify_jwt = false   # called by users (JWT checked in code) and by the sweeper (internal secret)
 [functions.asset-urls]
@@ -442,6 +444,8 @@ verify_jwt = true
 verify_jwt = false   # users (JWT checked in code) + internal re-invocation
 [functions.account-delete]
 verify_jwt = true
+[functions.admin-diagnose]
+verify_jwt = true   # owner only (checked in code): real provider calls
 [functions.admin-ai-keys]
 verify_jwt = true
 [functions.ops-selftest]

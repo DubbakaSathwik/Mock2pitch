@@ -1,6 +1,5 @@
 "use client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { Card } from "@/components/ds/Card";
 import { Icon, type IconName } from "@/components/ds/Icon";
@@ -17,6 +16,7 @@ import { useDashboardStats } from "@/features/dashboard/queries";
 import { useStartPractice } from "@/features/dashboard/useStartPractice";
 import { useMyProfile } from "@/features/profile/queries";
 import styles from "./shells.module.css";
+import { useGo } from "@/lib/use-go";
 
 export type StudentNav = "dashboard" | "upload" | "history" | "settings";
 
@@ -103,15 +103,15 @@ export function FlowShell({ step, wide, back, children }: { step: FlowStep; wide
 
 const ADMIN_NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/admin", label: "Overview", icon: "layout-dashboard" }, { href: "/admin/students", label: "Students", icon: "users" },
-  { href: "/admin/ratings", label: "Ratings", icon: "star" }, { href: "/admin/ai-usage", label: "AI usage", icon: "cpu" }, { href: "/admin/terms", label: "Terms", icon: "file-text" },
+  { href: "/admin/ratings", label: "Ratings", icon: "star" }, { href: "/admin/ai-usage", label: "AI usage", icon: "cpu" }, { href: "/admin/diagnosis", label: "Diagnosis", icon: "activity" }, { href: "/admin/terms", label: "Terms", icon: "file-text" },
 ];
 
 /** Admin shell: Prussian sidebar on desktop; Prussian top bar + 5-column bottom bar on mobile. */
 export function AdminShell({ active, children }: { active: string; children: ReactNode }) {
   const compact = useCompact();
-  const router = useRouter();
   const signOut = useSignOut();
-  const out = () => signOut.mutate(undefined, { onSuccess: () => router.replace("/") });
+  const nav = useGo();
+  const out = () => signOut.mutate(undefined, { onSuccess: () => nav.go("/", { replace: true }) });
   if (compact) {
     return (
       <div className={styles.mRoot}>
@@ -132,7 +132,7 @@ export function AdminShell({ active, children }: { active: string; children: Rea
           {ADMIN_NAV.map((it) => <Link key={it.href} href={it.href} aria-current={active === it.href ? "page" : undefined} className={`${styles.navItem} ${styles.navDark} ${active === it.href ? styles.navDarkOn : ""}`}><Icon name={it.icon} size={20} />{it.label}</Link>)}
         </nav>
         <div style={{ flex: 1 }} />
-        <button type="button" className={`${styles.navItem} ${styles.navDark}`} onClick={out}><Icon name="log-out" size={20} />Sign out</button>
+        <button type="button" className={`${styles.navItem} ${styles.navDark}`} data-nav-pending={signOut.isPending || nav.pending ? "true" : undefined} disabled={signOut.isPending || nav.pending} onClick={out}><Icon name="log-out" size={20} />Sign out</button>
       </aside>
       <main id="main" className={styles.main}><div style={{ maxWidth: 1200, margin: "0 auto" }}>{children}</div></main>
     </div>

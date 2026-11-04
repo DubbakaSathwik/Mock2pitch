@@ -43,10 +43,12 @@ export function Details() {
   const st = status.data?.status;
   useEffect(() => {
     if (!st) return;
-    if (st === "processing" || st === "failed") router.replace(`/practice/${deckId}/reading`);
+    const dead = st === "failed" && (status.data?.error_code === "cancelled" || status.data?.error_code === "upload_timeout" || !status.data?.page_count);
+    if (dead) router.replace("/practice/new"); // cancelled / timed out: nothing to continue
+    else if (st === "processing" || st === "failed") router.replace(`/practice/${deckId}/reading`);
     else if (st === "ready") router.replace(`/practice/${deckId}/prepare`);
     else if (st === "awaiting_upload") router.replace("/practice/new");
-  }, [st, deckId, router]);
+  }, [st, status.data, deckId, router]);
 
   const start = useMutation({
     mutationFn: (details: ReturnType<typeof toDeckDetails>) => getData().upload.process(deckId, details),

@@ -97,13 +97,19 @@ test("2. first practice: upload → reading → prep → time → mic → room �
   // S12 → submit
   await expect(page).toHaveURL(/\/review/);
   await expect(page.getByText("Audio is deleted from our servers once your report is generated.")).toBeVisible();
-  // playback works BEFORE submitting too: it must keep playing (a re-render used to stop it at once), and Stop ends it
+  // playback works BEFORE submitting too: it keeps playing (a re-render used to stop it at once), the seek bar moves it, Pause holds the position
   await page.getByRole("button", { name: "Play back slide 1" }).click();
-  await expect(page.getByRole("button", { name: "Stop playback of slide 1" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Pause playback of slide 1" })).toBeVisible();
   await page.waitForTimeout(800);
-  await expect(page.getByRole("button", { name: "Stop playback of slide 1" })).toBeVisible();
-  await page.getByRole("button", { name: "Stop playback of slide 1" }).click();
+  await expect(page.getByRole("button", { name: "Pause playback of slide 1" })).toBeVisible();
+  const seek = page.getByRole("slider", { name: "Seek slide 1 recording" });
+  await seek.fill("2");
+  await expect(seek).toHaveAttribute("aria-valuetext", /^0:0[2-3] of /);
+  await page.getByRole("button", { name: "Pause playback of slide 1" }).click();
   await expect(page.getByRole("button", { name: "Play back slide 1" })).toBeVisible();
+  const held = await seek.getAttribute("aria-valuetext");
+  await page.waitForTimeout(600);
+  expect(await seek.getAttribute("aria-valuetext")).toBe(held);
   await page.getByRole("button", { name: "Submit for feedback" }).click();
 
   // S13 → S14
@@ -123,13 +129,20 @@ test("2. first practice: upload → reading → prep → time → mic → room �
   await row2.click();
   await expect(page.getByText("Transcript").first()).toBeVisible();
   await expect(page.getByText("Key points").first()).toBeVisible();
+  // the suggested script sits below the transcript so the student can compare it with what they said
+  await expect(page.getByTestId("script-1")).toContainText("Suggested script");
+  await expect(page.getByRole("region", { name: "Suggested script for slide 2" })).toBeVisible();
+  const tBox = (await page.getByText("Transcript").first().boundingBox())!;
+  const sBox = (await page.getByTestId("script-1").boundingBox())!;
+  expect(sBox.y).toBeGreaterThan(tBox.y);
 
   // playback after submitting: the recordings are still in this tab, so each recorded slide can be played back from its panel
   await expect(page.getByText("They are only on this device and disappear when you leave this report.")).toBeVisible();
   await expect(page.getByTestId("playback-1")).toContainText("Your recording");
   await page.getByRole("button", { name: "Play your recording of slide 2" }).click();
-  await expect(page.getByRole("button", { name: "Stop your recording of slide 2" })).toBeVisible();
-  await page.getByRole("button", { name: "Stop your recording of slide 2" }).click();
+  await expect(page.getByRole("button", { name: "Pause your recording of slide 2" })).toBeVisible();
+  await page.getByRole("slider", { name: "Seek your recording of slide 2" }).fill("1");
+  await page.getByRole("button", { name: "Pause your recording of slide 2" }).click();
   await expect(page.getByRole("button", { name: "Play your recording of slide 2" })).toBeVisible();
 
   // rate: exactly five star buttons

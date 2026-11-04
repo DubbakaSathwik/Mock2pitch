@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ds/Badge";
 import { Button } from "@/components/ds/Button";
 import { Dialog } from "@/components/ds/Dialog";
@@ -21,6 +21,7 @@ import { recordingStore, useRecordingStore } from "@/features/recording/store";
 import { useSessionStatusRedirect } from "@/features/sessions/queries";
 import { mmss } from "@/lib/format";
 import styles from "./Room.module.css";
+import { useGo } from "@/lib/use-go";
 
 type Status = "none" | "rec" | "done" | "over";
 const STAT: Record<Status, { color: string; label: string }> = {
@@ -43,7 +44,8 @@ function Ctl({ icon, label, onClick, disabled, kind, big, compact }: { icon: Ico
 export function Room() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const compact = useCompact();
-  const router = useRouter();
+  const pageNav = useGo();
+  const swipeStart = useRef<{ x: number; y: number } | null>(null); // phone swipe on the slide (see swipeProps)
   const params = useSearchParams();
   const { toast } = useToast();
   const session = useSessionStatusRedirect(sessionId, "pre-submit");
@@ -61,6 +63,7 @@ export function Room() {
   const [recording, setRecording] = useState(false);
   const [, tick] = useState(0);
   const [notes, setNotes] = useState(false);
+  const [notesTab, setNotesTab] = useState<"points" | "script">("points");
   const [leave, setLeave] = useState(false);
   const [micErr, setMicErr] = useState<string | null>(null);
   const [announce, setAnnounce] = useState("");
@@ -80,7 +83,8 @@ export function Room() {
   const i = cur ?? 0;
   curRef.current = i;
 
-  useEffect(() => { try { setNotes(localStorage.getItem("m2p.room.notes") === "1"); } catch { /* ignore */ } }, []);
+  useEffect(() => { try { setNotes(localStorage.getItem("m2p.room.notes") === "1"); setNotesTab(localStorage.getItem("m2p.room.notesTab") === "script" ? "script" : "points"); } catch { /* ignore */ } }, []);
+  const pickNotesTab = (t: "points" | "script") => { setNotesTab(t); try { localStorage.setItem("m2p.room.notesTab", t); } catch { /* ignore */ } };
   const toggleNotes = () => { const v = !notes; setNotes(v); try { localStorage.setItem("m2p.room.notes", v ? "1" : "0"); } catch { /* ignore */ } };
 
   // microphone: reuse the one granted at mic check, or open it again (e.g. after a refresh)
@@ -142,8 +146,8 @@ export function Room() {
   const totalTarget = (session.data?.total_minutes ?? 0) * 60;
   const name = auth.data?.fullName ?? auth.data?.email ?? "You";
   const slide = slides[i];
-  const goReview = () => router.push(`/session/${sessionId}/review`);
-  const doLeave = () => { recordingStore.clearSession(sessionId); recordingStore.closeMic(); router.push("/dashboard"); };
+  const goReview = () => pageNav.go(`/session/${sessionId}/review`);
+  const doLeave = () => { recordingStore.clearSession(sessionId); recordingStore.closeMic(); pageNav.go("/dashboard"); };
 
   const timers: ReactNode = (
     <div className={styles.timers}>
@@ -162,9 +166,21 @@ export function Room() {
       <Ctl compact={compact} icon="phone" label="End" kind="leave" onClick={() => setLeave(true)} />
     </div>
   );
+  // Phone only: swipe the big slide left / right to go to the next / previous slide (not while recording). Pointer events work for touch and mouse.
+  const swipeProps = compact ? {
+    onPointerDown: (e: React.PointerEvent) => { swipeStart.current = { x: e.clientX, y: e.clientY }; },
+    onPointerCancel: () => { swipeStart.current = null; },
+    onPointerUp: (e: React.PointerEvent) => {
+      const s = swipeStart.current; swipeStart.current = null;
+      if (!s || recording) return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (dx < 0 && i < N - 1) nav(1); else if (dx > 0 && i > 0) nav(-1);
+    },
+  } : {};
   const stage = (
     <div className={styles.stage}>
-      <SlideView src={images.urls.get(i)} alt={`Slide ${i + 1}: ${slide?.title ?? ""}`} onRefetch={images.refetch} />
+      <div className={styles.slideBox} {...swipeProps}><SlideView src={images.urls.get(i)} alt={`Slide ${i + 1}: ${slide?.title ?? ""}`} onRefetch={images.refetch} style={{ width: "min(100cqw, calc(100cqh * 16 / 9))" }} /></div>
       <div className={styles.status}>
         <div className={styles.statusL}>
           {recording ? <Badge tone="danger" dot>Recording slide {i + 1}</Badge> : playback.playing === i ? <Badge tone="info" dot>Playing back slide {i + 1}</Badge> : <Badge tone={here === "over" ? "warning" : here === "done" ? "success" : "neutral"}>{STAT[here].label}</Badge>}
@@ -178,17 +194,51 @@ export function Room() {
   const strip = (
     <div className={styles.strip} role="group" aria-label="Slides" tabIndex={0}>
       {slides.map((_, k) => { const s = statusOf(k); return (
-        <button key={k} type="button" disabled={recording} aria-current={k === i ? "true" : undefined} aria-label={`Slide ${k + 1}, ${STAT[s].label}`} className={`${styles.chip} ${k === i ? styles.chipOn : ""}`} style={{ width: compact ? 76 : 112 }} onClick={() => { playback.stop(); setCur(k); }}>
+        <button key={k} type="button" disabled={recording} aria-current={k === i ? "true" : undefined} aria-label={`Slide ${k + 1}, ${STAT[s].label}`} className={`${styles.chip} ${k === i ? styles.chipOn : ""}`} style={{ width: compact ? 64 : 112 }} onClick={() => { playback.stop(); setCur(k); }}>
           <SlideView src={images.urls.get(k)} alt="" flat radius={4} onRefetch={images.refetch} />
           <span className={styles.chipLabel}><i className={`${styles.dot} ${s === "rec" ? styles.pulse : ""}`} style={{ background: s === "none" ? "var(--ink-400)" : STAT[s].color }} />{compact ? k + 1 : STAT[s].label}</span>
         </button>
       ); })}
     </div>
   );
+  const script = (slide?.suggested_script ?? "").trim();
   const notesP = (
-    <div className={styles.notes}>
+    <div className={`${styles.notes} ${notes ? styles.notesOpen : ""}`}>
       <button type="button" className={styles.notesBtn} aria-expanded={notes} onClick={toggleNotes}><span className={styles.notesTitle}><Icon name="notebook-pen" size={16} />My notes</span><Icon name={notes ? "chevron-up" : "chevron-down"} size={16} /></button>
-      {notes && slide && <div className={styles.notesBody}><Overline color="var(--icy-blue)" style={{ marginBottom: 6 }}>Cover on this slide</Overline>{slide.key_points.map((k, x) => <div key={x} className={styles.note}><Icon name="circle-check" size={15} color="var(--icy-blue)" style={{ marginTop: 3 }} />{k}</div>)}</div>}
+      {notes && (
+        <>
+          <div className={styles.noteTabs} role="tablist" aria-label="Notes">
+            <button type="button" role="tab" id="notes-tab-points" aria-selected={notesTab === "points"} aria-controls="notes-panel" className={`${styles.noteTab} ${notesTab === "points" ? styles.noteTabOn : ""}`} onClick={() => pickNotesTab("points")}>Key points</button>
+            <button type="button" role="tab" id="notes-tab-script" aria-selected={notesTab === "script"} aria-controls="notes-panel" className={`${styles.noteTab} ${notesTab === "script" ? styles.noteTabOn : ""}`} onClick={() => pickNotesTab("script")}>Script</button>
+          </div>
+          <div id="notes-panel" role="tabpanel" aria-labelledby={`notes-tab-${notesTab}`} tabIndex={0} className={styles.notesBody} data-testid="notes-panel">
+            {!slide ? null : notesTab === "points" ? (
+              <>
+                <Overline color="var(--icy-blue)" style={{ marginBottom: 6 }}>Cover on this slide</Overline>
+                {slide.key_points.map((k, x) => <div key={x} className={styles.note}><Icon name="circle-check" size={15} color="var(--icy-blue)" style={{ marginTop: 3 }} />{k}</div>)}
+              </>
+            ) : (
+              <>
+                <Overline color="var(--icy-blue)" style={{ marginBottom: 6 }}>Suggested script</Overline>
+                {script ? script.split(/\n+/).map((para, x) => <p key={x} className={styles.scriptP}>{para}</p>) : <p className={styles.scriptP}>There is no suggested script for this slide.</p>}
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+  // Phone: slide position dots and a 2 x 2 grid below the slide: three jury members and you, big.
+  const dots = (
+    <div className={styles.dots} data-testid="slide-dots">
+      {slides.map((_, k) => <i key={k} className={k === i ? styles.dotOn : undefined} aria-hidden="true" />)}
+      <span className="sr-only">Slide {i + 1} of {N}. Swipe the slide left or right to change it.</span>
+    </div>
+  );
+  const grid = (
+    <div className={styles.mGrid} aria-label="In the room">
+      {JURY.slice(0, 3).map((a, k) => <Person key={k} k={k} label={a.name} role={a.role} />)}
+      <SelfTile name={name} avatarUrl={auth.data?.avatarUrl} speaking={recording} level={level} />
     </div>
   );
   const tiles = (small: boolean) => <>{JURY.map((a, k) => <Person key={k} k={k} label={a.name} role={a.role} small={small} />)}<SelfTile name={name} avatarUrl={auth.data?.avatarUrl} speaking={recording} level={level} small={small} /></>;
@@ -198,14 +248,14 @@ export function Room() {
       <header className={styles.bar} style={{ height: compact ? 52 : 64, padding: compact ? "0 12px" : "0 24px" }}>
         {compact ? <div className={styles.barL}>Slide {i + 1}/{N}</div> : <div className={styles.barLeft}><Logo dark size={18} /><span className={styles.deckName}>{deck.data?.deck.title} · Slide {i + 1} of {N}</span></div>}
         {!compact && timers}
-        {compact ? <div className={styles.barR}>Total {mmss(total)} / {mmss(totalTarget)}</div> : <Button variant="inverse" size="sm" disabled={recording} onClick={goReview}>Review and submit</Button>}
+        {compact ? <div className={styles.barR}>Total {mmss(total)} / {mmss(totalTarget)}</div> : <Button variant="inverse" size="sm" disabled={recording} loading={pageNav.pending} onClick={goReview}>Review and submit</Button>}
       </header>
       <div className="sr-only" role="status" aria-live="polite" data-testid="room-announce">{announce}</div>
-      {micErr && <div className={styles.micErr}><Notice tone="danger" title="We can't use your microphone" action={<Button size="sm" variant="secondary" onClick={() => router.push(`/session/${sessionId}/mic`)}>Mic check</Button>}>Go back to the mic check to allow it, then return here.</Notice></div>}
+      {micErr && <div className={styles.micErr}><Notice tone="danger" title="We can't use your microphone" action={<Button size="sm" variant="secondary" loading={pageNav.pending} onClick={() => pageNav.go(`/session/${sessionId}/mic`)}>Mic check</Button>}>Go back to the mic check to allow it, then return here.</Notice></div>}
       <h1 className="sr-only">Practice room</h1>
       {compact ? (
         <>
-          <main id="main" className={styles.mBody}>{stage}<div className={styles.mTiles}>{tiles(true)}</div>{strip}{notesP}<Button variant="inverse" disabled={recording} onClick={goReview}>Review and submit</Button></main>
+          <main id="main" className={styles.mBody}>{stage}{dots}{grid}{notesP}<Button variant="inverse" disabled={recording} loading={pageNav.pending} onClick={goReview}>Review and submit</Button></main>
           <div className={styles.sheet}><div className={styles.sheetTimers}>{timers}</div>{ctls}</div>
         </>
       ) : (
@@ -218,7 +268,7 @@ export function Room() {
         </>
       )}
       <Dialog open={leave} title="Leave this session?" onClose={() => setLeave(false)} width={440}
-        actions={<><Button variant="secondary" onClick={() => setLeave(false)}>Keep practising</Button><Button variant="record" onClick={doLeave}>Leave session</Button></>}>
+        actions={<><Button variant="secondary" onClick={() => setLeave(false)}>Keep practising</Button><Button variant="record" loading={pageNav.pending} onClick={doLeave}>Leave session</Button></>}>
         <P>Your recordings for this session will be discarded and no report will be created.</P>
       </Dialog>
     </div>

@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Button } from "@/components/ds";
+import { Button, IconButton } from "@/components/ds";
 import { Logo } from "@/components/app/Logo";
 import { BackLink } from "@/components/app/BackLink";
 import { NavProgress } from "@/components/app/NavProgress";
@@ -31,6 +31,18 @@ describe("Button loading state", () => {
   });
 });
 
+describe("IconButton loading state", () => {
+  it("shows a spinner instead of the icon, is busy and disabled", async () => {
+    const onClick = vi.fn();
+    render(<IconButton icon="rotate-ccw" label="Re-record slide 1" loading onClick={onClick} />);
+    const b = screen.getByRole("button", { name: "Re-record slide 1" });
+    expect(b).toBeDisabled(); expect(b).toHaveAttribute("aria-busy", "true");
+    expect(b.querySelector("svg")).toBeNull();
+    await userEvent.click(b);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+});
+
 describe("Logo / BackLink", () => {
   it("the logo is a link home only when given an href", () => {
     const { rerender } = render(<Logo />);
@@ -56,6 +68,26 @@ describe("NavProgress", () => {
     pathname = "/history";
     await act(async () => { rerender(<><NavProgress /><a href="/history">h</a></>); });
     expect(navProgress.isActive()).toBe(false);
+  });
+  it("marks the clicked link as pending (spinner via CSS) until the URL changes, and only that link", async () => {
+    const { rerender } = render(<><NavProgress /><a href="/history" data-testid="a">h</a><a href="/settings" data-testid="b">s</a><a href="https://example.com/x" data-testid="ext">e</a></>);
+    await userEvent.click(screen.getByTestId("a"));
+    expect(screen.getByTestId("a")).toHaveAttribute("data-nav-pending", "true");
+    expect(screen.getByTestId("b")).not.toHaveAttribute("data-nav-pending");
+    await userEvent.click(screen.getByTestId("ext"));
+    expect(screen.getByTestId("ext")).not.toHaveAttribute("data-nav-pending");
+    pathname = "/history";
+    await act(async () => { rerender(<><NavProgress /><a href="/history" data-testid="a">h</a><a href="/settings" data-testid="b">s</a></>); });
+    expect(screen.getByTestId("a")).not.toHaveAttribute("data-nav-pending");
+  });
+  it("clears the mark when the navigation is cancelled or times out", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    render(<><NavProgress /><a href="/history" data-testid="a">h</a></>);
+    await userEvent.click(screen.getByTestId("a"));
+    expect(screen.getByTestId("a")).toHaveAttribute("data-nav-pending", "true");
+    await act(async () => { vi.advanceTimersByTime(12_100); });
+    expect(screen.getByTestId("a")).not.toHaveAttribute("data-nav-pending");
+    vi.useRealTimers();
   });
   it("never runs forever: a navigation that never lands is ended by the safety timeout", () => {
     vi.useFakeTimers();

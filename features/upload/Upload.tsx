@@ -12,6 +12,7 @@ import { H, Muted } from "@/components/app/Typography";
 import { MAX_PDF_BYTES, MAX_SLIDES } from "@shared/constants.ts";
 import { useUploadFlow, type UploadPhase } from "./useUploadFlow";
 import styles from "./Upload.module.css";
+import { ActiveDeckPanel } from "@/features/practice/ActiveDeckPanel";
 
 const MB = MAX_PDF_BYTES / (1024 * 1024);
 
@@ -57,7 +58,9 @@ export function Upload() {
       )}
       {flow.failure && (
         <div className={styles.err} data-testid="upload-error">
-          <ErrorNotice title={flow.failure.ui.title} body={flow.failure.ui.body} onRetry={flow.failure.ui.retry ? flow.retry : undefined} />
+          {flow.failure.code === "deck_in_progress"
+            ? <ActiveDeckPanel intro="Finish your current deck first" onCancelled={flow.retry} />
+            : <ErrorNotice title={flow.failure.ui.title} body={flow.failure.ui.body} onRetry={flow.failure.ui.retry ? flow.retry : undefined} />}
         </div>
       )}
       <Card variant="sunken" padding={16} className={styles.hint}>

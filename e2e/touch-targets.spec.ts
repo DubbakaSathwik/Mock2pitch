@@ -8,7 +8,7 @@ const SCREENS: [Persona, string][] = [
   ["returning_student", "/reports/00000000-0000-4000-8000-00000000d001-rep2"], ["returning_student", "/history/00000000-0000-4000-8000-00000000d001"],
   ["returning_student", "/practice/00000000-0000-4000-8000-00000000d001/prepare"], ["returning_student", "/practice/00000000-0000-4000-8000-00000000d001/time"],
   ["at_limit", "/limit"], ["blocked", "/paused"],
-  ["admin", "/admin"], ["admin", "/admin/students"], ["admin", "/admin/ratings"], ["admin", "/admin/ai-usage"], ["admin", "/admin/terms"],
+  ["admin", "/admin"], ["admin", "/admin/students"], ["admin", "/admin/ratings"], ["admin", "/admin/ai-usage"], ["admin", "/admin/diagnosis"], ["admin", "/admin/terms"],
 ];
 
 test("mobile: tappable controls are at least 44px", async ({ browser, isMobile }) => {

@@ -349,3 +349,49 @@ describe("account deletion and admin", () => {
     expect(store.has("m2p.mock.seed")).toBe(false);
   });
 });
+
+describe("unfinished deck: getActive / cancel and the one-active-deck rule", () => {
+  async function uploadOnly(m: ReturnType<typeof createMockData>, name: string) {
+    const pdf = await makePdf(3);
+    const init = await m.data.upload.init({ filename: name, size_bytes: pdf.length, content_type: "application/pdf" });
+    await putToSignedUrl(init.upload, blobOf(pdf, "application/pdf"));
+    const done = await m.data.upload.complete(init.deck_id);
+    for (const im of done.images) await putToSignedUrl(im.upload, jpeg());
+    return init.deck_id;
+  }
+  it("a deck waiting for its details is the active one and blocks a new upload until it is cancelled (session not refunded)", async () => {
+    const m = createMockData({ persona: "student", config: fast });
+    expect(await m.data.decks.getActive()).toBeNull();
+    const id = await uploadOnly(m, "First.pdf");
+    expect(await m.data.decks.getActive()).toMatchObject({ deck_id: id, status: "awaiting_images", title: "First" });
+    const pdf = await makePdf(2);
+    await expect(m.data.upload.init({ filename: "Second.pdf", size_bytes: pdf.length, content_type: "application/pdf" })).rejects.toMatchObject({ code: "deck_in_progress" });
+    const before = (await m.data.dashboard.getStats()).sessions_used_today;
+    await m.data.decks.cancel(id);
+    await m.data.decks.cancel(id); // idempotent
+    expect(await m.data.decks.getActive()).toBeNull();
+    expect((await m.data.decks.getStatus(id))).toMatchObject({ status: "failed", error_code: "cancelled" });
+    expect((await m.data.dashboard.getStats()).sessions_used_today).toBe(before);
+    await expect(m.data.upload.init({ filename: "Second.pdf", size_bytes: pdf.length, content_type: "application/pdf" })).resolves.toBeTruthy();
+  });
+  it("a cancelled deck cannot be started, and a finished deck cannot be cancelled", async () => {
+    const m = createMockData({ persona: "student", config: fast });
+    const id = await uploadOnly(m, "Gone.pdf");
+    await m.data.decks.cancel(id);
+    await expect(m.data.upload.process(id)).rejects.toMatchObject({ code: "invalid_state" });
+    const ready = await uploadDeck(createMockData({ persona: "student", config: fast }));
+    const m2 = createMockData({ persona: "student", config: fast });
+    const rid = await uploadDeck(m2);
+    await expect(m2.data.decks.cancel(rid)).rejects.toMatchObject({ code: "invalid_state" });
+    void ready;
+  });
+  it("process stores the details sent with the first start", async () => {
+    const m = createMockData({ persona: "student", config: fast });
+    const id = await uploadOnly(m, "Details.pdf");
+    await m.data.upload.process(id, { audience: "others", audience_other: "Alumni", goal: "Win", abstract: "A parking app.", total_minutes: 6 });
+    await until(() => m.data.decks.getStatus(id), (d) => d.status === "ready");
+    const d = (await m.data.decks.get(id)).deck;
+    expect(d).toMatchObject({ audience: "others", audience_other: "Alumni", goal: "Win", abstract: "A parking app.", target_minutes: 6 });
+    await expect(m.data.upload.process(id, { audience: "others", total_minutes: 6 })).resolves.toBeTruthy(); // ready: details ignored
+  });
+});

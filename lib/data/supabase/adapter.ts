@@ -4,7 +4,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { Supa } from "@/lib/supabase/browser";
 import { AppError } from "../errors";
 import type {
-  AdminAiKeys, AdminAiUsage, AdminOverview, AdminPolicyVersion, AdminRatings, AdminStudent, AdminStudentDetail, AuthSession, DashboardStats, DataPort, DeckAttempt, DeckDetail,
+  ActiveDeck, DiagnosisResult, AdminAiKeys, AdminAiUsage, AdminOverview, AdminPolicyVersion, AdminRatings, AdminStudent, AdminStudentDetail, AuthSession, DashboardStats, DataPort, DeckAttempt, DeckDetail,
   DeckEvent, DeckRow, DeckSummary, PolicyVersionRow, ProfileRow, RatingRow, ReportDetail, ReportListItem, SessionEvent, SessionRow, SessionsPerDay, SlideRow, Unsubscribe,
 } from "../types";
 import { fromAuth, fromPostgrest } from "./errors";
@@ -151,6 +151,12 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
       attempts: async (deckId): Promise<DeckAttempt[]> => arr(S.deckAttempt, "my_deck_detail")(await t.rpc<unknown[]>("my_deck_detail", { p_deck_id: deckId })) as unknown as DeckAttempt[],
       setPinned: async (deckId, pinned) => { await t.rpc("set_deck_pinned", { p_deck_id: deckId, p_pinned: pinned }); },
       getAssetUrls: async (deckId, kinds) => parse(S.assetUrls, await t.fn("asset-urls", { deck_id: deckId, kinds }), "asset-urls") as never,
+      getActive: async (): Promise<ActiveDeck | null> => {
+        const rows = await t.db(() => supa.from("decks").select("id,title,status,page_count,processed_slides").in("status", ["awaiting_images", "processing"]).order("created_at", { ascending: false }).limit(1));
+        const r = one(rows) as { id: string; title: string; status: string; page_count: number | null; processed_slides: number } | undefined;
+        return r ? { deck_id: r.id, title: r.title, status: r.status as ActiveDeck["status"], page_count: r.page_count == null ? null : Number(r.page_count), processed_slides: Number(r.processed_slides ?? 0) } : null;
+      },
+      cancel: async (deckId) => { await t.fn("deck-cancel", { deck_id: deckId }); },
       getStatus: async (deckId): Promise<DeckEvent> => deckEvent(await t.db(() => supa.from("decks").select(DECK_EVENT_COLS).eq("id", deckId).single()) as Record<string, unknown>),
     },
 
@@ -182,7 +188,7 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
         const report = parse(S.reportRow, await t.db(() => supa.from("reports").select("*").eq("id", reportId).single()), "reports");
         const [results, slides, deck, session, rating] = await Promise.all([
           t.db(() => supa.from("session_slide_results").select("*").eq("session_id", report.session_id).order("slide_index")),
-          t.db(() => supa.from("slides").select("slide_index,title,key_points").eq("deck_id", report.deck_id).order("slide_index")),
+          t.db(() => supa.from("slides").select("slide_index,title,key_points,suggested_script").eq("deck_id", report.deck_id).order("slide_index")),
           t.db(() => supa.from("decks").select("title").eq("id", report.deck_id).maybeSingle()),
           t.db(() => supa.from("practice_sessions").select("suggested_seconds").eq("id", report.session_id).maybeSingle()),
           t.db(() => supa.from("report_ratings").select("stars,comment").eq("report_id", reportId).maybeSingle()),
@@ -190,7 +196,7 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
         return {
           report: report as unknown as ReportDetail["report"],
           results: arr(S.resultRow, "session_slide_results")(results) as unknown as ReportDetail["results"],
-          slides: (slides ?? []).map((s: { slide_index: unknown; title: string | null; key_points: string[] }) => ({ slide_index: Number(s.slide_index), title: s.title, key_points: s.key_points })),
+          slides: (slides ?? []).map((s: { slide_index: unknown; title: string | null; key_points: string[]; suggested_script?: string | null }) => ({ slide_index: Number(s.slide_index), title: s.title, key_points: s.key_points, suggested_script: s.suggested_script ?? null })),
           deck_title: deck?.title ?? "Deck", deck_id: report.deck_id,
           target_seconds: ((session?.suggested_seconds as number[] | undefined) ?? []).reduce((a, b) => a + Number(b), 0),
           rating: rating ? { stars: Number(rating.stars), comment: rating.comment } : null,
@@ -217,6 +223,7 @@ export function createSupabaseData(opts: SupabaseDataOptions): DataPort & { tran
     },
 
     admin: {
+      diagnose: async (input): Promise<DiagnosisResult> => parse(S.diagnosisResult, await t.fn("admin-diagnose", input as Record<string, unknown>), "admin-diagnose") as unknown as DiagnosisResult,
       overview: async (): Promise<AdminOverview> => parse(S.adminOverview, one(await t.rpc<unknown[]>("admin_overview")), "admin_overview") as unknown as AdminOverview,
       sessionsPerDay: async (days): Promise<SessionsPerDay[]> => arr(S.sessionsPerDay, "admin_sessions_per_day")(await t.rpc<unknown[]>("admin_sessions_per_day", { p_days: days })),
       listStudents: async (input): Promise<AdminStudent[]> => arr(S.adminStudent, "admin_list_students")(await t.rpc<unknown[]>("admin_list_students", { p_search: input.search?.trim() || null, p_limit: input.limit ?? 50, p_offset: input.offset ?? 0 })) as unknown as AdminStudent[],

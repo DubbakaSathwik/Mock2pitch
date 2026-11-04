@@ -6,3 +6,6 @@
 .secondary{--bg:var(--white);--hv:var(--marine-50);--fg:var(--imperial-blue);--bd:var(--border-strong)}
 .primary{--bg:var(--action-primary);--hv:var(--action-primary-hover);--fg:var(--white);--bd:transparent}
 .inverse{--bg:rgba(166,225,250,.12);--hv:rgba(166,225,250,.22);--fg:var(--icy-blue);--bd:transparent}
+.spin{border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:ib-spin .7s linear infinite}
+@keyframes ib-spin{to{transform:rotate(360deg)}}
+.ib:disabled[aria-busy="true"]{color:var(--fg);cursor:progress;opacity:.8}

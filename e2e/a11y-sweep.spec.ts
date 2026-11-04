@@ -130,7 +130,7 @@ for (const vp of VIEWPORTS) {
     // ---- admin
     {
       const { ctx, page } = await open(browser, "admin", vp);
-      for (const [p, h] of [["/admin", "Overview"], ["/admin/students", "Students"], ["/admin/ratings", "Report ratings"], ["/admin/ai-usage", "AI usage and credits"], ["/admin/terms", "Terms and Privacy Policy"]] as const) {
+      for (const [p, h] of [["/admin", "Overview"], ["/admin/students", "Students"], ["/admin/ratings", "Report ratings"], ["/admin/ai-usage", "AI usage and credits"], ["/admin/diagnosis", "Diagnosis"], ["/admin/terms", "Terms and Privacy Policy"]] as const) {
         await page.goto(p);
         await check(page, found, `admin ${p}`, v, () => expect(page.getByRole("heading", { level: 1, name: h })).toBeVisible());
       }
@@ -152,7 +152,7 @@ test("no horizontal scroll at 320 / 390 / 760 / 1024 / 1440 px on the static scr
   test.setTimeout(300_000);
   const widths = [320, 390, 760, 1024, 1440];
   const bad: string[] = [];
-  for (const [persona, paths] of [["signed_out", ["/", "/sign-in", "/terms"]], ["returning_student", ["/dashboard", "/history", "/settings", "/practice/new"]], ["admin", ["/admin", "/admin/students", "/admin/ai-usage", "/admin/terms"]]] as const) {
+  for (const [persona, paths] of [["signed_out", ["/", "/sign-in", "/terms"]], ["returning_student", ["/dashboard", "/history", "/settings", "/practice/new"]], ["admin", ["/admin", "/admin/students", "/admin/ai-usage", "/admin/diagnosis", "/admin/terms"]]] as const) {
     const { ctx, page } = await open(browser, persona, { width: 1280, height: 800 });
     for (const w of widths) {
       await page.setViewportSize({ width: w, height: 800 });

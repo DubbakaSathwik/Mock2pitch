@@ -9,6 +9,22 @@ export const useDecks = () => useQuery({ queryKey: qk.decks, queryFn: () => getD
 export const useDeck = (id: string | undefined) => useQuery({ queryKey: qk.deck(id ?? ""), queryFn: () => getData().decks.get(id!), enabled: !!id });
 export const useDeckAttempts = (id: string | undefined) => useQuery({ queryKey: qk.deckAttempts(id ?? ""), queryFn: () => getData().decks.attempts(id!), enabled: !!id });
 
+/** The deck that is not finished yet (waiting for its details / being read), if any: it blocks a new upload until it is continued or cancelled. */
+export const useActiveDeck = (enabled = true) => useQuery({ queryKey: qk.activeDeck, queryFn: () => getData().decks.getActive(), enabled, staleTime: 0 });
+
+/** Cancels that deck (files and slides discarded, the session is not refunded) and refreshes what depends on it. */
+export function useCancelDeck() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (deckId: string) => getData().decks.cancel(deckId),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: qk.decks }); void qc.invalidateQueries({ queryKey: qk.stats }); },
+  });
+}
+
+/** Where "continue" leads for an unfinished deck. */
+export const activeDeckHref = (d: { deck_id: string; status: "awaiting_images" | "processing" }) =>
+  d.status === "awaiting_images" ? `/practice/${d.deck_id}/details` : `/practice/${d.deck_id}/reading`;
+
 /** Slide images by index. `refetch` fetches fresh signed URLs (used once when an image fails, e.g. an expired URL). */
 export function useSlideImages(deckId: string | undefined, enabled = true) {
   const q = useQuery({

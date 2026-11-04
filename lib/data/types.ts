@@ -28,6 +28,8 @@ export type DeckSummary = {
   deck_id: string; title: string; page_count: number; pinned: boolean; pinned_at: string | null; created_at: string;
   attempts_count: number; latest_score: number | null; latest_attempt_at: string | null;
 };
+/** The deck the student has not finished (blocks a new upload): waiting for its details, or being read. */
+export type ActiveDeck = { deck_id: string; title: string; status: "awaiting_images" | "processing"; page_count: number | null; processed_slides: number };
 /** `my_deck_detail(p_deck_id)` row. */
 export type DeckAttempt = {
   report_id: string; session_id: string; attempt_number: number; created_at: string; overall_score: number; coverage_score: number;
@@ -50,7 +52,7 @@ export type ClipDeclaration = { slide_index: number; size_bytes: number };
 export type SubmitInit = { session_id: string; clips: { slide_index: number; upload: SignedUpload }[] };
 export type AnalyseResult = { session_id: string; status: "transcribing" | "completed"; report_id?: string };
 
-export type ReportSlideInfo = { slide_index: number; title: string | null; key_points: string[] };
+export type ReportSlideInfo = { slide_index: number; title: string | null; key_points: string[]; suggested_script: string | null };
 export type ReportFiller = { word: string; count: number };
 export type ReportDetail = {
   report: ReportRow;
@@ -117,6 +119,10 @@ export interface DecksPort {
   getAssetUrls(deckId: string, kinds: AssetKind[]): Promise<AssetUrls>;
   /** Current row (direct read) — used to hydrate before/while subscribed to realtime. */
   getStatus(deckId: string): Promise<DeckEvent>;
+  /** The unfinished deck (waiting for details / being read), or null. */
+  getActive(): Promise<ActiveDeck | null>;
+  /** Stops that deck so a new one can be uploaded (its files and slides are discarded; the daily session is not given back). */
+  cancel(deckId: string): Promise<void>;
 }
 export interface UploadPort {
   init(input: { filename: string; size_bytes: number; content_type: string }): Promise<UploadInit>;
@@ -143,7 +149,17 @@ export interface RealtimePort {
   subscribeSession(sessionId: string, cb: (e: SessionEvent) => void): Unsubscribe;
 }
 export interface AccountPort { delete(confirm: "DELETE"): Promise<{ deleted: true; storage_cleanup: "complete" | "pending" }> }
+/** Admin Diagnosis: one real call to a service with a preset (or the owner's own) input. See supabase/functions/_shared/handlers/admin-diagnose.ts. */
+export type DiagnosisTarget = "gemini_slide" | "nvidia_report" | "nvidia_asr" | "storage" | "database";
+export type DiagnosisInput = { target: DiagnosisTarget; mode?: "preset" | "custom"; prompt?: string; expect?: string; model?: string; slot?: Slot; include_image?: boolean };
+export type DiagnosisFailure = { kind: "bad_key" | "not_found" | "quota" | "overloaded" | "timeout" | "network" | "bad_request" | "invalid_output" | "not_configured" | "other"; reason: string; hint: string; upstream?: string };
+export type DiagnosisResult = {
+  target: DiagnosisTarget; mode: "preset" | "custom"; ran_at: string; ok: boolean; verdict: "pass" | "fail" | "unchecked"; ms: number; http_status: number | null;
+  model: string | null; key: { slot: string; masked: string } | null; request: string; expected: string; actual: string;
+  checks: { name: string; ok: boolean; detail?: string }[]; error: DiagnosisFailure | null;
+};
 export interface AdminPort {
+  diagnose(input: DiagnosisInput): Promise<DiagnosisResult>;
   overview(): Promise<AdminOverview>;
   sessionsPerDay(days: number): Promise<SessionsPerDay[]>;
   listStudents(input: { search?: string; limit?: number; offset?: number }): Promise<AdminStudent[]>;

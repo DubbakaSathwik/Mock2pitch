@@ -36,3 +36,16 @@ img{max-width:100%}
 /* the minutes field is a plain number box (no native spinner) */
 input[type="number"]{-moz-appearance:textfield;appearance:textfield}
 input[type="number"]::-webkit-inner-spin-button,input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+
+/* Navigation feedback: NavProgress marks the link that was clicked (data-nav-pending) until the next page is on screen. */
+@keyframes nav-spin{to{transform:rotate(360deg)}}
+a[data-nav-pending="true"],button[data-nav-pending="true"]{cursor:progress}
+a[data-nav-pending="true"]:not(:has(> button)),button[data-nav-pending="true"]{opacity:.78}
+a[data-nav-pending="true"]:not(:has(> button))::after,button[data-nav-pending="true"]::after,a[data-nav-pending="true"] > button::after{
+  content:"";display:inline-block;flex-shrink:0;width:.95em;height:.95em;margin-left:8px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;
+  animation:nav-spin .7s linear infinite;vertical-align:-.12em}
+a[data-nav-pending="true"] > button{opacity:.78;cursor:progress}
+/* Icon-only and stacked links: put the spinner on top of the icon instead of beside it. */
+a[data-nav-pending="true"][aria-label]::after,a[data-nav-pending="true"][class*="mTab"]::after{position:absolute;margin:0;top:6px;right:6px}
+a[data-nav-pending="true"][aria-label],a[data-nav-pending="true"][class*="mTab"]{position:relative}
+@media (prefers-reduced-motion:reduce){a[data-nav-pending="true"]::after,button[data-nav-pending="true"]::after,a[data-nav-pending="true"] > button::after{animation-duration:2.4s}}

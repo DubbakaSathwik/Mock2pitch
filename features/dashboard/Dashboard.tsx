@@ -21,6 +21,7 @@ import { useDashboardStats, useRecentReports } from "./queries";
 import { useStartPractice } from "./useStartPractice";
 import styles from "./Dashboard.module.css";
 import { useGo } from "@/lib/use-go";
+import { ActiveDeckPanel } from "@/features/practice/ActiveDeckPanel";
 
 
 export function Dashboard() {
@@ -48,6 +49,7 @@ export function Dashboard() {
     <StudentShell active="dashboard">
       <Head title={`Hi ${first}, ready to rehearse?`} sub="Take a breath. Nobody is watching but you." right={!compact && <Button size="lg" iconLeft="plus" loading={nav.pending} onClick={go}>Start a new practice</Button>} />
       {compact && <Button fullWidth size="lg" iconLeft="plus" loading={nav.pending} onClick={go} style={{ marginBottom: 16 }}>Start a new practice</Button>}
+      <div style={{ marginBottom: 16 }}><ActiveDeckPanel tone="info" /></div>
       {ui?.kind === "inline" && <div style={{ marginBottom: 16 }}><ErrorNotice title={ui.title} body={ui.body} onRetry={() => { void stats.refetch(); void decks.refetch(); }} /></div>}
       <div className={styles.grid}>
         <div className={styles.col}>
