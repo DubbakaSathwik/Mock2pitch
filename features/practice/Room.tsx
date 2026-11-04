@@ -45,6 +45,7 @@ export function Room() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const compact = useCompact();
   const pageNav = useGo();
+  const swipeStart = useRef<{ x: number; y: number } | null>(null); // phone swipe on the slide (see swipeProps)
   const params = useSearchParams();
   const { toast } = useToast();
   const session = useSessionStatusRedirect(sessionId, "pre-submit");
@@ -165,9 +166,21 @@ export function Room() {
       <Ctl compact={compact} icon="phone" label="End" kind="leave" onClick={() => setLeave(true)} />
     </div>
   );
+  // Phone only: swipe the big slide left / right to go to the next / previous slide (not while recording). Pointer events work for touch and mouse.
+  const swipeProps = compact ? {
+    onPointerDown: (e: React.PointerEvent) => { swipeStart.current = { x: e.clientX, y: e.clientY }; },
+    onPointerCancel: () => { swipeStart.current = null; },
+    onPointerUp: (e: React.PointerEvent) => {
+      const s = swipeStart.current; swipeStart.current = null;
+      if (!s || recording) return;
+      const dx = e.clientX - s.x, dy = e.clientY - s.y;
+      if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      if (dx < 0 && i < N - 1) nav(1); else if (dx > 0 && i > 0) nav(-1);
+    },
+  } : {};
   const stage = (
     <div className={styles.stage}>
-      <div className={styles.slideBox}><SlideView src={images.urls.get(i)} alt={`Slide ${i + 1}: ${slide?.title ?? ""}`} onRefetch={images.refetch} style={{ width: "min(100cqw, calc(100cqh * 16 / 9))" }} /></div>
+      <div className={styles.slideBox} {...swipeProps}><SlideView src={images.urls.get(i)} alt={`Slide ${i + 1}: ${slide?.title ?? ""}`} onRefetch={images.refetch} style={{ width: "min(100cqw, calc(100cqh * 16 / 9))" }} /></div>
       <div className={styles.status}>
         <div className={styles.statusL}>
           {recording ? <Badge tone="danger" dot>Recording slide {i + 1}</Badge> : playback.playing === i ? <Badge tone="info" dot>Playing back slide {i + 1}</Badge> : <Badge tone={here === "over" ? "warning" : here === "done" ? "success" : "neutral"}>{STAT[here].label}</Badge>}
@@ -215,6 +228,19 @@ export function Room() {
       )}
     </div>
   );
+  // Phone: slide position dots and a 2 x 2 grid below the slide: three jury members and you, big.
+  const dots = (
+    <div className={styles.dots} data-testid="slide-dots">
+      {slides.map((_, k) => <i key={k} className={k === i ? styles.dotOn : undefined} aria-hidden="true" />)}
+      <span className="sr-only">Slide {i + 1} of {N}. Swipe the slide left or right to change it.</span>
+    </div>
+  );
+  const grid = (
+    <div className={styles.mGrid} aria-label="In the room">
+      {JURY.slice(0, 3).map((a, k) => <Person key={k} k={k} label={a.name} role={a.role} />)}
+      <SelfTile name={name} avatarUrl={auth.data?.avatarUrl} speaking={recording} level={level} />
+    </div>
+  );
   const tiles = (small: boolean) => <>{JURY.map((a, k) => <Person key={k} k={k} label={a.name} role={a.role} small={small} />)}<SelfTile name={name} avatarUrl={auth.data?.avatarUrl} speaking={recording} level={level} small={small} /></>;
 
   return (
@@ -229,7 +255,7 @@ export function Room() {
       <h1 className="sr-only">Practice room</h1>
       {compact ? (
         <>
-          <main id="main" className={styles.mBody}>{stage}{strip}{notesP}<div className={styles.mTiles} aria-label="In the room">{tiles(true)}</div><Button variant="inverse" disabled={recording} loading={pageNav.pending} onClick={goReview}>Review and submit</Button></main>
+          <main id="main" className={styles.mBody}>{stage}{dots}{grid}{notesP}<Button variant="inverse" disabled={recording} loading={pageNav.pending} onClick={goReview}>Review and submit</Button></main>
           <div className={styles.sheet}><div className={styles.sheetTimers}>{timers}</div>{ctls}</div>
         </>
       ) : (

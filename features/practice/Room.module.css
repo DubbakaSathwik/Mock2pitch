@@ -103,3 +103,12 @@
   .big svg{width:20px;height:20px}
   .leave{width:52px}
 }
+
+@container app (max-width:759.98px){
+  .slideBox{touch-action:pan-y;user-select:none}
+  .dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:-2px}
+  .dots i{width:7px;height:7px;border-radius:50%;background:rgba(166,225,250,.3);transition:width .2s,background .2s}
+  .dots i.dotOn{width:20px;border-radius:99px;background:var(--icy-blue)}
+  .mGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .mGrid > div{border-radius:16px}
+}
