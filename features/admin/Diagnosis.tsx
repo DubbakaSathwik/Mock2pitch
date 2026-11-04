@@ -124,7 +124,9 @@ export function Diagnosis() {
     catch (e) {
       const err = toAppError(e);
       record({ target: input.target, mode: input.mode ?? "preset", ran_at: new Date().toISOString(), ok: false, verdict: "fail", ms: 0, http_status: null, model: input.model ?? null, key: null, request: input.prompt ?? "", expected: "", actual: "",
-        checks: [], error: { kind: "network", reason: err.code === "forbidden" ? "Only the owner can run diagnosis." : "The diagnosis request itself failed.", hint: "Check your connection and that the admin-diagnose function is deployed, then try again.", upstream: err.message } }, input.slot ?? null);
+        checks: [], error: err.code === "not_found"
+          ? { kind: "not_found", reason: "The diagnosis function is not deployed on your Supabase project yet (HTTP 404), so nothing was tested.", hint: "Run the \"Deploy Supabase Edge Functions\" workflow on the latest code (it deploys admin-diagnose), then try again. This is not a Gemini / NVIDIA / storage / database failure.", upstream: err.message }
+          : { kind: "network", reason: err.code === "forbidden" ? "Only the owner can run diagnosis." : "The diagnosis request itself failed.", hint: "Check your connection and that the admin-diagnose function is deployed, then try again.", upstream: err.message } }, input.slot ?? null);
     } finally { setRunning((x) => ({ ...x, [input.target]: false })); }
   };
   const runAll = async () => { setAll(true); for (const d of DEFS) await run({ target: d.target, mode: "preset" }); setAll(false); };
