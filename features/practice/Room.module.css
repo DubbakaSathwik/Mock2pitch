@@ -53,9 +53,9 @@
 .big{width:56px;height:56px}
 .rec{background:var(--danger-500)}
 .leave{background:var(--danger-500);width:68px}
-.mBody{flex:1;overflow:auto;padding:0 12px 12px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-content:start}
-.mTiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px}
-.sheet{flex-shrink:0;background:var(--deep-navy);border-radius:20px 20px 0 0;padding:12px 8px max(14px,env(safe-area-inset-bottom));display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.mBody{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:4px 12px 20px;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-content:start}
+.mTiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.sheet{flex-shrink:0;background:var(--deep-navy);border-radius:18px 18px 0 0;padding:8px 8px max(10px,env(safe-area-inset-bottom));display:grid;grid-template-columns:minmax(0,1fr);gap:6px;box-shadow:0 -6px 20px rgba(0,0,0,.28)}
 .sheetTimers{display:flex;justify-content:center}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 @container app (max-width:759.98px){
@@ -73,3 +73,33 @@
 .room *::-webkit-scrollbar-track{background:transparent}
 .room *::-webkit-scrollbar-thumb{background:rgba(166,225,250,.4);border-radius:99px;border:2px solid transparent;background-clip:padding-box}
 .room *::-webkit-scrollbar-thumb:hover{background:rgba(166,225,250,.65);background-clip:padding-box;border:2px solid transparent}
+
+/* Phone layout: compact controls, a clean scrolling page, avatars without labels. */
+@container app (max-width:759.98px){
+  /* a plain column (not a grid): grid tracks shrank scrollable items (strip, notes) to nothing once the page was taller than the screen */
+  .mBody{display:flex;flex-direction:column;gap:12px}
+  .mBody > *{flex-shrink:0}
+  .slideBox{container-type:normal;display:block;flex:0 0 auto;min-height:auto}
+  .slideBox > div{width:100% !important;border-radius:12px !important}
+  .stage{flex:0 0 auto;min-height:auto;gap:8px}
+  .strip{padding:2px 2px 4px;min-height:max-content}
+  .chip{padding:3px;border-radius:8px}
+  .chipLabel{font-size:10px;margin-top:2px}
+  .notes{border-radius:14px}
+  .notesOpen{height:220px}
+  .notesBtn{min-height:40px;padding:8px 14px;font-size:13px}
+  .noteTab{min-height:32px;font-size:12px}
+  .notesBody{font-size:14px}
+  .mTiles > div{border-radius:10px}
+  .mTiles span[class*="label"],.mTiles span[class*="mute"]{display:none}
+  .sheetTimers{gap:8px}
+  .sheetTimers .pill{padding:3px 10px;font-size:13px}
+  .sheetTimers .pill .dim{font-size:11px}
+  .ctls{gap:0;justify-content:space-between;padding:0 2px}
+  .ctl{font-size:10px;gap:2px;min-width:44px}
+  .ctlIcon{width:38px;height:38px}
+  .ctlIcon svg{width:17px;height:17px}
+  .big{width:46px;height:46px}
+  .big svg{width:20px;height:20px}
+  .leave{width:52px}
+}
