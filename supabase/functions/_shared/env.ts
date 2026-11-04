@@ -18,6 +18,8 @@ const schema = z.object({
   /** Optional second model tried when the primary one is retired / not found (HTTP 404/410). */
   GEMINI_SLIDE_FALLBACK_MODEL: opt,
   NVIDIA_REPORT_MODEL: z.string().min(1),
+  /** Optional second report model, tried when the primary is gone (404/410) or overloaded on every key (503 / timeouts / 429). */
+  NVIDIA_REPORT_FALLBACK_MODEL: opt,
   NVIDIA_ASR_FUNCTION_ID: z.string().min(1),
   NVIDIA_ASR_MODEL_LABEL: z.string().default("parakeet-tdt-0.6b-v2"),
   NVIDIA_KEY_RPM_SOFT_LIMIT: z.coerce.number().int().positive().default(35),

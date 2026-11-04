@@ -5,7 +5,7 @@
 |---|---|---|---|
 | `slide_reading` | `GEMINI_SLIDE_MODEL` (+ optional `GEMINI_SLIDE_FALLBACK_MODEL`) | `GEMINI_SLIDE_KEY_PRIMARY / _FALLBACK_1 / _FALLBACK_2` | **Google Gemini**, OpenAI-compatible `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, image as base64 data URL. NVIDIA no longer serves slide reading (`meta/llama-3.2-11b-vision-instruct` was retired: HTTP 404). |
 | `speech_to_text` | `NVIDIA_ASR_FUNCTION_ID`, label `NVIDIA_ASR_MODEL_LABEL` | `NVIDIA_ASR_KEY_*` | Riva gRPC `Recognize` (offline), sent as a direct HTTP/2 call (grpc-js does not connect in the Edge Runtime) |
-| `report_generation` | `NVIDIA_REPORT_MODEL` | `NVIDIA_REPORT_KEY_*` | OpenAI-compatible `chat/completions` |
+| `report_generation` | `NVIDIA_REPORT_MODEL` (+ optional `NVIDIA_REPORT_FALLBACK_MODEL`: tried when the primary is gone or overloaded on every key) | `NVIDIA_REPORT_KEY_*` | OpenAI-compatible `chat/completions` |
 
 One model per purpose, used by all three keys of that purpose (D9). Slide reading additionally has an optional fallback model that is tried once when the primary answers HTTP 404/410. A slot whose env var is empty is skipped. **The models in `.env.example` are defaults to try first; none has been verified live** (see `spikes.md`). Keys never reach the browser, logs, responses or the database; the admin sees only `••••••••<last4>` via `admin-ai-keys`.
 

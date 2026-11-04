@@ -275,6 +275,28 @@ describe("session-analyse: failures, retries and resumption", () => {
     expect((await sess(sessionId)).status).toBe("completed");
     expect(env.ai.asrCalls).toHaveLength(2); // transcripts were reused
   });
+  it("report model overloaded (503 / timeouts) -> the fallback report model writes the report; without a fallback the session fails as AI busy", async () => {
+    const original = env.deps.env; const orig = env.ai.fetchFn;
+    const overloadPrimary = (url: any, init: any) => (JSON.parse(String(init?.body ?? "{}")).model === "report-model" ? Promise.resolve(new Response("{}", { status: 503 })) : orig(url, init));
+    await env.db.admin.query("update public.ai_key_slots set cooldown_until=null");
+    env.deps.env = { ...original, NVIDIA_REPORT_FALLBACK_MODEL: "report-fallback" };
+    env.deps.fetchFn = overloadPrimary as typeof fetch; env.ai.chatCalls.length = 0;
+    const a = await started("fb1@example.test");
+    await submit(a.u, a.sessionId, [{ slide_index: 0, wav: wav(10) }]);
+    await env.call(sessionAnalyse, { session_id: a.sessionId }, { token: a.u.token }); await env.settle();
+    env.deps.env = original; env.deps.fetchFn = orig;
+    expect((await sess(a.sessionId)).status).toBe("completed");
+    expect(env.ai.chatCalls.some((c) => c.model === "report-fallback")).toBe(true);
+    expect((await env.db.admin.query("select count(*)::int n from public.ai_key_slots where purpose='report_generation' and cooldown_until is not null")).rows[0].n).toBe(0);
+
+    env.deps.fetchFn = overloadPrimary as typeof fetch;
+    const b = await started("fb2@example.test");
+    await submit(b.u, b.sessionId, [{ slide_index: 0, wav: wav(10) }]);
+    await env.call(sessionAnalyse, { session_id: b.sessionId }, { token: b.u.token }); await env.settle();
+    env.deps.fetchFn = orig;
+    expect(await sess(b.sessionId)).toMatchObject({ status: "failed", error_code: "ai_unavailable" });
+    await env.db.admin.query("update public.ai_key_slots set cooldown_until=null");
+  });
   it("invalid report JSON triggers exactly one repair retry; two invalid answers fail with report_invalid and keep audio", async () => {
     const a = await started("f3@example.test");
     env.ai.invalidReportOnce = true; env.ai.chatCalls.length = 0;
