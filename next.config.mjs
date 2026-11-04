@@ -5,34 +5,6 @@ import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from "next/constants
 const root = path.dirname(fileURLToPath(import.meta.url));
 
 /**
- * Content-Security-Policy. Next.js injects inline bootstrap scripts and React renders inline style attributes, so `script-src` and
- * `style-src` keep 'unsafe-inline' (no nonce pipeline); everything else is locked to this origin plus the services the app really
- * talks to: Supabase (https + wss), Cloudflare R2 signed URLs (uploads/downloads), Google avatars. pdf.js needs a blob/self worker and
- * WebAssembly; recorded audio and rendered slide images are blob: URLs. Dev adds 'unsafe-eval' (webpack source maps) and the HMR socket.
- */
-function contentSecurityPolicy(isDev) {
-  const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseHttp = supabase ? [new URL(supabase).origin] : [];
-  const supabaseWs = supabase ? [`wss://${new URL(supabase).host}`] : [];
-  const r2 = ["https://*.r2.cloudflarestorage.com"];
-  const directives = {
-    "default-src": ["'self'"],
-    "script-src": ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", ...(isDev ? ["'unsafe-eval'"] : [])],
-    "style-src": ["'self'", "'unsafe-inline'"],
-    "img-src": ["'self'", "data:", "blob:", "https://lh3.googleusercontent.com", ...r2],
-    "media-src": ["'self'", "blob:", ...r2],
-    "font-src": ["'self'"],
-    "connect-src": ["'self'", ...supabaseHttp, ...supabaseWs, ...r2, ...(isDev ? ["ws://localhost:*", "ws://127.0.0.1:*"] : [])],
-    "worker-src": ["'self'", "blob:"],
-    "object-src": ["'none'"],
-    "base-uri": ["'self'"],
-    "form-action": ["'self'"],
-    "frame-ancestors": ["'none'"],
-  };
-  return Object.entries(directives).map(([k, v]) => `${k} ${v.join(" ")}`).join("; ");
-}
-
-/**
  * Everything named NEXT_PUBLIC_* is inlined into the JavaScript every visitor downloads. Fail the production build if a server-side secret
  * was put in one by mistake: a variable whose NAME says secret, or a Supabase key whose VALUE is the service-role / secret key.
  * (The anon / publishable key is public by design; it is safe only because every table has RLS.)
@@ -74,7 +46,7 @@ export default function config(phase) {
     serverExternalPackages: ["@grpc/grpc-js", "@grpc/proto-loader"],
     async headers() {
       const security = [
-        { key: "Content-Security-Policy", value: contentSecurityPolicy(isDevServer) },
+        // Content-Security-Policy is set per request (with a script nonce) by proxy.ts / lib/csp.ts, not here.
         { key: "Permissions-Policy", value: "microphone=(self), camera=(), geolocation=(), payment=(), usb=()" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         { key: "X-Content-Type-Options", value: "nosniff" },

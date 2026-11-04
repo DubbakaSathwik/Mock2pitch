@@ -65,6 +65,10 @@ export const WORDS_PER_SECOND = 130 / 60;
 export const MAX_ANALYSIS_ATTEMPTS = 3;
 export const STUCK_JOB_MS = 5 * 60 * 1000;
 export const PENDING_FILE_TTL_MS = 60 * 60 * 1000;
+// A presigned PUT URL (<= 10 min) outlives the file row that was retired (cancelled / failed / deleted). The sweeper re-checks recently
+// retired files once every URL has expired (grace > the longest presign expiry) and for a few hours after, and removes late arrivals.
+export const LATE_PUT_GRACE_MS = 11 * 60 * 1000;
+export const LATE_PUT_WINDOW_MS = 6 * 60 * 60 * 1000;
 export const AUDIO_HARD_TTL_MS = 24 * 60 * 60 * 1000;
 
 export const COLLEGE_YEARS = ["3rd year", "4th year", "Other"] as const;

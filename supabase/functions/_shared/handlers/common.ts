@@ -26,9 +26,34 @@ export function isInternal(req: Request, deps: Deps): boolean {
   return !!s && timingSafeEqual(s, deps.env.INTERNAL_FUNCTION_SECRET);
 }
 
+/** Every real request body is tiny (ids, a few short strings, at most 10 clip sizes). Anything bigger is abuse, not a feature. */
+export const MAX_BODY_BYTES = 64 * 1024;
+
+/** Reads the body as text, aborting as soon as it exceeds MAX_BODY_BYTES so an oversized payload is never buffered or parsed. */
+async function readCappedText(req: Request): Promise<string> {
+  const declared = Number(req.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) throw Errors.tooLarge("body_too_large");
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_BODY_BYTES) { await reader.cancel().catch(() => {}); throw Errors.tooLarge("body_too_large"); } // content-length can lie or be absent (chunked)
+    chunks.push(value);
+  }
+  const all = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { all.set(c, off); off += c.byteLength; }
+  return new TextDecoder().decode(all);
+}
+
 export async function readBody<T extends z.ZodTypeAny>(req: Request, schema: T): Promise<z.infer<T>> {
+  const text = await readCappedText(req); // 413 body_too_large propagates; only malformed JSON / shape is a 400
   let raw: unknown;
-  try { raw = await req.json(); } catch { throw Errors.badRequest(); }
+  try { raw = JSON.parse(text); } catch { throw Errors.badRequest(); }
   const r = schema.safeParse(raw);
   if (!r.success) throw Errors.badRequest();
   return r.data;

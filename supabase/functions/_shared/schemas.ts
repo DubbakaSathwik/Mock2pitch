@@ -15,7 +15,7 @@ export const deckIdIn = z.object({ deck_id: uuid }).strict();
 
 export const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length;
 /** Optional free text from the student: trimmed, empty -> undefined, length-limited. It is DATA for the prompt, never instructions. */
-const optionalText = (max: number) => z.string().trim().max(max).optional().transform((v) => (v ? v : undefined));
+const optionalText = (max: number) => z.string().trim().max(max).transform((v) => (v ? v : undefined)).optional();
 
 /** Presentation details from the Details step (audience / goal / summary / time). Sent with the first deck-process call. */
 export const deckDetailsIn = z.object({
@@ -87,7 +87,7 @@ export const reportOut = z.object({
     key_points_covered: z.array(z.coerce.number().int()).default([]),
     key_points_missed: z.array(z.coerce.number().int()).default([]),
     off_topic_quotes: z.array(z.string()).default([]),
-    feedback: z.string().optional().transform((s) => (s ? s.trim().slice(0, 200) : undefined)),
+    feedback: z.string().transform((s) => (s ? s.trim().slice(0, 200) : undefined)).optional(),
   })),
   clarity_score: clampInt(0, 100),
   headline: z.string().min(1).transform((s) => s.trim().slice(0, 140)),

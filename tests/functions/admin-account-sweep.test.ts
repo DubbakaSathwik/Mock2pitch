@@ -3,6 +3,7 @@ import { createEnv, jpeg, makePdf, put, SECRET, uploadDeck, wav, type Env_ } fro
 import { deckUploadInit } from "@shared/handlers/deck-upload-init.ts";
 import { deckUploadComplete } from "@shared/handlers/deck-upload-complete.ts";
 import { deckProcess } from "@shared/handlers/deck-process.ts";
+import { deckCancel } from "@shared/handlers/deck-cancel.ts";
 import { sessionSubmitInit } from "@shared/handlers/session-submit-init.ts";
 import { accountDelete } from "@shared/handlers/account-delete.ts";
 import { adminAiKeys } from "@shared/handlers/admin-ai-keys.ts";
@@ -138,6 +139,28 @@ describe("maintenance-sweep", () => {
     expect(r.json.data.decks_failed).toBeGreaterThanOrEqual(1);
     expect((await env.db.admin.query("select status, error_code from public.decks where id=$1", [deckId])).rows[0]).toEqual({ status: "failed", error_code: "upload_timeout" });
     expect(await env.r2.head(keys.deckPdf(u.id, deckId))).toBeNull();
+  });
+  it("removes an object uploaded through a presigned URL AFTER the deck was cancelled (it would otherwise be an untracked, unbounded orphan)", async () => {
+    const u = await env.user("sw-late@example.test");
+    const init = await env.call(deckUploadInit, { filename: "late.pdf", size_bytes: 10, content_type: "application/pdf" }, { token: u.token });
+    const deckId = init.json.data.deck_id; const up = init.json.data.upload;
+    const cancelled = await env.call(deckCancel, { deck_id: deckId }, { token: u.token });
+    expect(cancelled.status).toBe(200);
+    const key = keys.deckPdf(u.id, deckId);
+    expect(await env.r2.head(key)).toBeNull();                       // cancel removed everything it knew about
+    await put(up.url, up.headers, new Uint8Array(10));               // ...but the presigned URL is still valid: the attacker uploads now
+    expect(await env.r2.head(key)).not.toBeNull();                   // the orphan exists and no row is tracking it
+    const fileId = (await env.db.admin.query("select id, status from public.files where deck_id=$1", [deckId])).rows[0];
+    expect(fileId.status).toBe("deleted");
+    // too early (URL might still be valid): left alone. After the grace period: removed.
+    const early = await env.call(maintenanceSweep, {}, { internal: true });
+    expect(early.json.data.late_uploads_removed).toBe(0);
+    await env.backdate("files", fileId.id, "20 minutes", "created_at");
+    const r = await env.call(maintenanceSweep, {}, { internal: true });
+    expect(r.json.data.late_uploads_removed).toBe(1);
+    expect(await env.r2.head(key)).toBeNull();
+    const again = await env.call(maintenanceSweep, {}, { internal: true });
+    expect(again.json.data.late_uploads_removed).toBe(0);            // idempotent
   });
   it("deletes audio older than 24 h (including failed sessions) and marks rows deleted only after R2 confirms", async () => {
     const { u, sessionId } = await withDeck("sw-b@example.test");

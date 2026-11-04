@@ -9,6 +9,9 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+# Least privilege: CI only reads the repository (no write token for anything a PR could run).
+permissions:
+  contents: read
 env:
   NEXT_TELEMETRY_DISABLED: "1"
 jobs:

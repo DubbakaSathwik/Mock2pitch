@@ -2,7 +2,8 @@
 import { z } from "zod";
 import { PURPOSES, SLOTS, type Purpose, type Slot } from "./constants.ts";
 
-const opt = z.string().optional().transform((v) => (v && v.trim() !== "" ? v.trim() : undefined));
+// zod 4: `.optional().transform()` makes the output key required; transform first, then `.optional()` keeps the key optional.
+const opt = z.string().transform((v) => (v.trim() !== "" ? v.trim() : undefined)).optional();
 const schema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),

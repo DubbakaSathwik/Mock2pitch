@@ -1,5 +1,6 @@
 // Zod schemas for every backend response the adapter consumes. Shape drift fails loudly in development and is reported
 // safely (code only, no payload) in production. Row schemas are `passthrough` so additive columns never break the UI.
+import "@/lib/zod-setup";
 import { z } from "zod";
 import { AppError } from "../errors";
 

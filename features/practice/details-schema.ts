@@ -1,3 +1,4 @@
+import "@/lib/zod-setup";
 import { z } from "zod";
 import { AUDIENCES, MAX_ABSTRACT_WORDS, MAX_AUDIENCE_OTHER_CHARS, MAX_GOAL_CHARS, MAX_TOTAL_MINUTES, MIN_TOTAL_MINUTES } from "@shared/constants.ts";
 import { countWords } from "@shared/schemas.ts";

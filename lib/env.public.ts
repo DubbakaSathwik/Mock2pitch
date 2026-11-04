@@ -1,4 +1,5 @@
 // Browser-safe environment (NO server-only names in this file: it is bundled into the client).
+import "@/lib/zod-setup";
 import { z } from "zod";
 
 const clientSchema = z.object({

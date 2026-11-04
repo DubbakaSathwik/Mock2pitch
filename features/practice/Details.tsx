@@ -1,4 +1,5 @@
 "use client";
+import "@/lib/zod-setup";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";

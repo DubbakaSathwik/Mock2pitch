@@ -1,5 +1,5 @@
 import { api, AppError, isInternal, logEvent, ok } from "./common.ts";
-import { AUDIO_HARD_TTL_MS, MAX_ANALYSIS_ATTEMPTS, PENDING_FILE_TTL_MS, STUCK_JOB_MS } from "../constants.ts";
+import { AUDIO_HARD_TTL_MS, LATE_PUT_GRACE_MS, LATE_PUT_WINDOW_MS, MAX_ANALYSIS_ATTEMPTS, PENDING_FILE_TTL_MS, STUCK_JOB_MS } from "../constants.ts";
 import type { Deps } from "../deps.ts";
 
 const iso = (deps: Deps, ago: number) => new Date(deps.now().getTime() - ago).toISOString();
@@ -8,7 +8,7 @@ const iso = (deps: Deps, ago: number) => new Date(deps.now().getTime() - ago).to
 export const maintenanceSweep = api(async (ctx) => {
   if (!isInternal(ctx.req, ctx.deps)) throw new AppError("forbidden", 403, "You can't do that.");
   const { deps } = ctx;
-  const counts = { pending_files_failed: 0, decks_failed: 0, sessions_reopened: 0, sessions_abandoned: 0, audio_deleted: 0, sessions_resumed: 0, sessions_failed: 0, decks_resumed: 0, deletions_finished: 0 };
+  const counts = { pending_files_failed: 0, decks_failed: 0, sessions_reopened: 0, sessions_abandoned: 0, audio_deleted: 0, sessions_resumed: 0, sessions_failed: 0, decks_resumed: 0, deletions_finished: 0, late_uploads_removed: 0 };
 
   // 1a) files stuck 'pending' > 1h: remove object if present, mark failed.
   const { data: pending } = await deps.admin.from("files").select("id, object_key").eq("status", "pending").lt("created_at", iso(deps, PENDING_FILE_TTL_MS));
@@ -36,6 +36,21 @@ export const maintenanceSweep = api(async (ctx) => {
   // 1d) never-submitted sessions older than 24h are abandoned.
   const { data: idle } = await deps.admin.from("practice_sessions").select("id").eq("status", "in_progress").lt("created_at", iso(deps, AUDIO_HARD_TTL_MS));
   for (const s of (idle ?? []) as { id: string }[]) { await deps.admin.from("practice_sessions").update({ status: "abandoned" }).eq("id", s.id); counts.sessions_abandoned++; }
+
+  // 1e) uploads that landed AFTER their file was retired. A presigned PUT URL stays valid for minutes after a deck is cancelled or a file
+  // fails, so a student could still write an object (of any size) that no row tracks any more. Once every URL has expired, look again at
+  // recently retired files and remove whatever is there. Counted only when an object really existed, so a quiet run reports 0.
+  const { data: retired } = await deps.admin.from("files").select("id, object_key").in("status", ["deleted", "failed"])
+    .lt("created_at", iso(deps, LATE_PUT_GRACE_MS)).gt("created_at", iso(deps, LATE_PUT_WINDOW_MS)).limit(500);
+  for (const f of (retired ?? []) as { id: string; object_key: string }[]) {
+    try {
+      if (!(await deps.r2.head(f.object_key))) continue;
+      const { data: still } = await deps.admin.from("files").select("id").eq("id", f.id).in("status", ["deleted", "failed"]).maybeSingle(); // not re-used meanwhile
+      if (!still) continue;
+      await deps.r2.delete(f.object_key);
+      counts.late_uploads_removed++;
+    } catch { /* retried next run */ }
+  }
 
   // 2) audio older than 24h, whatever the session state: delete from R2 first, then mark deleted.
   const { data: oldAudio } = await deps.admin.from("files").select("id, object_key").eq("kind", "audio_clip").eq("status", "uploaded").lt("created_at", iso(deps, AUDIO_HARD_TTL_MS));

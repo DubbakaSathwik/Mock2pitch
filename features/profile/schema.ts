@@ -1,3 +1,4 @@
+import "@/lib/zod-setup";
 import { z } from "zod";
 import { BRANCHES, COLLEGE_YEARS } from "@shared/constants.ts";
 

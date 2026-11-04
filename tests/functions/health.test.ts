@@ -34,6 +34,19 @@ describe("health (public liveness + configuration probe)", () => {
     for (const secret of ["slide-k0", "asr-k0", "rep-k0", "sekrit", "slide-model", "report-model", "m2p-test", "internal-secret", "AKIATEST"]) expect(text).not.toContain(secret);
   });
 
+  it("answers repeat calls from a short-lived cache so an anonymous caller cannot hammer the database and R2", async () => {
+    const admin = env.deps.admin; const r2 = env.deps.r2;
+    let dbCalls = 0, r2Calls = 0;
+    env.deps.admin = { from: (t: string) => { dbCalls++; return (admin as any).from(t); } } as any;
+    (env.deps as { r2: unknown }).r2 = { head: async (k: string) => { r2Calls++; return (r2 as any).head(k); } };
+    try {
+      const results = [];
+      for (let i = 0; i < 25; i++) results.push((await get()).status);
+      expect(results.every((s) => s === 200)).toBe(true);
+      expect([dbCalls, r2Calls]).toEqual([1, 1]); // 25 requests, one real probe
+    } finally { env.deps.admin = admin; (env.deps as { r2: unknown }).r2 = r2; }
+  });
+
   it("turns unhealthy (503) when the Gemini primary key is missing, and says which purpose", async () => {
     const saved = env.deps.env;
     env.deps.env = { ...testEnv, GEMINI_SLIDE_KEY_PRIMARY: undefined };

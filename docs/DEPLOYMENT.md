@@ -3,7 +3,7 @@
 Last verified: typecheck, lint, 456 unit / function / frontend / database tests, both production builds and the bundle guards pass. The only tests not run in CI-less environments are the two that need the Deno binary.
 
 ## 1. Order
-1. **Database migrations** first (functions assume them). Applied on the hosted project so far: through `20261104000011_deck_details` (applied by hand; the file is re-runnable). New migrations: `supabase db push`, or paste the SQL in the dashboard.
+1. **Database migrations** first (functions assume them). Applied on the hosted project so far: through `20261104000011_deck_details` (applied by hand; the file is re-runnable). **Pending since the security audit: `20261104000012_narrow_selftest_signup_exemption`** (tightens the Google-only sign-up guard; apply it before or together with the functions). New migrations: `supabase db push`, or paste the SQL in the dashboard.
 2. **Edge Functions**: merge to `main` (workflow "Deploy Supabase Edge Functions" runs on pushes touching `supabase/functions/**`) or run it manually on a branch. 13 functions: account-delete, admin-ai-keys, admin-diagnose, asset-urls, deck-cancel, deck-process, deck-upload-complete, deck-upload-init, health, maintenance-sweep, ops-selftest, session-analyse, session-submit-init.
 3. **Web app** (Netlify builds `main`).
 4. **Verify** (section 5).
@@ -25,7 +25,7 @@ Last verified: typecheck, lint, 456 unit / function / frontend / database tests,
 Remove the retired `NVIDIA_SLIDE_MODEL` and `NVIDIA_SLIDE_KEY_*` secrets. `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` are injected by the platform.
 
 ## 3. Netlify (production context)
-`NEXT_PUBLIC_DATA_MODE=supabase` (set in `netlify.toml`), plus in the Netlify UI: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL`. No server secrets on Netlify. Deploy previews run on the in-browser mock backend by design.
+`NEXT_PUBLIC_DATA_MODE=supabase` (set in `netlify.toml`), plus in the Netlify UI: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL`. No server secrets on Netlify (a `SUPABASE_SERVICE_ROLE_KEY` here would fail the secrets scan, and the build refuses any secret-looking `NEXT_PUBLIC_*` variable). `netlify.toml` omits only the three public `NEXT_PUBLIC_*` keys from Netlify's secrets scan. Every page renders per request because the CSP carries a script nonce. Deploy previews run on the in-browser mock backend by design.
 
 ## 4. GitHub (Actions → secrets)
 `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`. CI needs no secrets. The browser jobs run on `ubuntu-24.04` (Playwright does not support 26.04 yet). The deploy workflow passes `--yes` (the CLI refuses to deploy non-interactively without it).

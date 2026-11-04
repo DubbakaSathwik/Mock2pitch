@@ -1,4 +1,5 @@
 // The mock implementation of the data port: an in-memory backend that follows the Phase 1 contracts (error codes, limits, stages).
+import "@/lib/zod-setup";
 import { DAILY_SESSION_LIMIT, MAX_CLIP_BYTES, MAX_PDF_BYTES, MAX_SLIDES, MAX_TOTAL_MINUTES, MIN_TOTAL_MINUTES, PURPOSES,
   PUT_EXPIRES_S, AUDIO_PUT_EXPIRES_S, GET_EXPIRES_S, SLIDE_IMAGE_JPEG_QUALITY, SLIDE_IMAGE_MAX_BYTES, SLIDE_IMAGE_MAX_WIDTH, SLIDE_IMAGE_MIN_JPEG_QUALITY, SLIDE_IMAGE_MIN_WIDTH, type Purpose } from "@shared/constants.ts";
 import { isJpegSignature, parseWav, titleFromFilename } from "@shared/files.ts";

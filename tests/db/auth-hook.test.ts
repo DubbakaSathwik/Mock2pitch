@@ -27,20 +27,32 @@ describe("before-user-created hook (Google-only sign-up)", () => {
 });
 
 describe("auth.users guard trigger (defence in depth)", () => {
-  const insertAs = async (role: string, email: string, provider: string, providers: string[] = [provider]) => {
+  const insertAs = async (role: string, email: string, provider: string, providers: string[] = [provider], confirmed = false) => {
     const c = await db.admin.connect();
     try {
       await c.query("begin");
       await c.query(`do $$ begin if not exists (select from pg_roles where rolname='supabase_auth_admin') then create role supabase_auth_admin nologin; end if; end $$`);
       await c.query("grant usage on schema auth to supabase_auth_admin; grant insert, select on auth.users to supabase_auth_admin; grant usage on schema public to supabase_auth_admin");
       await c.query(`set local role ${role}`);
-      await c.query("insert into auth.users (id, aud, role, email, raw_app_meta_data) values (gen_random_uuid(), 'authenticated', 'authenticated', $1, $2::jsonb)", [email, JSON.stringify({ provider, providers })]);
+      await c.query("insert into auth.users (id, aud, role, email, raw_app_meta_data, email_confirmed_at) values (gen_random_uuid(), 'authenticated', 'authenticated', $1, $2::jsonb, case when $3::boolean then now() end)", [email, JSON.stringify({ provider, providers }), confirmed]);
       return "inserted";
     } catch (e) { return (e as Error).message; }
     finally { await c.query("rollback").catch(() => {}); c.release(); }
   };
   it("lets the Auth service create Google users", async () => { expect(await insertAs("supabase_auth_admin", "g@gmail.com", "google")).toBe("inserted"); });
   it("rejects email/password users created by the Auth service", async () => { expect(await insertAs("supabase_auth_admin", "x@gmail.com", "email")).toMatch(/signup_not_allowed/); });
-  it("allows the reserved @mock2pitch.test domain through the Auth service (operator self-test)", async () => { expect(await insertAs("supabase_auth_admin", "selftest@mock2pitch.test", "email")).toBe("inserted"); });
+  it("allows ONLY the operator self-test shape through the Auth service: selftest-<digits>@mock2pitch.test, already confirmed", async () => {
+    expect(await insertAs("supabase_auth_admin", "selftest-1730000000000@mock2pitch.test", "email", ["email"], true)).toBe("inserted");
+  });
+  it("rejects every other @mock2pitch.test sign-up (the old blanket exemption was a Google-only bypass)", async () => {
+    for (const [email, confirmed] of [
+      ["attacker@mock2pitch.test", true],                          // arbitrary address in the reserved domain
+      ["selftest-1730000000000@mock2pitch.test", false],           // right shape but unconfirmed = a normal public sign-up
+      ["selftest-abc@mock2pitch.test", true],                      // not digits
+      ["selftest-1@mock2pitch.test.evil.example", true],           // suffix trick
+      ["x-selftest-1@mock2pitch.test", true],                      // prefix trick
+      ["selftest-1@mock2pitch.test\n", true],                      // trailing newline
+    ] as const) expect(await insertAs("supabase_auth_admin", email, "email", ["email"], confirmed), email).toMatch(/signup_not_allowed/);
+  });
   it("does not interfere with operator SQL inserts (test-user provisioning)", async () => { expect(await insertAs("postgres", "it@whatever.test", "email")).toBe("inserted"); });
 });

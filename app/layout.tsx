@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { preload } from "react-dom";
+import { connection } from "next/server";
 import "@/styles/fonts.css";
 import "@/styles/tokens.css";
 import "@/styles/globals.css";
@@ -12,7 +13,9 @@ export const metadata: Metadata = {
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#00072D" };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // The Content-Security-Policy carries a fresh script nonce per request (proxy.ts), and Next.js can only stamp it on pages rendered per request.
+  await connection();
   // Preload only the two faces every page uses.
   preload("/fonts/AutourOne-Regular.woff2", { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   preload("/fonts/LXGWWenKaiTC-Regular.woff2", { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
